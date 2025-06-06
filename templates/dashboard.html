@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chief of Staff - Dashboard</title>
+    <title>AI Chief of Staff v2.0 - Enhanced Dashboard</title>
     <style>
         * {
             margin: 0;
@@ -34,6 +34,14 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+        }
+        
+        .version-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
         
         .user-info {
@@ -159,6 +167,26 @@
             background: #4b5563;
         }
         
+        .btn-small {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+        }
+        
+        .gmail-link {
+            background: #ea4335;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .gmail-link:hover {
+            background: #d23825;
+        }
+        
         .tabs {
             background: white;
             border-radius: 12px;
@@ -221,8 +249,12 @@
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         }
         
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+        
         @media (max-width: 768px) {
-            .grid-2, .grid-3 {
+            .grid-2, .grid-3, .grid-4 {
                 grid-template-columns: 1fr;
             }
         }
@@ -285,6 +317,10 @@
             margin-bottom: 0.5rem;
             color: #1e293b;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: space-between;
         }
         
         .list-item p {
@@ -293,12 +329,38 @@
             margin-bottom: 0.5rem;
         }
         
+        .task-context {
+            background: #f1f5f9;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            font-size: 0.875rem;
+        }
+        
+        .sender-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .sender-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .sender-details {
+            color: #64748b;
+        }
+        
         .meta-info {
             display: flex;
             flex-wrap: wrap;
             gap: 1rem;
             font-size: 0.75rem;
             color: #94a3b8;
+            align-items: center;
         }
         
         .meta-info span {
@@ -341,6 +403,50 @@
         .badge-info {
             background: #dbeafe;
             color: #2563eb;
+        }
+        
+        .badge-high {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        
+        .badge-medium {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .badge-low {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .quality-score {
+            background: linear-gradient(90deg, #fef2f2 0%, #fef3c7 50%, #dcfce7 100%);
+            height: 4px;
+            border-radius: 2px;
+            margin: 0.5rem 0;
+            position: relative;
+        }
+        
+        .quality-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        
+        .quality-high {
+            background: #059669;
+        }
+        
+        .quality-medium {
+            background: #d97706;
+        }
+        
+        .quality-low {
+            background: #dc2626;
         }
         
         .empty-state {
@@ -426,11 +532,264 @@
             border-radius: 6px;
             border: 1px solid #bbf7d0;
         }
+        
+        .person-profile {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .person-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .person-details h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
+        }
+        
+        .person-role {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin: 0;
+        }
+        
+        .topic-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .topic-name {
+            font-weight: 500;
+            color: #1e293b;
+        }
+        
+        .topic-count {
+            background: #e2e8f0;
+            color: #64748b;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+        
+        .official-topic {
+            border-left: 4px solid #059669;
+        }
+        
+        .confidence-score {
+            font-size: 0.75rem;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+        
+        .enhanced-features {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .enhanced-features h3 {
+            margin: 0 0 0.5rem 0;
+            color: white;
+        }
+        
+        .enhanced-features p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.875rem;
+        }
+        
+        .topic-management {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .topic-details {
+            flex: 1;
+        }
+        
+        .topic-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-topic {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-topic:hover {
+            background: #f1f5f9;
+        }
+        
+        .btn-official {
+            background: #059669;
+            color: white;
+            border-color: #059669;
+        }
+        
+        .btn-official:hover {
+            background: #047857;
+        }
+        
+        .topic-official {
+            border-left: 4px solid #059669;
+            background: #f0fdf4;
+        }
+        
+        .content-item {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid #e2e8f0;
+        }
+        
+        .content-item.has-source {
+            border-left-color: #3b82f6;
+        }
+        
+        .content-source {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .task-row {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem 0;
+            display: grid;
+            grid-template-columns: 2fr 1fr 120px 100px 80px;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .task-row:hover {
+            background: #f8fafc;
+        }
+        
+        .task-description {
+            font-weight: 500;
+            color: #1e293b;
+        }
+        
+        .task-context {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+        
+        .task-sender {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .task-due {
+            font-size: 0.875rem;
+            color: #dc2626;
+            font-weight: 500;
+        }
+        
+        .task-priority {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .priority-high {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        
+        .priority-medium {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .priority-low {
+            background: #dcfce7;
+            color: #059669;
+        }
+        
+        .task-confidence {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-align: center;
+        }
+        
+        /* People table specific styling */
+        .people-table-row {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem 0;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 100px;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .people-table-row:hover {
+            background: #f8fafc;
+        }
+        
+        /* Override any existing card styling for people */
+        #peopleNetwork .list-item {
+            background: none;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            margin: 0;
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🤖 AI Chief of Staff</h1>
+        <h1>
+            🤖 AI Chief of Staff 
+            <span class="version-badge">v2.0 Enhanced</span>
+        </h1>
         <div class="user-info">
             <div class="user-email">{{ user_email }}</div>
             <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
@@ -438,6 +797,12 @@
     </div>
     
     <div class="container">
+        <!-- Enhanced Features Notice -->
+        <div class="enhanced-features">
+            <h3>🚀 Enhanced AI Intelligence Active</h3>
+            <p>Quality email filtering • Enhanced task context • Professional people network • Gmail integration • Topic management</p>
+        </div>
+        
         <!-- Status Bar -->
         <div class="status-bar">
             <div class="status-info">
@@ -450,12 +815,12 @@
                         ✗ Gmail Not Connected
                     </div>
                 {% endif %}
-                <span id="statusText">Ready</span>
+                <span id="statusText">Ready for Enhanced Processing</span>
             </div>
             
             <div class="control-buttons">
                 <button onclick="processEmails()" class="btn" id="processBtn">
-                    🔄 Process Emails
+                    🧠 Intelligent Processing
                 </button>
                 <button onclick="refreshAllData()" class="btn btn-secondary">
                     📊 Refresh Data
@@ -470,7 +835,7 @@
         <div class="processing-form">
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="maxEmails">Number of emails to process:</label>
+                    <label for="maxEmails">Emails to process (quality filtered):</label>
                     <input type="number" id="maxEmails" class="form-control" value="20" min="1" max="100">
                 </div>
                 <div class="form-group">
@@ -480,7 +845,7 @@
                 <div class="form-group">
                     <label>&nbsp;</label>
                     <button onclick="processEmails()" class="btn" style="width: 100%;">
-                        🚀 Intelligent Processing
+                        🚀 Enhanced Processing
                     </button>
                 </div>
             </div>
@@ -491,139 +856,339 @@
                     <span>🔄 Force refresh existing emails (re-analyze with enhanced AI insights)</span>
                 </label>
                 <p style="font-size: 0.75rem; color: #64748b; margin: 0.5rem 0 0 1.5rem;">
-                    Check this to apply new AI intelligence to emails you've already processed
+                    Apply v2.0 enhancements: quality filtering, sender context, Gmail links, professional insights
                 </p>
             </div>
             
             <div id="processingResults" style="display: none;"></div>
         </div>
         
-        <!-- Main Tabs -->
+        <!-- Enhanced Tabs -->
         <div class="tabs">
             <div class="tab-buttons">
-                <button class="tab-button active" onclick="switchTab('business')">
-                    🏢 Business Knowledge
+                <button class="tab-button active" onclick="switchTab('ai-chat')">
+                    🤖 AI Chat
                 </button>
-                <button class="tab-button" onclick="switchTab('insights')">
-                    📧 Email Insights
+                <button class="tab-button" onclick="switchTab('business-knowledge')">
+                    📊 Settings & Topics
                 </button>
                 <button class="tab-button" onclick="switchTab('tasks')">
-                    ✅ Tasks
+                    ✅ Actionable Tasks
                 </button>
                 <button class="tab-button" onclick="switchTab('people')">
-                    👥 People
+                    👥 People Network
                 </button>
             </div>
             
+            <!-- AI Chat Tab -->
+            <div id="ai-chat" class="tab-content active">
+                <div class="card">
+                    <h3>🤖 AI Chief of Staff Chat</h3>
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                        <strong>💡 Smart Context:</strong> Chat with Claude using your complete knowledge base • People insights • Business intelligence • Tasks & projects • Historical context
+                    </div>
+                    
+                    <!-- Chat Interface -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+                        <!-- Main Chat Area -->
+                        <div>
+                            <div id="chatMessages" style="height: 400px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-y: auto; background: #f8fafc; margin-bottom: 1rem;">
+                                <div style="text-align: center; color: #64748b; padding: 2rem;">
+                                    <div style="font-size: 3rem; margin-bottom: 1rem;">🤖</div>
+                                    <h4 style="margin: 0 0 0.5rem 0;">Welcome to your AI Chief of Staff</h4>
+                                    <p style="margin: 0; font-size: 0.875rem;">I have access to your complete business knowledge. Ask me about people, decisions, opportunities, tasks, or any insights from your emails.</p>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" id="chatInput" placeholder="Ask about your business knowledge, people, tasks, or any insights..." 
+                                       style="flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;"
+                                       onkeypress="if(event.key==='Enter') sendChatMessage()">
+                                <button onclick="sendChatMessage()" class="btn" style="white-space: nowrap;">
+                                    💬 Send
+                                </button>
+                            </div>
+                            
+                            <!-- Quick Prompts -->
+                            <div style="margin-top: 1rem;">
+                                <div style="font-weight: 500; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem;">Quick Questions:</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    <button onclick="askQuickQuestion('What are my most urgent tasks and deadlines?')" 
+                                            style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                        📋 Urgent Tasks
+                                    </button>
+                                    <button onclick="askQuickQuestion('Who are my most important business contacts and what are they working on?')" 
+                                            style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                        👥 Key Contacts
+                                    </button>
+                                    <button onclick="askQuickQuestion('What are the biggest opportunities and challenges I should focus on?')" 
+                                            style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                        💡 Opportunities
+                                    </button>
+                                    <button onclick="askQuickQuestion('What important decisions were made recently and what impact do they have?')" 
+                                            style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                        ⚡ Recent Decisions
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Saved Prompts & Monitoring -->
+                        <div>
+                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem;">📌 Saved Prompts & Monitoring</h4>
+                            
+                            <!-- Add New Prompt -->
+                            <div style="background: #f8fafc; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0;">
+                                <div style="font-weight: 500; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem;">Create Monitoring Prompt:</div>
+                                <textarea id="newPromptText" placeholder="E.g., 'What new urgent tasks appeared this week?' or 'Any changes in key relationships?'" 
+                                          style="width: 100%; height: 60px; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; resize: vertical;"></textarea>
+                                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: center;">
+                                    <select id="promptFrequency" style="flex: 1; padding: 0.375rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem;">
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="manual">Manual Only</option>
+                                    </select>
+                                    <button onclick="saveMonitoringPrompt()" style="padding: 0.375rem 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                        💾 Save
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Saved Prompts List -->
+                            <div id="savedPrompts" style="max-height: 300px; overflow-y: auto;">
+                                <div style="text-align: center; color: #94a3b8; padding: 1rem; font-size: 0.875rem;">
+                                    No saved prompts yet.<br>Create monitoring prompts to track changes in your business intelligence.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Business Knowledge Tab -->
-            <div id="business-tab" class="tab-content active">
-                <div class="grid grid-3">
-                    <div class="card">
-                        <h3>📊 Overview</h3>
-                        <div id="businessMetrics">
-                            <div class="loading">Loading business knowledge...</div>
+            <div id="business-knowledge" class="tab-content">
+                <!-- Quick metrics bar -->
+                <div class="grid grid-4" style="margin-bottom: 1.5rem;">
+                    <div class="card" style="padding: 1rem;">
+                        <div class="metric">
+                            <span class="metric-value" id="businessMetricEmails" style="font-size: 1.5rem;">-</span>
+                            <div class="metric-label">Quality Emails</div>
                         </div>
                     </div>
-                    <div class="card">
-                        <h3>🎯 Key Topics</h3>
-                        <div id="keyTopics">
-                            <div class="loading">Loading topics...</div>
+                    <div class="card" style="padding: 1rem;">
+                        <div class="metric">
+                            <span class="metric-value" id="businessMetricProjects" style="font-size: 1.5rem;">-</span>
+                            <div class="metric-label">Projects</div>
                         </div>
                     </div>
-                    <div class="card">
-                        <h3>💡 Opportunities</h3>
-                        <div id="opportunities">
-                            <div class="loading">Loading opportunities...</div>
+                    <div class="card" style="padding: 1rem;">
+                        <div class="metric">
+                            <span class="metric-value" id="businessMetricPeople" style="font-size: 1.5rem;">-</span>
+                            <div class="metric-label">Contacts</div>
+                        </div>
+                    </div>
+                    <div class="card" style="padding: 1rem;">
+                        <div class="metric">
+                            <span class="metric-value" id="businessMetricTopics" style="font-size: 1.5rem;">-</span>
+                            <div class="metric-label">Topics</div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="grid grid-2" style="margin-top: 1.5rem;">
+                <!-- Main content sections -->
+                <div class="grid grid-1">
                     <div class="card">
-                        <h3>📈 Key Decisions</h3>
-                        <div id="keyDecisions">
-                            <div class="loading">Loading decisions...</div>
+                        <h3>🎯 Topic Management & Trends</h3>
+                        <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                            <strong>🆕 Enhanced Topic Management:</strong> Create topics manually • Add descriptions for Claude • Mark as official • Merge similar topics • Consistent categorization
+                        </div>
+                        
+                        <!-- Knowledge Overview for Chat Feature -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                            <h4 style="margin: 0 0 0.75rem 0; color: #1e293b; font-size: 1rem;">💬 Knowledge Base for AI Chat</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.875rem;">
+                                <div>
+                                    <strong style="color: #475569;">Rich Contacts:</strong>
+                                    <div id="chatKnowledgeContacts" style="color: #64748b;">Loading...</div>
+                                </div>
+                                <div>
+                                    <strong style="color: #475569;">Business Intelligence:</strong>
+                                    <div id="chatKnowledgeBusiness" style="color: #64748b;">Loading...</div>
+                                </div>
+                                <div>
+                                    <strong style="color: #475569;">Projects & Topics:</strong>
+                                    <div id="chatKnowledgeProjects" style="color: #64748b;">Loading...</div>
+                                </div>
+                                <div>
+                                    <strong style="color: #475569;">Searchable Data:</strong>
+                                    <div id="chatKnowledgeSearch" style="color: #64748b;">Loading...</div>
+                                </div>
+                            </div>
+                            <button onclick="showDetailedKnowledge()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">View Detailed Knowledge Base</button>
+                        </div>
+                        
+                        <!-- Manual Topic Creation Form -->
+                        <div style="background: #f8fafc; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem;">➕ Create New Topic</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 2fr auto; gap: 1rem; align-items: end;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Topic Name *</label>
+                                    <input type="text" id="topicName" class="form-control" placeholder="e.g. Apple Inc, Series A Funding" style="width: 100%;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Description (helps Claude understand)</label>
+                                    <input type="text" id="topicDescription" class="form-control" placeholder="Detailed description for precise AI categorization" style="width: 100%;">
+                                </div>
+                                <button onclick="createTopic()" class="btn" style="white-space: nowrap;">
+                                    ➕ Create Topic
+                                </button>
+                            </div>
+                            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #64748b;">
+                                💡 <strong>Tip:</strong> Focus on company names, project names, strategic goals, or personal goals. Claude will use your description to categorize content more accurately.
+                            </div>
+                        </div>
+                        
+                        <!-- Topic Management Sections -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                            <!-- Official Topics -->
+                            <div>
+                                <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    ⭐ Official Topics
+                                    <button onclick="resyncTopics()" class="btn btn-small" style="margin-left: auto;">
+                                        🔄 Resync All Content
+                                    </button>
+                                </h4>
+                                <div id="officialTopics" style="min-height: 200px;">
+                                    <div class="loading">Loading official topics...</div>
+                                </div>
+                            </div>
+                            
+                            <!-- AI-Discovered Topics -->
+                            <div>
+                                <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem;">🤖 AI-Discovered Topics</h4>
+                                <div id="discoveredTopics" style="min-height: 200px;">
+                                    <div class="loading">Loading discovered topics...</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Legacy Topics Display (from email analysis) -->
+                        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1rem 0; color: #64748b; font-size: 1rem;">📊 Recent Email Topics</h4>
+                            <div id="businessTopics" class="loading">Loading business topics...</div>
                         </div>
                     </div>
+                </div>
+                
+                <div class="grid grid-3">
                     <div class="card">
-                        <h3>⚠️ Challenges</h3>
-                        <div id="challenges">
-                            <div class="loading">Loading challenges...</div>
-                        </div>
+                        <h3>💡 Business Opportunities</h3>
+                        <div id="businessOpportunities" class="loading">Loading opportunities...</div>
+                    </div>
+                    <div class="card">
+                        <h3>⚡ Key Decisions Made</h3>
+                        <div id="businessDecisions" class="loading">Loading decisions...</div>
+                    </div>
+                    <div class="card">
+                        <h3>🚨 Challenges & Issues</h3>
+                        <div id="businessChallenges" class="loading">Loading challenges...</div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Email Insights Tab -->
-            <div id="insights-tab" class="tab-content">
-                <div id="emailInsights">
-                    <div class="loading">Loading email insights...</div>
+                
+                <!-- Single Business Intelligence Table -->
+                <div class="card">
+                    <h3>🧠 Business Intelligence Overview</h3>
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                        <strong>📊 Comprehensive View:</strong> All business insights in one table • Filter by type • Sort and search • Preparation for long lists
+                    </div>
+                    
+                    <!-- Filter Controls -->
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500;">Filter:</label>
+                            <select id="intelligenceFilter" onchange="filterBusinessIntelligence()" style="padding: 0.375rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem;">
+                                <option value="all">All Types</option>
+                                <option value="opportunities">💡 Opportunities</option>
+                                <option value="decisions">⚡ Decisions</option>
+                                <option value="challenges">🚨 Challenges</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500;">Search:</label>
+                            <input type="text" id="intelligenceSearch" onkeyup="filterBusinessIntelligence()" placeholder="Search content..." 
+                                   style="padding: 0.375rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem; width: 200px;">
+                        </div>
+                    </div>
+                    
+                    <!-- Business Intelligence Table -->
+                    <div id="businessIntelligenceTable" class="loading">Loading business intelligence...</div>
                 </div>
             </div>
             
-            <!-- Tasks Tab -->
-            <div id="tasks-tab" class="tab-content">
-                <div id="tasksContainer">
-                    <div class="loading">Loading tasks...</div>
+            <!-- Enhanced Tasks Tab -->
+            <div id="tasks" class="tab-content">
+                <div class="card">
+                    <h3>✅ Actionable Tasks</h3>
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                        <strong>🎯 Focus:</strong> Only showing genuine actionable tasks • Quality over quantity • Real business value<br>
+                        <strong>📋 Organized by Topics:</strong> Tasks grouped by business entities (companies, projects, goals) for better organization
+                    </div>
+                    <div id="enhancedTasks" class="loading">Loading actionable tasks...</div>
                 </div>
             </div>
             
-            <!-- People Tab -->
-            <div id="people-tab" class="tab-content">
-                <div id="peopleContainer">
-                    <div class="loading">Loading people insights...</div>
+            <!-- People Network Tab -->
+            <div id="people" class="tab-content">
+                <div class="card">
+                    <h3>👥 Business Contacts</h3>
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                        <strong>🎯 Focus:</strong> Real business contacts only • No newsletters or automated senders • Professional relationships
+                    </div>
+                    <div id="peopleNetwork" class="loading">Loading business contacts...</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let processing = false;
+        // Global variables
+        let currentUser = "{{ user_email }}";
         
-        // Tab switching
+        // Tab switching functionality
         function switchTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
             
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(`${tabName}-tab`).classList.add('active');
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
             
-            // Load data for the active tab
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Load data for the selected tab
             loadTabData(tabName);
         }
         
-        async function loadTabData(tabName) {
-            switch(tabName) {
-                case 'business':
-                    await loadBusinessKnowledge();
-                    break;
-                case 'insights':
-                    await loadEmailInsights();
-                    break;
-                case 'tasks':
-                    await loadTasks();
-                    break;
-                case 'people':
-                    await loadPeople();
-                    break;
-            }
-        }
-        
+        // Enhanced email processing
         async function processEmails() {
-            if (processing) return;
-            
+            const processBtn = document.getElementById('processBtn');
+            const statusText = document.getElementById('statusText');
+            const resultsDiv = document.getElementById('processingResults');
             const maxEmails = document.getElementById('maxEmails').value;
             const daysBack = document.getElementById('daysBack').value;
             const forceRefresh = document.getElementById('forceRefresh').checked;
-            const processBtn = document.getElementById('processBtn');
-            const resultsDiv = document.getElementById('processingResults');
             
-            processing = true;
             processBtn.disabled = true;
-            processBtn.textContent = '🔄 Processing...';
-            document.getElementById('statusText').textContent = 'Processing emails...';
+            processBtn.textContent = '🧠 Processing...';
+            statusText.textContent = 'Enhanced AI processing in progress...';
+            resultsDiv.style.display = 'none';
             
             try {
                 const response = await fetch('/api/process-emails', {
@@ -634,352 +1199,1355 @@
                     body: JSON.stringify({
                         max_emails: parseInt(maxEmails),
                         days_back: parseInt(daysBack),
-                        force_refresh: forceRefresh
-                    })
+                        force_refresh: forceRefresh,
+                        enhanced_processing: true
+                    }),
                 });
                 
-                const data = await response.json();
+                const result = await response.json();
                 
-                if (data.success) {
-                    showProcessingResults(data);
-                    // Refresh all tabs
-                    await refreshAllData();
+                if (result.success) {
+                    resultsDiv.innerHTML = `
+                        <div class="success">
+                            <h4>✅ Enhanced Processing Complete!</h4>
+                            <div style="margin-top: 0.5rem; font-size: 0.875rem;">
+                                📧 Emails processed: ${result.processed_emails || 0}<br>
+                                🔍 Quality filtered: ${result.filtered_emails || 0}<br>
+                                🧠 AI insights extracted: ${result.insights_extracted || 0}<br>
+                                👥 People identified: ${result.people_identified || 0}<br>
+                                📊 Projects classified: ${result.projects_identified || 0}<br>
+                                ✅ Tasks created: ${result.tasks_created || 0}
+                            </div>
+                        </div>
+                    `;
+                    statusText.textContent = 'Enhanced processing completed successfully';
+                    refreshAllData();
                 } else {
-                    showError(data.error || 'Processing failed');
+                    resultsDiv.innerHTML = `<div class="error">❌ Processing failed: ${result.error}</div>`;
+                    statusText.textContent = 'Processing failed';
                 }
-                
             } catch (error) {
-                showError('Error: ' + error.message);
-            } finally {
-                processing = false;
-                processBtn.disabled = false;
-                processBtn.textContent = '🔄 Process Emails';
-                document.getElementById('statusText').textContent = 'Ready';
+                resultsDiv.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
+                statusText.textContent = 'Network error occurred';
+            }
+            
+            resultsDiv.style.display = 'block';
+            processBtn.disabled = false;
+            processBtn.textContent = '🧠 Intelligent Processing';
+        }
+        
+        // Load data for specific tab
+        async function loadTabData(tabName) {
+            switch(tabName) {
+                case 'ai-chat':
+                    loadSavedPrompts();
+                    break;
+                case 'business-knowledge':
+                    await loadBusinessKnowledge();
+                    break;
+                case 'tasks':
+                    await loadEnhancedTasks();
+                    break;
+                case 'people':
+                    await loadPeopleNetwork();
+                    break;
             }
         }
         
-        function showProcessingResults(data) {
-            const resultsDiv = document.getElementById('processingResults');
-            resultsDiv.style.display = 'block';
-            resultsDiv.innerHTML = `
-                <div class="success">
-                    <h4>🎉 Processing Complete!</h4>
-                    <div class="grid grid-3" style="margin-top: 1rem;">
-                        <div class="metric">
-                            <span class="metric-value">${data.summary.emails_fetched}</span>
-                            <div class="metric-label">Emails Fetched</div>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-value">${data.summary.emails_analyzed}</span>
-                            <div class="metric-label">Emails Analyzed</div>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-value">${data.summary.tasks_created}</span>
-                            <div class="metric-label">Tasks Created</div>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-value">${data.summary.people_identified}</span>
-                            <div class="metric-label">People Identified</div>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-value">${data.summary.projects_identified}</span>
-                            <div class="metric-label">Projects Identified</div>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-value">${data.summary.insights_extracted}</span>
-                            <div class="metric-label">Insights Extracted</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function showError(message) {
-            const resultsDiv = document.getElementById('processingResults');
-            resultsDiv.style.display = 'block';
-            resultsDiv.innerHTML = `<div class="error">Error: ${message}</div>`;
-        }
-        
+        // Load business knowledge
         async function loadBusinessKnowledge() {
             try {
                 const response = await fetch('/api/business-knowledge');
                 const data = await response.json();
                 
                 if (data.success) {
-                    displayBusinessKnowledge(data.business_knowledge);
-                } else {
-                    document.getElementById('businessMetrics').innerHTML = 
-                        '<div class="empty-state"><h3>No business knowledge available</h3><p>Process some emails to build business intelligence</p></div>';
+                    const knowledge = data.business_knowledge;
+                    
+                    // Update metrics
+                    document.getElementById('businessMetricEmails').textContent = knowledge.total_emails_analyzed || 0;
+                    document.getElementById('businessMetricProjects').textContent = knowledge.active_projects || 0;
+                    document.getElementById('businessMetricPeople').textContent = knowledge.people_network_size || 0;
+                    document.getElementById('businessMetricTopics').textContent = knowledge.key_topics?.length || 0;
+                    
+                    // Load topic management sections
+                    await loadOfficialTopics();
+                    await loadDiscoveredTopics();
+                    
+                    // Enhanced Topics from email analysis (legacy)
+                    if (knowledge.key_topics && knowledge.key_topics.length > 0) {
+                        const topicsHtml = knowledge.key_topics.map((topic, index) => `
+                            <span style="display: inline-block; background: #f1f5f9; color: #374151; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; margin: 0.25rem;">
+                                ${topic}
+                            </span>
+                        `).join('');
+                        document.getElementById('businessTopics').innerHTML = topicsHtml;
+                    } else {
+                        document.getElementById('businessTopics').innerHTML = '<div style="color: #64748b; font-size: 0.875rem;">No topics identified yet from recent email analysis</div>';
+                    }
+                    
+                    // Load Business Intelligence Table
+                    loadBusinessIntelligenceTable(knowledge);
+                    
+                    // Load chat knowledge preview
+                    await loadChatKnowledgePreview();
                 }
             } catch (error) {
-                console.error('Error loading business knowledge:', error);
+                console.error('Failed to load business knowledge:', error);
+                document.getElementById('businessTopics').innerHTML = '<div class="error">Failed to load business knowledge</div>';
             }
         }
         
-        function displayBusinessKnowledge(knowledge) {
-            // Metrics
-            document.getElementById('businessMetrics').innerHTML = `
-                <div class="grid grid-2">
-                    <div class="metric">
-                        <span class="metric-value">${knowledge.total_emails_analyzed}</span>
-                        <div class="metric-label">Emails Analyzed</div>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-value">${knowledge.projects_count}</span>
-                        <div class="metric-label">Projects</div>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-value">${knowledge.people_network_size}</span>
-                        <div class="metric-label">People in Network</div>
-                    </div>
-                    <div class="metric">
-                        <span class="metric-value">${knowledge.active_projects}</span>
-                        <div class="metric-label">Active Projects</div>
-                    </div>
-                </div>
-            `;
-            
-            // Key Topics
-            if (knowledge.key_topics && knowledge.key_topics.length > 0) {
-                document.getElementById('keyTopics').innerHTML = knowledge.key_topics
-                    .map(topic => `<span class="badge badge-info" style="margin: 0.25rem;">${topic}</span>`)
-                    .join('');
-            } else {
-                document.getElementById('keyTopics').innerHTML = '<p class="empty-state">No topics identified yet</p>';
-            }
-            
-            // Opportunities
-            if (knowledge.opportunities && knowledge.opportunities.length > 0) {
-                document.getElementById('opportunities').innerHTML = knowledge.opportunities
-                    .map(opp => `<div class="list-item"><p>💡 ${opp}</p></div>`)
-                    .join('');
-            } else {
-                document.getElementById('opportunities').innerHTML = '<p class="empty-state">No opportunities identified yet</p>';
-            }
-            
-            // Key Decisions
-            if (knowledge.key_decisions && knowledge.key_decisions.length > 0) {
-                document.getElementById('keyDecisions').innerHTML = knowledge.key_decisions
-                    .map(decision => `<div class="list-item"><p>📈 ${decision}</p></div>`)
-                    .join('');
-            } else {
-                document.getElementById('keyDecisions').innerHTML = '<p class="empty-state">No key decisions identified yet</p>';
-            }
-            
-            // Challenges
-            if (knowledge.challenges && knowledge.challenges.length > 0) {
-                document.getElementById('challenges').innerHTML = knowledge.challenges
-                    .map(challenge => `<div class="list-item"><p>⚠️ ${challenge}</p></div>`)
-                    .join('');
-            } else {
-                document.getElementById('challenges').innerHTML = '<p class="empty-state">No challenges identified yet</p>';
-            }
-        }
-        
-        async function loadEmailInsights() {
+        // Load chat knowledge preview
+        async function loadChatKnowledgePreview() {
             try {
-                const response = await fetch('/api/email-insights');
+                const response = await fetch('/api/chat-knowledge');
                 const data = await response.json();
                 
-                if (data.success && data.email_insights.length > 0) {
-                    displayEmailInsights(data.email_insights);
-                } else {
-                    document.getElementById('emailInsights').innerHTML = 
-                        '<div class="empty-state"><h3>No email insights available</h3><p>Process some emails to see AI-generated insights</p></div>';
+                if (data.success) {
+                    const knowledge = data.knowledge_base;
+                    const stats = knowledge.summary_stats;
+                    
+                    // Update preview sections
+                    document.getElementById('chatKnowledgeContacts').innerHTML = `
+                        ${stats.rich_contacts} detailed profiles with expertise, communication styles, and project involvement
+                    `;
+                    
+                    document.getElementById('chatKnowledgeBusiness').innerHTML = `
+                        ${stats.business_decisions} decisions • ${stats.opportunities_identified} opportunities • ${stats.challenges_tracked} challenges
+                    `;
+                    
+                    document.getElementById('chatKnowledgeProjects').innerHTML = `
+                        ${stats.active_projects} active projects • ${stats.total_topics} business topics
+                    `;
+                    
+                    document.getElementById('chatKnowledgeSearch').innerHTML = `
+                        ${stats.total_emails_analyzed} analyzed emails with searchable insights and context
+                    `;
                 }
             } catch (error) {
-                console.error('Error loading email insights:', error);
+                console.error('Failed to load chat knowledge preview:', error);
+                document.getElementById('chatKnowledgeContacts').innerHTML = 'Failed to load';
+                document.getElementById('chatKnowledgeBusiness').innerHTML = 'Failed to load';
+                document.getElementById('chatKnowledgeProjects').innerHTML = 'Failed to load';
+                document.getElementById('chatKnowledgeSearch').innerHTML = 'Failed to load';
             }
         }
         
-        function displayEmailInsights(insights) {
-            const insightsHtml = insights.map(email => {
-                const urgencyColor = email.urgency_score > 0.7 ? 'high' : email.urgency_score > 0.4 ? 'medium' : 'low';
-                const sentimentEmoji = email.sentiment_score > 0.3 ? '😊' : email.sentiment_score < -0.3 ? '😟' : '😐';
-                
-                return `
-                    <div class="list-item priority-${urgencyColor}">
-                        <h4>${email.subject}</h4>
-                        <p><strong>From:</strong> ${email.from_name}</p>
-                        <p><strong>Summary:</strong> ${email.ai_summary}</p>
-                        <p><strong>Category:</strong> ${email.ai_category || 'Not categorized'}</p>
-                        <div class="meta-info">
-                            <span>📅 ${new Date(email.email_date).toLocaleDateString()}</span>
-                            <span>🎯 Urgency: ${Math.round((email.urgency_score || 0) * 100)}%</span>
-                            <span>${sentimentEmoji} Sentiment: ${Math.round((email.sentiment_score || 0) * 100)}</span>
-                            ${email.action_required ? '<span class="badge badge-warning">Action Required</span>' : ''}
-                            ${email.follow_up_required ? '<span class="badge badge-info">Follow-up Needed</span>' : ''}
-                        </div>
-                        ${email.topics && email.topics.length > 0 ? 
-                            `<div style="margin-top: 0.5rem;">
-                                ${email.topics.map(topic => `<span class="badge badge-info" style="margin-right: 0.5rem;">${topic}</span>`).join('')}
-                            </div>` : ''
-                        }
-                    </div>
-                `;
-            }).join('');
+        // Show detailed knowledge modal
+        async function showDetailedKnowledge() {
+            document.getElementById('knowledgeModal').style.display = 'block';
+            document.getElementById('detailedKnowledgeContent').innerHTML = 'Loading comprehensive knowledge base...';
             
-            document.getElementById('emailInsights').innerHTML = `
-                <h3>📧 Email Intelligence (${insights.length} analyzed emails)</h3>
-                ${insightsHtml}
-            `;
+            try {
+                const response = await fetch('/api/chat-knowledge');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const knowledge = data.knowledge_base;
+                    
+                    let html = `
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3 style="margin: 0;">📚 Complete Knowledge Base by Topics</h3>
+                                <button onclick="downloadKnowledgeAsText()" style="padding: 0.5rem 1rem; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                                    📄 Download as Text File
+                                </button>
+                            </div>
+                            <p style="color: #64748b; margin: 0;">Click on any section to view the complete content extracted by Claude from your emails.</p>
+                        </div>
+                    `;
+                    
+                    // Business Intelligence by Topic
+                    if (knowledge.business_intelligence) {
+                        const bi = knowledge.business_intelligence;
+                        
+                        html += `<div style="margin-bottom: 2rem;">`;
+                        
+                        // Recent Decisions
+                        if (bi.recent_decisions && bi.recent_decisions.length > 0) {
+                            html += `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div onclick="toggleSection('decisions')" style="cursor: pointer; background: #f0f9ff; padding: 1rem; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 0.5rem;">
+                                        <h4 style="margin: 0; color: #1e40af; display: flex; align-items: center; gap: 0.5rem;">
+                                            <span id="decisionsToggle">▶️</span> ⚡ Business Decisions (${bi.recent_decisions.length})
+                                        </h4>
+                                        <p style="margin: 0.5rem 0 0 2rem; color: #3730a3; font-size: 0.875rem;">Click to view all decision details with context, stakeholders, and impact analysis</p>
+                                    </div>
+                                    <div id="decisionsContent" style="display: none; background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #3b82f6;">
+                                        ${bi.recent_decisions.map((decision, index) => `
+                                            <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Decision ${index + 1}:</div>
+                                                <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">${decision}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Opportunities
+                        if (bi.top_opportunities && bi.top_opportunities.length > 0) {
+                            html += `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div onclick="toggleSection('opportunities')" style="cursor: pointer; background: #f0fdf4; padding: 1rem; border-radius: 6px; border: 1px solid #bbf7d0; margin-bottom: 0.5rem;">
+                                        <h4 style="margin: 0; color: #059669; display: flex; align-items: center; gap: 0.5rem;">
+                                            <span id="opportunitiesToggle">▶️</span> 💡 Business Opportunities (${bi.top_opportunities.length})
+                                        </h4>
+                                        <p style="margin: 0.5rem 0 0 2rem; color: #047857; font-size: 0.875rem;">Click to view all identified opportunities with potential value and requirements</p>
+                                    </div>
+                                    <div id="opportunitiesContent" style="display: none; background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #10b981;">
+                                        ${bi.top_opportunities.map((opportunity, index) => `
+                                            <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Opportunity ${index + 1}:</div>
+                                                <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">${opportunity}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Challenges
+                        if (bi.current_challenges && bi.current_challenges.length > 0) {
+                            html += `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div onclick="toggleSection('challenges')" style="cursor: pointer; background: #fef2f2; padding: 1rem; border-radius: 6px; border: 1px solid #fecaca; margin-bottom: 0.5rem;">
+                                        <h4 style="margin: 0; color: #dc2626; display: flex; align-items: center; gap: 0.5rem;">
+                                            <span id="challengesToggle">▶️</span> 🚨 Current Challenges (${bi.current_challenges.length})
+                                        </h4>
+                                        <p style="margin: 0.5rem 0 0 2rem; color: #b91c1c; font-size: 0.875rem;">Click to view all challenges with impact analysis and potential solutions</p>
+                                    </div>
+                                    <div id="challengesContent" style="display: none; background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #ef4444;">
+                                        ${bi.current_challenges.map((challenge, index) => `
+                                            <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Challenge ${index + 1}:</div>
+                                                <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">${challenge}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Key Metrics
+                        if (bi.key_metrics && bi.key_metrics.length > 0) {
+                            html += `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div onclick="toggleSection('metrics')" style="cursor: pointer; background: #fef3c7; padding: 1rem; border-radius: 6px; border: 1px solid #fde68a; margin-bottom: 0.5rem;">
+                                        <h4 style="margin: 0; color: #d97706; display: flex; align-items: center; gap: 0.5rem;">
+                                            <span id="metricsToggle">▶️</span> 📊 Key Metrics & Data (${bi.key_metrics.length})
+                                        </h4>
+                                        <p style="margin: 0.5rem 0 0 2rem; color: #92400e; font-size: 0.875rem;">Click to view all captured metrics with context and significance</p>
+                                    </div>
+                                    <div id="metricsContent" style="display: none; background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #f59e0b;">
+                                        ${bi.key_metrics.map((metric, index) => `
+                                            <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Metric ${index + 1}:</div>
+                                                <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">${metric}</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Strategic Contexts
+                        if (bi.strategic_contexts && bi.strategic_contexts.length > 0) {
+                            html += `
+                                <div style="margin-bottom: 1.5rem;">
+                                    <div onclick="toggleSection('strategic')" style="cursor: pointer; background: #fce7f3; padding: 1rem; border-radius: 6px; border: 1px solid #f9a8d4; margin-bottom: 0.5rem;">
+                                        <h4 style="margin: 0; color: #be185d; display: flex; align-items: center; gap: 0.5rem;">
+                                            <span id="strategicToggle">▶️</span> 🎯 Strategic Context (${bi.strategic_contexts.length})
+                                        </h4>
+                                        <p style="margin: 0.5rem 0 0 2rem; color: #9d174d; font-size: 0.875rem;">Click to view strategic insights and broader business context</p>
+                                    </div>
+                                    <div id="strategicContent" style="display: none; background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #ec4899;">
+                                        ${bi.strategic_contexts.map((context, index) => `
+                                            <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Strategic Insight ${index + 1}:</div>
+                                                <div style="font-size: 0.875rem; color: #374151; margin-bottom: 0.5rem;"><strong>Context:</strong> ${context.context}</div>
+                                                <div style="font-size: 0.75rem; color: #64748b;"><strong>From:</strong> ${context.email_subject} (${context.date})</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        html += `</div>`;
+                    }
+                    
+                    // Rich Contacts Section
+                    if (knowledge.rich_contacts && knowledge.rich_contacts.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 2rem;">
+                                <div onclick="toggleSection('contacts')" style="cursor: pointer; background: #f3f4f6; padding: 1rem; border-radius: 6px; border: 1px solid #d1d5db; margin-bottom: 0.5rem;">
+                                    <h4 style="margin: 0; color: #374151; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span id="contactsToggle">▶️</span> 👥 Rich Contact Intelligence (${knowledge.rich_contacts.length})
+                                    </h4>
+                                    <p style="margin: 0.5rem 0 0 2rem; color: #4b5563; font-size: 0.875rem;">Click to view detailed profiles with expertise, communication patterns, and relationship intelligence</p>
+                                </div>
+                                <div id="contactsContent" style="display: none; background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #6b7280;">
+                                    ${knowledge.rich_contacts.map((contact, index) => `
+                                        <div style="margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                                <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">
+                                                    ${contact.name ? contact.name.charAt(0).toUpperCase() : '?'}
+                                                </div>
+                                                <div>
+                                                    <div style="font-weight: 600; color: #1e293b; font-size: 1.1rem;">${contact.name}</div>
+                                                    <div style="color: #64748b; font-size: 0.875rem;">${contact.title || 'Unknown Title'} at ${contact.company || 'Unknown Company'}</div>
+                                                    <div style="color: #3b82f6; font-size: 0.75rem;">${contact.relationship || 'Unknown relationship'}</div>
+                                                </div>
+                                            </div>
+                                            <div style="background: #f8fafc; padding: 1rem; border-radius: 4px; border-left: 3px solid #3b82f6;">
+                                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Complete Intelligence Profile:</div>
+                                                <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">${contact.story}</div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Topic Knowledge
+                    if (knowledge.topic_knowledge && knowledge.topic_knowledge.all_topics && knowledge.topic_knowledge.all_topics.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 2rem;">
+                                <div onclick="toggleSection('topicKnowledge')" style="cursor: pointer; background: #f0f9ff; padding: 1rem; border-radius: 6px; border: 1px solid #c7d2fe; margin-bottom: 0.5rem;">
+                                    <h4 style="margin: 0; color: #3730a3; display: flex; align-items: center; gap: 0.5rem;">
+                                        <span id="topicKnowledgeToggle">▶️</span> 🏷️ Knowledge by Topics (${knowledge.topic_knowledge.all_topics.length})
+                                    </h4>
+                                    <p style="margin: 0.5rem 0 0 2rem; color: #4338ca; font-size: 0.875rem;">Click to view knowledge organized by business topics with email contexts</p>
+                                </div>
+                                <div id="topicKnowledgeContent" style="display: none; background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #6366f1;">
+                                    ${knowledge.topic_knowledge.all_topics.map(topic => {
+                                        const contexts = knowledge.topic_knowledge.topic_contexts[topic] || [];
+                                        return `
+                                            <div style="margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                                <div style="font-weight: 600; color: #1e293b; font-size: 1.1rem; margin-bottom: 1rem; padding: 0.5rem; background: #f3f4f6; border-radius: 4px;">
+                                                    🏷️ ${topic}
+                                                </div>
+                                                ${contexts.length > 0 ? `
+                                                    <div style="margin-top: 1rem;">
+                                                        <div style="font-weight: 500; color: #374151; margin-bottom: 0.5rem;">Related Email Contexts:</div>
+                                                        ${contexts.map((context, idx) => `
+                                                            <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f8fafc; border-radius: 4px; border-left: 2px solid #3b82f6;">
+                                                                <div style="font-weight: 500; color: #1e293b; font-size: 0.875rem; margin-bottom: 0.25rem;">${context.email_subject}</div>
+                                                                <div style="font-size: 0.875rem; color: #374151; margin-bottom: 0.25rem;">${context.summary || 'No summary available'}</div>
+                                                                <div style="font-size: 0.75rem; color: #64748b;">Date: ${context.date}</div>
+                                                            </div>
+                                                        `).join('')}
+                                                    </div>
+                                                ` : `
+                                                    <div style="color: #94a3b8; font-style: italic; font-size: 0.875rem;">No detailed context available yet for this topic.</div>
+                                                `}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `
+                        <div style="margin-top: 2rem; padding: 1rem; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
+                            <div style="font-size: 0.875rem; color: #166534;">
+                                💡 <strong>This comprehensive knowledge base grows with every email processed.</strong> 
+                                All content is extracted and organized by Claude 4 Sonnet for intelligent business insights and relationship management.
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('detailedKnowledgeContent').innerHTML = html;
+                } else {
+                    document.getElementById('detailedKnowledgeContent').innerHTML = `<div class="error">Failed to load knowledge base: ${data.error}</div>`;
+                }
+            } catch (error) {
+                console.error('Failed to load detailed knowledge:', error);
+                document.getElementById('detailedKnowledgeContent').innerHTML = '<div class="error">Failed to load knowledge base</div>';
+            }
         }
         
-        async function loadTasks() {
+        // Toggle section visibility
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId + 'Content');
+            const toggle = document.getElementById(sectionId + 'Toggle');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '🔽';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▶️';
+            }
+        }
+        
+        // Download knowledge as text file
+        async function downloadKnowledgeAsText() {
+            try {
+                const response = await fetch('/api/chat-knowledge');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const knowledge = data.knowledge_base;
+                    let textContent = "AI CHIEF OF STAFF - COMPREHENSIVE KNOWLEDGE BASE\n";
+                    textContent += "=" * 60 + "\n\n";
+                    textContent += `Generated: ${new Date().toLocaleString()}\n`;
+                    textContent += `Total Emails Analyzed: ${knowledge.summary_stats.total_emails_analyzed}\n`;
+                    textContent += `Rich Contacts: ${knowledge.summary_stats.rich_contacts}\n`;
+                    textContent += `Business Decisions: ${knowledge.summary_stats.business_decisions}\n`;
+                    textContent += `Active Projects: ${knowledge.summary_stats.active_projects}\n\n`;
+                    
+                    // Business Intelligence
+                    if (knowledge.business_intelligence) {
+                        const bi = knowledge.business_intelligence;
+                        
+                        if (bi.recent_decisions && bi.recent_decisions.length > 0) {
+                            textContent += "BUSINESS DECISIONS\n" + "-" * 30 + "\n";
+                            bi.recent_decisions.forEach((decision, index) => {
+                                textContent += `${index + 1}. ${decision}\n\n`;
+                            });
+                        }
+                        
+                        if (bi.top_opportunities && bi.top_opportunities.length > 0) {
+                            textContent += "BUSINESS OPPORTUNITIES\n" + "-" * 30 + "\n";
+                            bi.top_opportunities.forEach((opportunity, index) => {
+                                textContent += `${index + 1}. ${opportunity}\n\n`;
+                            });
+                        }
+                        
+                        if (bi.current_challenges && bi.current_challenges.length > 0) {
+                            textContent += "CURRENT CHALLENGES\n" + "-" * 30 + "\n";
+                            bi.current_challenges.forEach((challenge, index) => {
+                                textContent += `${index + 1}. ${challenge}\n\n`;
+                            });
+                        }
+                        
+                        if (bi.key_metrics && bi.key_metrics.length > 0) {
+                            textContent += "KEY METRICS & DATA\n" + "-" * 30 + "\n";
+                            bi.key_metrics.forEach((metric, index) => {
+                                textContent += `${index + 1}. ${metric}\n\n`;
+                            });
+                        }
+                    }
+                    
+                    // Rich Contacts
+                    if (knowledge.rich_contacts && knowledge.rich_contacts.length > 0) {
+                        textContent += "RICH CONTACT INTELLIGENCE\n" + "-" * 30 + "\n";
+                        knowledge.rich_contacts.forEach((contact, index) => {
+                            textContent += `${index + 1}. ${contact.name}\n`;
+                            textContent += `   Title: ${contact.title || 'Unknown'}\n`;
+                            textContent += `   Company: ${contact.company || 'Unknown'}\n`;
+                            textContent += `   Relationship: ${contact.relationship || 'Unknown'}\n`;
+                            textContent += `   Intelligence Profile:\n   ${contact.story.replace(/\n/g, '\n   ')}\n\n`;
+                        });
+                    }
+                    
+                    // Topic Knowledge
+                    if (knowledge.topic_knowledge && knowledge.topic_knowledge.all_topics) {
+                        textContent += "KNOWLEDGE BY TOPICS\n" + "-" * 30 + "\n";
+                        knowledge.topic_knowledge.all_topics.forEach(topic => {
+                            textContent += `TOPIC: ${topic}\n`;
+                            const contexts = knowledge.topic_knowledge.topic_contexts[topic] || [];
+                            if (contexts.length > 0) {
+                                textContent += "Related Email Contexts:\n";
+                                contexts.forEach(context => {
+                                    textContent += `  - ${context.email_subject} (${context.date})\n`;
+                                    if (context.summary) {
+                                        textContent += `    ${context.summary}\n`;
+                                    }
+                                });
+                            }
+                            textContent += "\n";
+                        });
+                    }
+                    
+                    // Create and download file
+                    const blob = new Blob([textContent], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `AI_Chief_of_Staff_Knowledge_Base_${new Date().toISOString().split('T')[0]}.txt`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }
+            } catch (error) {
+                console.error('Failed to download knowledge:', error);
+                alert('Failed to download knowledge base');
+            }
+        }
+        
+        // Close knowledge modal
+        function closeKnowledgeModal() {
+            document.getElementById('knowledgeModal').style.display = 'none';
+        }
+        
+        // Topic Management Functions
+        async function createTopic() {
+            const topicName = document.getElementById('topicName').value.trim();
+            const topicDescription = document.getElementById('topicDescription').value.trim();
+            
+            if (!topicName) {
+                alert('Please enter a topic name');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/topics', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: topicName,
+                        description: topicDescription,
+                        is_official: true,
+                        keywords: topicName.split(' ').filter(word => word.length > 2) // Simple keyword extraction
+                    }),
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Clear form
+                    document.getElementById('topicName').value = '';
+                    document.getElementById('topicDescription').value = '';
+                    
+                    // Show success message
+                    alert(`✅ Topic "${topicName}" created successfully! Claude will now use this for categorization.`);
+                    
+                    // Reload topic sections
+                    await loadOfficialTopics();
+                    await loadDiscoveredTopics();
+                } else {
+                    alert('Failed to create topic: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Failed to create topic:', error);
+                alert('Network error: ' + error.message);
+            }
+        }
+        
+        async function loadOfficialTopics() {
+            try {
+                const response = await fetch('/api/topics');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const officialTopics = data.topics.filter(topic => topic.is_official);
+                    
+                    if (officialTopics.length > 0) {
+                        const html = officialTopics.map(topic => `
+                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.5rem;">
+                                <div style="display: flex; align-items: center; justify-content: between;">
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; color: #166534; margin-bottom: 0.25rem;">⭐ ${topic.name}</div>
+                                        ${topic.description ? `<div style="font-size: 0.875rem; color: #15803d;">${topic.description}</div>` : ''}
+                                        <div style="font-size: 0.75rem; color: #059669; margin-top: 0.25rem;">
+                                            ${topic.email_count || 0} emails • Created ${new Date(topic.created_at).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <button onclick="showTopicActions(${topic.id}, '${topic.name}')" class="btn btn-small">
+                                        ⚙️ Manage
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('');
+                        document.getElementById('officialTopics').innerHTML = html;
+                    } else {
+                        document.getElementById('officialTopics').innerHTML = `
+                            <div style="text-align: center; padding: 2rem; color: #64748b; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                                <h4 style="margin: 0 0 0.5rem 0; color: #64748b;">No official topics yet</h4>
+                                <p style="margin: 0; font-size: 0.875rem;">Create your first topic above to start organizing your content</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    document.getElementById('officialTopics').innerHTML = '<div class="error">Failed to load official topics</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load official topics:', error);
+                document.getElementById('officialTopics').innerHTML = '<div class="error">Failed to load official topics</div>';
+            }
+        }
+        
+        async function loadDiscoveredTopics() {
+            try {
+                const response = await fetch('/api/topics');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const discoveredTopics = data.topics.filter(topic => !topic.is_official);
+                    
+                    if (discoveredTopics.length > 0) {
+                        const html = discoveredTopics.map(topic => `
+                            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.5rem;">
+                                <div style="display: flex; align-items: center; justify-content: between; gap: 0.5rem;">
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 600; color: #d97706; margin-bottom: 0.25rem;">🤖 ${topic.name}</div>
+                                        <div style="font-size: 0.75rem; color: #92400e;">
+                                            ${topic.email_count || 0} emails • Discovered ${new Date(topic.created_at).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 0.25rem;">
+                                        <button onclick="markTopicOfficial(${topic.id}, '${topic.name}')" class="btn btn-small" style="font-size: 0.75rem;">
+                                            ⭐ Make Official
+                                        </button>
+                                        <button onclick="showMergeDialog(${topic.id}, '${topic.name}')" class="btn btn-small" style="font-size: 0.75rem;">
+                                            🔄 Merge
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                        document.getElementById('discoveredTopics').innerHTML = html;
+                    } else {
+                        document.getElementById('discoveredTopics').innerHTML = `
+                            <div style="text-align: center; padding: 2rem; color: #64748b; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                                <h4 style="margin: 0 0 0.5rem 0; color: #64748b;">No AI-discovered topics yet</h4>
+                                <p style="margin: 0; font-size: 0.875rem;">Process emails to let AI discover topics automatically</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    document.getElementById('discoveredTopics').innerHTML = '<div class="error">Failed to load discovered topics</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load discovered topics:', error);
+                document.getElementById('discoveredTopics').innerHTML = '<div class="error">Failed to load discovered topics</div>';
+            }
+        }
+        
+        async function markTopicOfficial(topicId, topicName) {
+            if (!confirm(`Mark "${topicName}" as an official topic?\n\nThis will make it available for consistent categorization by Claude.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/topics/${topicId}/official`, {
+                    method: 'POST',
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ "${topicName}" is now an official topic!`);
+                    await loadOfficialTopics();
+                    await loadDiscoveredTopics();
+                } else {
+                    alert('Failed to mark topic as official: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Failed to mark topic as official:', error);
+                alert('Network error: ' + error.message);
+            }
+        }
+        
+        async function showMergeDialog(sourceTopicId, sourceTopicName) {
+            try {
+                const response = await fetch('/api/topics');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const officialTopics = data.topics.filter(topic => topic.is_official && topic.id !== sourceTopicId);
+                    
+                    if (officialTopics.length === 0) {
+                        alert('No official topics available for merging. Create or mark some topics as official first.');
+                        return;
+                    }
+                    
+                    const topicOptions = officialTopics.map(topic => `${topic.id}: ${topic.name}`).join('\n');
+                    const targetTopicInfo = prompt(`Merge "${sourceTopicName}" into which official topic?\n\nAvailable official topics:\n${topicOptions}\n\nEnter the ID number of the target topic:`);
+                    
+                    if (targetTopicInfo) {
+                        const targetTopicId = parseInt(targetTopicInfo.trim());
+                        const targetTopic = officialTopics.find(t => t.id === targetTopicId);
+                        
+                        if (targetTopic) {
+                            await mergeTopic(sourceTopicId, sourceTopicName, targetTopicId, targetTopic.name);
+                        } else {
+                            alert('Invalid topic ID. Please try again.');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to show merge dialog:', error);
+                alert('Failed to load topics for merging');
+            }
+        }
+        
+        async function mergeTopic(sourceTopicId, sourceTopicName, targetTopicId, targetTopicName) {
+            if (!confirm(`Merge "${sourceTopicName}" into "${targetTopicName}"?\n\nThis will:\n• Move all content from "${sourceTopicName}" to "${targetTopicName}"\n• Delete "${sourceTopicName}"\n• Cannot be undone`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/topics/${sourceTopicId}/merge`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        target_topic_id: targetTopicId
+                    }),
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ Successfully merged "${sourceTopicName}" into "${targetTopicName}"`);
+                    await loadOfficialTopics();
+                    await loadDiscoveredTopics();
+                } else {
+                    alert('Failed to merge topics: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Failed to merge topics:', error);
+                alert('Network error: ' + error.message);
+            }
+        }
+        
+        async function resyncTopics() {
+            if (!confirm('Resync all content with updated topic definitions?\n\nThis will re-categorize all emails and tasks using your current official topics and may take a few minutes.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/topics/resync', {
+                    method: 'POST',
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('🔄 Topic resync initiated! Your content will be re-categorized in the background.');
+                } else {
+                    alert('Failed to start resync: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Failed to resync topics:', error);
+                alert('Network error: ' + error.message);
+            }
+        }
+        
+        function showTopicActions(topicId, topicName) {
+            alert(`Topic Management for "${topicName}"\n\n🚀 Coming Soon:\n• Edit topic description\n• Manage keywords\n• View topic analytics\n• Export topic data\n\nFor now, you can merge or create new topics.`);
+        }
+        
+        // Load enhanced tasks
+        async function loadEnhancedTasks() {
             try {
                 const response = await fetch('/api/tasks');
                 const data = await response.json();
                 
-                if (data.success && data.tasks.length > 0) {
-                    displayTasks(data.tasks);
+                if (data.success && data.tasks && data.tasks.length > 0) {
+                    // Group tasks by topic
+                    const tasksByTopic = {};
+                    
+                    data.tasks.forEach(task => {
+                        // Use the first topic from the topics array, fallback to category or "Other"
+                        let topic = 'Other Tasks';
+                        
+                        if (task.topics && task.topics.length > 0) {
+                            // Use the first topic as the primary grouping key
+                            topic = task.topics[0];
+                        } else if (task.category) {
+                            // Fallback to category if no topics
+                            topic = task.category.charAt(0).toUpperCase() + task.category.slice(1);
+                        }
+                        
+                        if (!tasksByTopic[topic]) {
+                            tasksByTopic[topic] = [];
+                        }
+                        tasksByTopic[topic].push(task);
+                    });
+                    
+                    // Sort topics by importance (topics with more tasks first)
+                    const sortedTopics = Object.keys(tasksByTopic).sort((a, b) => {
+                        if (a === 'Other Tasks') return 1; // Put "Other" at the end
+                        if (b === 'Other Tasks') return -1;
+                        return tasksByTopic[b].length - tasksByTopic[a].length;
+                    });
+                    
+                    // Create grouped display
+                    let groupedHtml = '';
+                    
+                    sortedTopics.forEach(topic => {
+                        const tasks = tasksByTopic[topic];
+                        
+                        groupedHtml += `
+                            <div style="margin-bottom: 2rem;">
+                                <h4 style="font-size: 1rem; font-weight: 600; color: #1e293b; margin-bottom: 1rem; padding: 0.5rem 0; border-bottom: 2px solid #e2e8f0;">
+                                    📋 ${topic} (${tasks.length})
+                                </h4>
+                                
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid #e2e8f0; text-align: left;">
+                                            <th style="padding: 0.5rem; font-weight: 500; color: #64748b; font-size: 0.875rem;">Task</th>
+                                            <th style="padding: 0.5rem; font-weight: 500; color: #64748b; font-size: 0.875rem;">From</th>
+                                            <th style="padding: 0.5rem; font-weight: 500; color: #64748b; font-size: 0.875rem;">Due</th>
+                                            <th style="padding: 0.5rem; font-weight: 500; color: #64748b; font-size: 0.875rem;">Priority</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${tasks.map(task => `
+                                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                <td style="padding: 0.75rem;">
+                                                    <div style="font-weight: 500; color: #1e293b; margin-bottom: 0.25rem;">
+                                                        ${task.description || task.title}
+                                                    </div>
+                                                    ${task.email_context ? `<div style="font-size: 0.875rem; color: #64748b;">${task.email_context}</div>` : ''}
+                                                    ${task.topics && task.topics.length > 1 ? `<div style="font-size: 0.75rem; color: #3b82f6; margin-top: 0.25rem;">Topics: ${task.topics.join(', ')}</div>` : ''}
+                                                    ${task.gmail_link ? `<a href="${task.gmail_link}" target="_blank" style="font-size: 0.75rem; color: #3b82f6; text-decoration: none;">📧 View Email</a>` : ''}
+                                                </td>
+                                                <td style="padding: 0.75rem; font-size: 0.875rem; color: #64748b;">
+                                                    ${task.sender_name || 'Unknown'}
+                                                </td>
+                                                <td style="padding: 0.75rem; font-size: 0.875rem; color: #dc2626;">
+                                                    ${task.due_date ? new Date(task.due_date).toLocaleDateString() : 
+                                                      task.due_date_text ? task.due_date_text : 'No deadline'}
+                                                </td>
+                                                <td style="padding: 0.75rem;">
+                                                    <span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; 
+                                                          background: ${task.priority === 'high' ? '#fef2f2' : task.priority === 'medium' ? '#fef3c7' : '#dcfce7'};
+                                                          color: ${task.priority === 'high' ? '#dc2626' : task.priority === 'medium' ? '#d97706' : '#059669'};">
+                                                        ${task.priority}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    });
+                    
+                    document.getElementById('enhancedTasks').innerHTML = groupedHtml;
                 } else {
-                    document.getElementById('tasksContainer').innerHTML = 
-                        '<div class="empty-state"><h3>No tasks found</h3><p>Process some emails to extract actionable tasks</p></div>';
+                    document.getElementById('enhancedTasks').innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;"><h3>No actionable tasks found</h3><p>Quality filtering found no genuine tasks requiring action</p></div>';
                 }
             } catch (error) {
-                console.error('Error loading tasks:', error);
+                console.error('Failed to load enhanced tasks:', error);
+                document.getElementById('enhancedTasks').innerHTML = '<div style="color: #dc2626; padding: 1rem;">Failed to load tasks</div>';
             }
         }
         
-        function displayTasks(tasks) {
-            // Filter tasks assigned to current user
-            const userTasks = tasks.filter(task => task.assignee && task.assignee.includes('@'));
-            
-            if (userTasks.length === 0) {
-                document.getElementById('tasksContainer').innerHTML = 
-                    '<div class="empty-state"><h3>No tasks assigned to you</h3><p>Tasks extracted from emails will appear here</p></div>';
-                return;
-            }
-            
-            const tasksHtml = userTasks.map(task => {
-                const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No deadline';
-                const createdDate = new Date(task.created_at).toLocaleDateString();
-                
-                return `
-                    <div class="list-item priority-${task.priority}">
-                        <h4>${task.description}</h4>
-                        <p><strong>Assigned to:</strong> ${task.assignee}</p>
-                        ${task.source_text ? `<p><strong>Context:</strong> "${task.source_text}"</p>` : ''}
-                        <div class="meta-info">
-                            <span>📅 Due: ${dueDate}</span>
-                            <span>🏷️ ${task.category}</span>
-                            <span>⚡ ${task.priority.toUpperCase()}</span>
-                            <span>✨ Created: ${createdDate}</span>
-                            <span>📧 Email ID: ${task.email_id}</span>
-                            ${task.confidence ? `<span>🎯 ${Math.round(task.confidence * 100)}% confidence</span>` : ''}
-                        </div>
-                        <div style="margin-top: 0.5rem;">
-                            <span class="badge ${task.status === 'completed' ? 'badge-success' : task.status === 'pending' ? 'badge-warning' : 'badge-info'}">
-                                ${task.status.toUpperCase()}
-                            </span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            document.getElementById('tasksContainer').innerHTML = `
-                <h3>✅ Your Tasks (${userTasks.length} assigned to you)</h3>
-                ${tasksHtml}
-            `;
-        }
-        
-        async function loadPeople() {
+        // Load people network
+        async function loadPeopleNetwork() {
             try {
                 const response = await fetch('/api/people');
                 const data = await response.json();
                 
-                if (data.success && data.people.length > 0) {
-                    displayPeople(data.people);
+                if (data.success && data.people && data.people.length > 0) {
+                    // Enhanced table format with rich contact stories
+                    const peopleHtml = `
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                    <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Contact</th>
+                                    <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Rich Intelligence & Story</th>
+                                    <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Emails</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.people.map(person => `
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td style="padding: 1rem; width: 250px;">
+                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.875rem;">
+                                                    ${person.name ? person.name.charAt(0).toUpperCase() : '?'}
+                                                </div>
+                                                <div>
+                                                    <div style="font-weight: 600; color: #1e293b; font-size: 1rem;">${person.name || 'Unknown'}</div>
+                                                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.25rem;">${person.email_address || ''}</div>
+                                                    <div style="font-size: 0.875rem; color: #374151;">
+                                                        ${person.title || 'Unknown Role'}
+                                                        ${person.company ? `<br><strong>${person.company}</strong>` : ''}
+                                                    </div>
+                                                    <div style="font-size: 0.75rem; color: #3b82f6; margin-top: 0.25rem;">
+                                                        ${person.relationship_type || 'Unknown relationship'}
+                                                        ${person.importance_level ? ` • ${(person.importance_level * 100).toFixed(0)}% importance` : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="padding: 1rem;">
+                                            ${person.notes && person.notes.length > 10 ? `
+                                                <div style="background: #f8fafc; border-radius: 6px; padding: 0.75rem; border-left: 3px solid #3b82f6;">
+                                                    <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">
+                                                        ${person.notes.length > 300 ? person.notes.substring(0, 300) + '...' : person.notes}
+                                                    </div>
+                                                    ${person.notes.length > 300 ? `
+                                                        <button onclick="showFullContactStory('${person.name}', \`${person.notes.replace(/`/g, '\\`')}\`)" 
+                                                                style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                                            View Full Story
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
+                                            ` : `
+                                                <div style="color: #94a3b8; font-style: italic; font-size: 0.875rem;">
+                                                    No rich intelligence available yet. Process more emails to build detailed contact profiles.
+                                                </div>
+                                            `}
+                                            
+                                            ${person.communication_style ? `
+                                                <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;">
+                                                    <strong>Communication:</strong> ${person.communication_style}
+                                                </div>
+                                            ` : ''}
+                                            
+                                            ${person.skills && person.skills.length > 0 ? `
+                                                <div style="margin-top: 0.5rem; font-size: 0.75rem;">
+                                                    <strong style="color: #64748b;">Skills:</strong> 
+                                                    ${Array.isArray(person.skills) ? person.skills.join(', ') : person.skills}
+                                                </div>
+                                            ` : ''}
+                                        </td>
+                                        <td style="padding: 1rem; text-align: center; width: 120px;">
+                                            <div style="font-weight: 600; font-size: 1.1rem; color: #1e293b;">${person.total_emails || 0}</div>
+                                            ${person.last_interaction ? `<div style="font-size: 0.75rem; color: #64748b; margin: 0.25rem 0;">Last: ${new Date(person.last_interaction).toLocaleDateString()}</div>` : ''}
+                                            ${person.email_address ? `<a href="https://mail.google.com/mail/u/0/#search/from:${person.email_address}" target="_blank" style="font-size: 0.75rem; color: #3b82f6; text-decoration: none; padding: 0.25rem 0.5rem; background: #dbeafe; border-radius: 4px; display: inline-block; margin-top: 0.25rem;">📧 Gmail History</a>` : ''}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    
+                    document.getElementById('peopleNetwork').innerHTML = peopleHtml;
                 } else {
-                    document.getElementById('peopleContainer').innerHTML = 
-                        '<div class="empty-state"><h3>No people insights available</h3><p>Process some emails to build your professional network insights</p></div>';
+                    document.getElementById('peopleNetwork').innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;"><h3>No business contacts found</h3><p>Quality filtering found no genuine business contacts. Process more emails to build your professional network.</p></div>';
                 }
             } catch (error) {
-                console.error('Error loading people:', error);
+                console.error('Failed to load people network:', error);
+                document.getElementById('peopleNetwork').innerHTML = '<div style="color: #dc2626; padding: 1rem;">Failed to load contacts</div>';
             }
         }
         
-        function displayPeople(people) {
-            const peopleHtml = people.map(person => {
-                const importance = person.importance_level || 0.5;
-                const importanceClass = importance > 0.7 ? 'high' : importance > 0.4 ? 'medium' : 'low';
-                
-                return `
-                    <div class="list-item priority-${importanceClass}">
-                        <h4>${person.name}</h4>
-                        ${person.email_address ? `<p><strong>Email:</strong> ${person.email_address}</p>` : ''}
-                        ${person.title ? `<p><strong>Title:</strong> ${person.title}</p>` : ''}
-                        ${person.company ? `<p><strong>Company:</strong> ${person.company}</p>` : ''}
-                        ${person.relationship_type ? `<p><strong>Relationship:</strong> ${person.relationship_type}</p>` : ''}
-                        ${person.communication_style ? `<p><strong>Communication Style:</strong> ${person.communication_style}</p>` : ''}
-                        ${person.notes ? `<p><strong>Notes:</strong> ${person.notes}</p>` : ''}
-                        <div class="meta-info">
-                            <span>📧 ${person.total_emails} emails</span>
-                            <span>⭐ Importance: ${Math.round(importance * 100)}%</span>
-                            ${person.last_interaction ? `<span>🕒 Last: ${new Date(person.last_interaction).toLocaleDateString()}</span>` : ''}
-                            ${person.communication_frequency ? `<span>📊 Frequency: ${person.communication_frequency}</span>` : ''}
-                        </div>
-                        ${person.skills && person.skills.length > 0 ? 
-                            `<div style="margin-top: 0.5rem;">
-                                <strong>Skills:</strong> ${person.skills.map(skill => `<span class="badge badge-info" style="margin-left: 0.25rem;">${skill}</span>`).join('')}
-                            </div>` : ''
-                        }
-                    </div>
-                `;
-            }).join('');
+        // Show full contact story in modal
+        function showFullContactStory(contactName, story) {
+            const modal = document.getElementById('knowledgeModal');
+            const content = document.getElementById('detailedKnowledgeContent');
             
-            document.getElementById('peopleContainer').innerHTML = `
-                <h3>👥 People Network (${people.length} contacts)</h3>
-                ${peopleHtml}
+            content.innerHTML = `
+                <h3>👤 Complete Profile: ${contactName}</h3>
+                <div style="background: #f8fafc; border-radius: 8px; padding: 1.5rem; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+                    <div style="font-size: 1rem; color: #374151; white-space: pre-line; line-height: 1.6;">
+                        ${story}
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 1rem; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
+                    <div style="font-size: 0.875rem; color: #166534;">
+                        💡 <strong>This intelligence was extracted by Claude from email communications.</strong> 
+                        The more emails processed, the richer these profiles become for better relationship management.
+                    </div>
+                </div>
             `;
+            
+            modal.style.display = 'block';
         }
         
+        // Refresh all data
         async function refreshAllData() {
-            const activeTab = document.querySelector('.tab-button.active').textContent.toLowerCase();
-            if (activeTab.includes('business')) await loadBusinessKnowledge();
-            if (activeTab.includes('email')) await loadEmailInsights();
-            if (activeTab.includes('tasks')) await loadTasks();
-            if (activeTab.includes('people')) await loadPeople();
+            document.getElementById('statusText').textContent = 'Refreshing data...';
+            
+            // Get current active tab
+            const activeTab = document.querySelector('.tab-content.active').id;
+            
+            // Reload data for active tab
+            await loadTabData(activeTab);
+            
+            document.getElementById('statusText').textContent = 'Data refreshed successfully';
         }
         
+        // Flush database
         async function flushDatabase() {
-            if (!confirm('⚠️ This will delete ALL your data (emails, tasks, people, projects). Are you sure?')) {
+            if (!confirm('⚠️ This will delete all processed emails, tasks, and insights. Are you sure?')) {
                 return;
             }
             
             const flushBtn = document.getElementById('flushBtn');
+            const statusText = document.getElementById('statusText');
+            
             flushBtn.disabled = true;
             flushBtn.textContent = '🗑️ Flushing...';
+            statusText.textContent = 'Flushing database...';
             
             try {
                 const response = await fetch('/api/flush-database', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
                 });
                 
-                const data = await response.json();
+                const result = await response.json();
                 
-                if (data.success) {
-                    alert('✅ Database flushed successfully! You can start fresh.');
-                    location.reload(); // Refresh the page
+                if (result.success) {
+                    statusText.textContent = 'Database flushed successfully';
+                    // Clear all tab content
+                    document.getElementById('businessMetricEmails').textContent = '0';
+                    document.getElementById('businessMetricProjects').textContent = '0';
+                    document.getElementById('businessMetricPeople').textContent = '0';
+                    document.getElementById('businessMetricTopics').textContent = '0';
+                    
+                    // Reload current tab
+                    const activeTab = document.querySelector('.tab-content.active').id;
+                    await loadTabData(activeTab);
                 } else {
-                    alert('❌ Error flushing database: ' + data.error);
+                    statusText.textContent = 'Failed to flush database';
+                    alert('Failed to flush database: ' + result.error);
                 }
-                
             } catch (error) {
-                alert('❌ Error: ' + error.message);
-            } finally {
-                flushBtn.disabled = false;
-                flushBtn.textContent = '🗑️ Flush Database';
+                statusText.textContent = 'Network error occurred';
+                alert('Network error: ' + error.message);
+            }
+            
+            flushBtn.disabled = false;
+            flushBtn.textContent = '🗑️ Flush Database';
+        }
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial data for ai-chat tab (now the default)
+            loadSavedPrompts();
+        });
+        
+        // Load Business Intelligence Table
+        function loadBusinessIntelligenceTable(knowledge) {
+            const allInsights = [];
+            
+            // Combine all types of insights
+            if (knowledge.opportunities) {
+                knowledge.opportunities.forEach((item, index) => {
+                    allInsights.push({
+                        type: 'opportunities',
+                        icon: '💡',
+                        content: item,
+                        source: 'Email Analysis',
+                        index: index
+                    });
+                });
+            }
+            
+            if (knowledge.key_decisions) {
+                knowledge.key_decisions.forEach((item, index) => {
+                    allInsights.push({
+                        type: 'decisions',
+                        icon: '⚡',
+                        content: item,
+                        source: 'Email Analysis',
+                        index: index
+                    });
+                });
+            }
+            
+            if (knowledge.challenges) {
+                knowledge.challenges.forEach((item, index) => {
+                    allInsights.push({
+                        type: 'challenges',
+                        icon: '🚨',
+                        content: item,
+                        source: 'Email Analysis',
+                        index: index
+                    });
+                });
+            }
+            
+            if (allInsights.length > 0) {
+                const tableHtml = `
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e2e8f0; text-align: left;">
+                                <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Type</th>
+                                <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Business Intelligence</th>
+                                <th style="padding: 0.75rem; font-weight: 600; color: #374151;">Source</th>
+                            </tr>
+                        </thead>
+                        <tbody id="businessIntelligenceTableBody">
+                            ${allInsights.map(insight => `
+                                <tr style="border-bottom: 1px solid #e2e8f0;" data-type="${insight.type}">
+                                    <td style="padding: 1rem; width: 120px;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <span style="font-size: 1.2rem;">${insight.icon}</span>
+                                            <span style="font-size: 0.875rem; font-weight: 500; color: #374151; text-transform: capitalize;">
+                                                ${insight.type.replace('_', ' ')}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td style="padding: 1rem;">
+                                        <div style="font-size: 0.875rem; color: #374151; line-height: 1.5;">
+                                            ${insight.content.length > 200 ? insight.content.substring(0, 200) + '...' : insight.content}
+                                        </div>
+                                        ${insight.content.length > 200 ? `
+                                            <button onclick="showFullInsight('${insight.type}', ${insight.index}, \`${insight.content.replace(/`/g, '\\`')}\`)" 
+                                                    style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                                View Full Content
+                                            </button>
+                                        ` : ''}
+                                    </td>
+                                    <td style="padding: 1rem; text-align: center; width: 150px;">
+                                        <div style="font-size: 0.875rem; color: #64748b;">${insight.source}</div>
+                                        <a href="#" onclick="showInsightSource('${insight.type}', ${insight.index})" 
+                                           style="font-size: 0.75rem; color: #3b82f6; text-decoration: none; padding: 0.25rem 0.5rem; background: #dbeafe; border-radius: 4px; display: inline-block; margin-top: 0.25rem;">
+                                            📧 View Source
+                                        </a>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                document.getElementById('businessIntelligenceTable').innerHTML = tableHtml;
+            } else {
+                document.getElementById('businessIntelligenceTable').innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;"><h3>No business intelligence found</h3><p>Process more emails to build your business intelligence base.</p></div>';
             }
         }
         
-        // Auto-load data on page load
-        window.addEventListener('load', function() {
-            loadBusinessKnowledge(); // Load default tab
-        });
+        // Filter Business Intelligence Table
+        function filterBusinessIntelligence() {
+            const filterValue = document.getElementById('intelligenceFilter').value;
+            const searchValue = document.getElementById('intelligenceSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#businessIntelligenceTableBody tr');
+            
+            rows.forEach(row => {
+                const type = row.getAttribute('data-type');
+                const content = row.textContent.toLowerCase();
+                
+                const typeMatch = filterValue === 'all' || type === filterValue;
+                const searchMatch = content.includes(searchValue);
+                
+                if (typeMatch && searchMatch) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // Show full insight content
+        function showFullInsight(type, index, content) {
+            const modal = document.getElementById('knowledgeModal');
+            const modalContent = document.getElementById('detailedKnowledgeContent');
+            
+            const typeNames = {
+                'opportunities': '💡 Business Opportunity',
+                'decisions': '⚡ Key Decision',
+                'challenges': '🚨 Challenge & Issue'
+            };
+            
+            modalContent.innerHTML = `
+                <h3>${typeNames[type]} - Full Content</h3>
+                <div style="background: #f8fafc; border-radius: 8px; padding: 1.5rem; border-left: 4px solid #3b82f6; margin-top: 1rem;">
+                    <div style="font-size: 1rem; color: #374151; white-space: pre-line; line-height: 1.6;">
+                        ${content}
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 1rem; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
+                    <div style="font-size: 0.875rem; color: #166534;">
+                        💡 <strong>This intelligence was extracted by Claude from email communications.</strong> 
+                        Use the AI Chat tab to ask questions about this insight and related business context.
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+        
+        // Show insight source (placeholder)
+        function showInsightSource(type, index) {
+            alert(`This feature will show the original email source for this ${type} insight. Gmail integration coming soon!`);
+        }
+        
+        // AI Chat Functions
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message to chat
+            addChatMessage('user', message);
+            input.value = '';
+            
+            // Add loading message
+            const loadingId = addChatMessage('assistant', '🤖 Analyzing your knowledge base...', true);
+            
+            try {
+                const response = await fetch('/api/chat-with-knowledge', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        include_context: true
+                    }),
+                });
+                
+                const result = await response.json();
+                
+                // Remove loading message
+                document.getElementById(loadingId).remove();
+                
+                if (result.success) {
+                    addChatMessage('assistant', result.response);
+                } else {
+                    addChatMessage('assistant', '❌ Sorry, I encountered an error: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                // Remove loading message
+                document.getElementById(loadingId).remove();
+                addChatMessage('assistant', '❌ Network error: ' + error.message);
+            }
+        }
+        
+        // Add message to chat
+        function addChatMessage(sender, message, isLoading = false) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageId = 'msg_' + Date.now();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.id = messageId;
+            messageDiv.style.cssText = `
+                margin-bottom: 1rem; 
+                display: flex; 
+                gap: 0.75rem;
+                ${sender === 'user' ? 'justify-content: flex-end;' : ''}
+            `;
+            
+            const avatar = sender === 'user' ? '👤' : '🤖';
+            const bgColor = sender === 'user' ? '#3b82f6' : '#f3f4f6';
+            const textColor = sender === 'user' ? 'white' : '#374151';
+            
+            messageDiv.innerHTML = `
+                ${sender === 'assistant' ? `<div style="width: 32px; height: 32px; border-radius: 50%; background: ${bgColor}; display: flex; align-items: center; justify-content: center; font-size: 1rem;">${avatar}</div>` : ''}
+                <div style="max-width: 70%; padding: 0.75rem 1rem; border-radius: 12px; background: ${bgColor}; color: ${textColor}; ${sender === 'user' ? 'border-radius: 12px 4px 12px 12px;' : 'border-radius: 4px 12px 12px 12px;'}">
+                    <div style="font-size: 0.875rem; line-height: 1.5; white-space: pre-line;">${message}</div>
+                </div>
+                ${sender === 'user' ? `<div style="width: 32px; height: 32px; border-radius: 50%; background: ${bgColor}; display: flex; align-items: center; justify-content: center; font-size: 1rem;">${avatar}</div>` : ''}
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            return messageId;
+        }
+        
+        // Ask quick question
+        function askQuickQuestion(question) {
+            document.getElementById('chatInput').value = question;
+            sendChatMessage();
+        }
+        
+        // Save monitoring prompt
+        async function saveMonitoringPrompt() {
+            const promptText = document.getElementById('newPromptText').value.trim();
+            const frequency = document.getElementById('promptFrequency').value;
+            
+            if (!promptText) {
+                alert('Please enter a prompt text');
+                return;
+            }
+            
+            // For now, just store in localStorage until we add backend support
+            const prompts = JSON.parse(localStorage.getItem('monitoringPrompts') || '[]');
+            const newPrompt = {
+                id: Date.now(),
+                prompt: promptText,
+                frequency: frequency,
+                created_at: new Date().toISOString(),
+                last_run: null
+            };
+            
+            prompts.push(newPrompt);
+            localStorage.setItem('monitoringPrompts', JSON.stringify(prompts));
+            
+            // Clear form
+            document.getElementById('newPromptText').value = '';
+            document.getElementById('promptFrequency').value = 'weekly';
+            
+            // Reload saved prompts
+            loadSavedPrompts();
+            
+            alert('✅ Monitoring prompt saved successfully!');
+        }
+        
+        // Load saved prompts
+        function loadSavedPrompts() {
+            const prompts = JSON.parse(localStorage.getItem('monitoringPrompts') || '[]');
+            
+            if (prompts.length > 0) {
+                const promptsHtml = prompts.map(prompt => `
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.5rem;">
+                        <div style="font-size: 0.875rem; color: #374151; margin-bottom: 0.5rem; line-height: 1.4;">
+                            ${prompt.prompt}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 0.75rem; color: #64748b;">
+                                ${prompt.frequency} • ${prompt.last_run ? 'Last: ' + new Date(prompt.last_run).toLocaleDateString() : 'Never run'}
+                            </div>
+                            <div style="display: flex; gap: 0.25rem;">
+                                <button onclick="runPrompt(${prompt.id})" style="padding: 0.25rem 0.5rem; background: #059669; color: white; border: none; border-radius: 3px; font-size: 0.75rem; cursor: pointer;">
+                                    ▶️ Run
+                                </button>
+                                <button onclick="deletePrompt(${prompt.id})" style="padding: 0.25rem 0.5rem; background: #dc2626; color: white; border: none; border-radius: 3px; font-size: 0.75rem; cursor: pointer;">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('savedPrompts').innerHTML = promptsHtml;
+            } else {
+                document.getElementById('savedPrompts').innerHTML = `
+                    <div style="text-align: center; color: #94a3b8; padding: 1rem; font-size: 0.875rem;">
+                        No saved prompts yet.<br>Create monitoring prompts to track changes in your business intelligence.
+                    </div>
+                `;
+            }
+        }
+        
+        // Run monitoring prompt
+        async function runPrompt(promptId) {
+            const prompts = JSON.parse(localStorage.getItem('monitoringPrompts') || '[]');
+            const prompt = prompts.find(p => p.id === promptId);
+            
+            if (prompt) {
+                // Add the prompt to chat and send it
+                document.getElementById('chatInput').value = prompt.prompt;
+                await sendChatMessage();
+                
+                // Update last run time
+                prompt.last_run = new Date().toISOString();
+                localStorage.setItem('monitoringPrompts', JSON.stringify(prompts));
+                loadSavedPrompts();
+            }
+        }
+        
+        // Delete monitoring prompt
+        function deletePrompt(promptId) {
+            if (!confirm('Delete this monitoring prompt?')) return;
+            
+            let prompts = JSON.parse(localStorage.getItem('monitoringPrompts') || '[]');
+            prompts = prompts.filter(p => p.id !== promptId);
+            localStorage.setItem('monitoringPrompts', JSON.stringify(prompts));
+            
+            loadSavedPrompts();
+        }
     </script>
+    
+    <!-- Detailed Knowledge Modal -->
+    <div id="knowledgeModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div style="max-width: 90%; max-height: 90%; margin: 2rem auto; background: white; border-radius: 8px; padding: 2rem; position: relative;">
+            <button onclick="closeKnowledgeModal()" style="position: absolute; top: 1rem; right: 1rem; background: #ef4444; color: white; border: none; border-radius: 4px; padding: 0.5rem 1rem; cursor: pointer;">Close</button>
+            <h2 style="margin-top: 0;">📊 Comprehensive Knowledge Base</h2>
+            <div id="detailedKnowledgeContent">Loading detailed knowledge...</div>
+        </div>
+    </div>
+
 </body>
 </html> 

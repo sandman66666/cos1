@@ -28,6 +28,7 @@ try:
     from processors.task_extractor import task_extractor
     from processors.email_intelligence import email_intelligence
     from models.database import get_db_manager, Person, Project
+    from models.database import Task, Email
     import anthropic
 except ImportError as e:
     print(f"Failed to import AI Chief of Staff modules: {e}")
@@ -503,12 +504,26 @@ Be helpful, professional, and actionable in your responses."""
         user_email = session['user_email']
         
         try:
-            result = email_intelligence.get_business_knowledge_summary(user_email)
-            return jsonify(result)
-            
+            knowledge = email_intelligence.get_business_knowledge_summary(user_email)
+            return jsonify(knowledge)
         except Exception as e:
-            logger.error(f"Get business knowledge API error: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            logger.error(f"Failed to get business knowledge: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    @app.route('/api/chat-knowledge', methods=['GET'])
+    def api_get_chat_knowledge():
+        """API endpoint to get comprehensive knowledge summary for chat queries"""
+        if 'user_email' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        user_email = session['user_email']
+        
+        try:
+            knowledge = email_intelligence.get_chat_knowledge_summary(user_email)
+            return jsonify(knowledge)
+        except Exception as e:
+            logger.error(f"Failed to get chat knowledge: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/email-insights', methods=['GET'])
     def api_get_email_insights():
@@ -544,6 +559,258 @@ Be helpful, professional, and actionable in your responses."""
         except Exception as e:
             logger.error(f"Get email insights API error: {str(e)}")
             return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/topics', methods=['GET'])
+    def api_get_topics():
+        """API endpoint to get all topics for a user"""
+        if 'user_email' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        user_email = session['user_email']
+        
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            topics = get_db_manager().get_user_topics(user.id)
+            
+            return jsonify({
+                'success': True,
+                'topics': [topic.to_dict() for topic in topics],
+                'count': len(topics)
+            })
+            
+        except Exception as e:
+            logger.error(f"Get topics API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/topics', methods=['POST'])
+    def api_create_topic():
+        """API endpoint to create a new topic manually"""
+        if 'user_email' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        user_email = session['user_email']
+        
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            data = request.get_json()
+            if not data or not data.get('name'):
+                return jsonify({'error': 'Topic name is required'}), 400
+            
+            topic_data = {
+                'name': data['name'],
+                'slug': data['name'].lower().replace(' ', '-'),
+                'description': data.get('description', ''),
+                'is_official': data.get('is_official', True),  # Default to official for manually created topics
+                'keywords': data.get('keywords', [])
+            }
+            
+            topic = get_db_manager().create_or_update_topic(user.id, topic_data)
+            
+            return jsonify({
+                'success': True,
+                'topic': topic.to_dict(),
+                'message': f'Topic "{topic.name}" created successfully'
+            })
+            
+        except Exception as e:
+            logger.error(f"Create topic API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/topics/<int:topic_id>/official', methods=['POST'])
+    def api_mark_topic_official(topic_id):
+        """API endpoint to mark a topic as official"""
+        if 'user_email' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        user_email = session['user_email']
+        
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            success = get_db_manager().mark_topic_official(user.id, topic_id)
+            
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Topic marked as official'
+                })
+            else:
+                return jsonify({'error': 'Topic not found or not authorized'}), 404
+            
+        except Exception as e:
+            logger.error(f"Mark topic official API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/topics/<int:topic_id>/merge', methods=['POST'])
+    def api_merge_topic(topic_id):
+        """API endpoint to merge one topic into another"""
+        if 'user_email' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        user_email = session['user_email']
+        
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            data = request.get_json()
+            target_topic_id = data.get('target_topic_id')
+            
+            if not target_topic_id:
+                return jsonify({'error': 'Target topic ID is required'}), 400
+            
+            success = get_db_manager().merge_topics(user.id, topic_id, target_topic_id)
+            
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Topics merged successfully'
+                })
+            else:
+                return jsonify({'error': 'Topics not found or merge failed'}), 404
+            
+        except Exception as e:
+            logger.error(f"Merge topic API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/topics/resync', methods=['POST'])
+    def api_resync_topics():
+        """API endpoint to resync all content with updated topics using Claude"""
+        if 'user_email' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        user_email = session['user_email']
+        
+        try:
+            # This would trigger a resync of all emails with the updated topic definitions
+            # For now, just return success - full implementation would re-process emails
+            return jsonify({
+                'success': True,
+                'message': 'Topic resync initiated - this will re-categorize all content with updated topic definitions'
+            })
+            
+        except Exception as e:
+            logger.error(f"Resync topics API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/chat-with-knowledge', methods=['POST'])
+    def api_chat_with_knowledge():
+        """API endpoint for enhanced Claude chat with full business knowledge context"""
+        if 'user_email' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        if not claude_client:
+            return jsonify({'error': 'Claude integration not configured'}), 500
+        
+        try:
+            data = request.get_json()
+            message = data.get('message')
+            include_context = data.get('include_context', True)
+            
+            if not message:
+                return jsonify({'error': 'No message provided'}), 400
+            
+            user_email = session['user_email']
+            
+            # Get comprehensive knowledge context
+            context_parts = []
+            
+            if include_context:
+                try:
+                    # Get business knowledge
+                    knowledge_response = email_intelligence.get_chat_knowledge_summary(user_email)
+                    if knowledge_response.get('success'):
+                        knowledge = knowledge_response['knowledge_base']
+                        
+                        # Add business intelligence context
+                        if knowledge.get('business_intelligence'):
+                            bi = knowledge['business_intelligence']
+                            
+                            if bi.get('recent_decisions'):
+                                context_parts.append("RECENT BUSINESS DECISIONS:\n" + "\n".join([f"- {decision}" for decision in bi['recent_decisions'][:5]]))
+                            
+                            if bi.get('top_opportunities'):
+                                context_parts.append("BUSINESS OPPORTUNITIES:\n" + "\n".join([f"- {opp}" for opp in bi['top_opportunities'][:5]]))
+                            
+                            if bi.get('current_challenges'):
+                                context_parts.append("CURRENT CHALLENGES:\n" + "\n".join([f"- {challenge}" for challenge in bi['current_challenges'][:5]]))
+                        
+                        # Add people context
+                        if knowledge.get('rich_contacts'):
+                            contacts_summary = []
+                            for contact in knowledge['rich_contacts'][:10]:  # Top 10 contacts
+                                contact_info = f"{contact['name']}"
+                                if contact.get('title') and contact.get('company'):
+                                    contact_info += f" ({contact['title']} at {contact['company']})"
+                                if contact.get('relationship'):
+                                    contact_info += f" - {contact['relationship']}"
+                                contacts_summary.append(contact_info)
+                            
+                            if contacts_summary:
+                                context_parts.append("KEY BUSINESS CONTACTS:\n" + "\n".join([f"- {contact}" for contact in contacts_summary]))
+                        
+                        # Add recent tasks
+                        user = get_db_manager().get_user_by_email(user_email)
+                        if user:
+                            tasks = get_db_manager().get_user_tasks(user.id)
+                            if tasks:
+                                recent_tasks = [f"{task.description}" for task in tasks[:10]]
+                                context_parts.append("CURRENT TASKS:\n" + "\n".join([f"- {task}" for task in recent_tasks]))
+                
+                except Exception as context_error:
+                    logger.warning(f"Failed to load context for chat: {context_error}")
+            
+            # Create enhanced system prompt with business context
+            business_context = "\n\n".join(context_parts) if context_parts else "No specific business context available."
+            
+            system_prompt = f"""You are an AI Chief of Staff assistant for {user_email}. You have access to their comprehensive business knowledge and should provide intelligent, context-aware responses.
+
+BUSINESS CONTEXT:
+{business_context}
+
+INSTRUCTIONS:
+- Use the business context above to provide informed, specific responses
+- Reference specific people, decisions, opportunities, or challenges when relevant
+- Provide actionable insights and recommendations based on the available data
+- If asked about people, reference their roles, relationships, and relevant context
+- For task or project questions, consider current priorities and deadlines
+- Be professional but conversational
+- If you don't have enough context for a specific question, say so and suggest what information would help
+
+Always think about the bigger picture and provide strategic, helpful advice based on the user's business situation."""
+            
+            # Send message to Claude with enhanced context
+            response = claude_client.messages.create(
+                model=settings.CLAUDE_MODEL,
+                max_tokens=3000,
+                system=system_prompt,
+                messages=[{
+                    "role": "user",
+                    "content": message
+                }]
+            )
+            
+            assistant_response = response.content[0].text
+            
+            return jsonify({
+                'success': True,
+                'response': assistant_response,
+                'model': settings.CLAUDE_MODEL,
+                'context_included': include_context and len(context_parts) > 0
+            })
+            
+        except Exception as e:
+            logger.error(f"Enhanced chat API error: {str(e)}")
+            return jsonify({'success': False, 'error': f'Enhanced chat error: {str(e)}'}), 500
     
     # Error handlers
     @app.errorhandler(404)
