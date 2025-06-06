@@ -1,0 +1,56 @@
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Test files and debug files
+test_files/
+debug_*.py
+test_*.py
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flask session files
+flask_session/
+
+# Credentials (should use environment variables)
+credentials.json
+token.json
+
+# Data files
+data/
+*.json
+*.csv
+
+# Temporary files
+tmp/
+temp/ 
