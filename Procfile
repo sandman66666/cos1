@@ -1,0 +1,1 @@
+web: cd chief_of_staff_ai && gunicorn --bind 0.0.0.0:$PORT main:app 

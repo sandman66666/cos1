@@ -1,0 +1,33 @@
+chief_of_staff_ai/
+├── README.md
+├── .env.example
+├── requirements.txt
+├── run.py
+
+├── config/
+│   └── settings.py
+
+├── auth/
+│   └── gmail_auth.py
+
+├── data/
+│   └── email_store.json         # optional local JSON store for raw fetched data
+
+├── ingest/
+│   └── gmail_fetcher.py         # fetch Gmail messages using Gmail API
+
+├── processors/
+│   ├── email_normalizer.py      # convert Gmail format into a clean schema
+│   └── task_extractor.py        # extract tasks, deadlines, follow-ups from email body
+
+├── embeddings/
+│   └── embedder.py              # creates vector embeddings from normalized emails
+
+├── storage/
+│   └── vector_store.py          # manages FAISS or other vector DB
+
+├── interface/
+│   └── prompt_console.py        # CLI interface or basic Streamlit frontend (v0.1)
+
+├── utils/
+│   └── datetime_utils.py        # handles natural language dates, etc.

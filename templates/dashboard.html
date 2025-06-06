@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chief of Staff - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        .user-email {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .status-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .status-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-error {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-danger {
+            background: #dc2626;
+        }
+        
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .tabs {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .tab-button:hover {
+            background: #e2e8f0;
+        }
+        
+        .tab-button.active {
+            background: white;
+            color: #3b82f6;
+            border-bottom: 2px solid #3b82f6;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 2rem;
+            min-height: 600px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+        
+        .grid-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card h3 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .metric {
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3b82f6;
+            display: block;
+        }
+        
+        .metric-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+        
+        .list-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+        }
+        
+        .list-item:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+        
+        .list-item h4 {
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+            font-weight: 600;
+        }
+        
+        .list-item p {
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .meta-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        
+        .meta-info span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .priority-high {
+            border-left: 4px solid #dc2626;
+        }
+        
+        .priority-medium {
+            border-left: 4px solid #d97706;
+        }
+        
+        .priority-low {
+            border-left: 4px solid #059669;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .badge-info {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #64748b;
+        }
+        
+        .empty-state h3 {
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+            color: #94a3b8;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: #64748b;
+        }
+        
+        .processing-form {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+        
+        .results {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+        }
+        
+        .error {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid #fecaca;
+        }
+        
+        .success {
+            background: #f0fdf4;
+            color: #166534;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid #bbf7d0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 AI Chief of Staff</h1>
+        <div class="user-info">
+            <div class="user-email">{{ user_email }}</div>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-info">
+                {% if gmail_status.authenticated and gmail_status.gmail_access %}
+                    <div class="status-indicator status-success">
+                        ✓ Gmail Connected
+                    </div>
+                {% else %}
+                    <div class="status-indicator status-error">
+                        ✗ Gmail Not Connected
+                    </div>
+                {% endif %}
+                <span id="statusText">Ready</span>
+            </div>
+            
+            <div class="control-buttons">
+                <button onclick="processEmails()" class="btn" id="processBtn">
+                    🔄 Process Emails
+                </button>
+                <button onclick="refreshAllData()" class="btn btn-secondary">
+                    📊 Refresh Data
+                </button>
+                <button onclick="flushDatabase()" class="btn btn-danger" id="flushBtn">
+                    🗑️ Flush Database
+                </button>
+            </div>
+        </div>
+        
+        <!-- Email Processing Form -->
+        <div class="processing-form">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="maxEmails">Number of emails to process:</label>
+                    <input type="number" id="maxEmails" class="form-control" value="20" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label for="daysBack">Days back to fetch:</label>
+                    <input type="number" id="daysBack" class="form-control" value="14" min="1" max="90">
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button onclick="processEmails()" class="btn" style="width: 100%;">
+                        🚀 Intelligent Processing
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem; padding: 1rem; background: #f1f5f9; border-radius: 6px;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;">
+                    <input type="checkbox" id="forceRefresh" style="margin: 0;">
+                    <span>🔄 Force refresh existing emails (re-analyze with enhanced AI insights)</span>
+                </label>
+                <p style="font-size: 0.75rem; color: #64748b; margin: 0.5rem 0 0 1.5rem;">
+                    Check this to apply new AI intelligence to emails you've already processed
+                </p>
+            </div>
+            
+            <div id="processingResults" style="display: none;"></div>
+        </div>
+        
+        <!-- Main Tabs -->
+        <div class="tabs">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="switchTab('business')">
+                    🏢 Business Knowledge
+                </button>
+                <button class="tab-button" onclick="switchTab('insights')">
+                    📧 Email Insights
+                </button>
+                <button class="tab-button" onclick="switchTab('tasks')">
+                    ✅ Tasks
+                </button>
+                <button class="tab-button" onclick="switchTab('people')">
+                    👥 People
+                </button>
+            </div>
+            
+            <!-- Business Knowledge Tab -->
+            <div id="business-tab" class="tab-content active">
+                <div class="grid grid-3">
+                    <div class="card">
+                        <h3>📊 Overview</h3>
+                        <div id="businessMetrics">
+                            <div class="loading">Loading business knowledge...</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>🎯 Key Topics</h3>
+                        <div id="keyTopics">
+                            <div class="loading">Loading topics...</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>💡 Opportunities</h3>
+                        <div id="opportunities">
+                            <div class="loading">Loading opportunities...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-2" style="margin-top: 1.5rem;">
+                    <div class="card">
+                        <h3>📈 Key Decisions</h3>
+                        <div id="keyDecisions">
+                            <div class="loading">Loading decisions...</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>⚠️ Challenges</h3>
+                        <div id="challenges">
+                            <div class="loading">Loading challenges...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Email Insights Tab -->
+            <div id="insights-tab" class="tab-content">
+                <div id="emailInsights">
+                    <div class="loading">Loading email insights...</div>
+                </div>
+            </div>
+            
+            <!-- Tasks Tab -->
+            <div id="tasks-tab" class="tab-content">
+                <div id="tasksContainer">
+                    <div class="loading">Loading tasks...</div>
+                </div>
+            </div>
+            
+            <!-- People Tab -->
+            <div id="people-tab" class="tab-content">
+                <div id="peopleContainer">
+                    <div class="loading">Loading people insights...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let processing = false;
+        
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Load data for the active tab
+            loadTabData(tabName);
+        }
+        
+        async function loadTabData(tabName) {
+            switch(tabName) {
+                case 'business':
+                    await loadBusinessKnowledge();
+                    break;
+                case 'insights':
+                    await loadEmailInsights();
+                    break;
+                case 'tasks':
+                    await loadTasks();
+                    break;
+                case 'people':
+                    await loadPeople();
+                    break;
+            }
+        }
+        
+        async function processEmails() {
+            if (processing) return;
+            
+            const maxEmails = document.getElementById('maxEmails').value;
+            const daysBack = document.getElementById('daysBack').value;
+            const forceRefresh = document.getElementById('forceRefresh').checked;
+            const processBtn = document.getElementById('processBtn');
+            const resultsDiv = document.getElementById('processingResults');
+            
+            processing = true;
+            processBtn.disabled = true;
+            processBtn.textContent = '🔄 Processing...';
+            document.getElementById('statusText').textContent = 'Processing emails...';
+            
+            try {
+                const response = await fetch('/api/process-emails', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        max_emails: parseInt(maxEmails),
+                        days_back: parseInt(daysBack),
+                        force_refresh: forceRefresh
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showProcessingResults(data);
+                    // Refresh all tabs
+                    await refreshAllData();
+                } else {
+                    showError(data.error || 'Processing failed');
+                }
+                
+            } catch (error) {
+                showError('Error: ' + error.message);
+            } finally {
+                processing = false;
+                processBtn.disabled = false;
+                processBtn.textContent = '🔄 Process Emails';
+                document.getElementById('statusText').textContent = 'Ready';
+            }
+        }
+        
+        function showProcessingResults(data) {
+            const resultsDiv = document.getElementById('processingResults');
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `
+                <div class="success">
+                    <h4>🎉 Processing Complete!</h4>
+                    <div class="grid grid-3" style="margin-top: 1rem;">
+                        <div class="metric">
+                            <span class="metric-value">${data.summary.emails_fetched}</span>
+                            <div class="metric-label">Emails Fetched</div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">${data.summary.emails_analyzed}</span>
+                            <div class="metric-label">Emails Analyzed</div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">${data.summary.tasks_created}</span>
+                            <div class="metric-label">Tasks Created</div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">${data.summary.people_identified}</span>
+                            <div class="metric-label">People Identified</div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">${data.summary.projects_identified}</span>
+                            <div class="metric-label">Projects Identified</div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-value">${data.summary.insights_extracted}</span>
+                            <div class="metric-label">Insights Extracted</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showError(message) {
+            const resultsDiv = document.getElementById('processingResults');
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = `<div class="error">Error: ${message}</div>`;
+        }
+        
+        async function loadBusinessKnowledge() {
+            try {
+                const response = await fetch('/api/business-knowledge');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayBusinessKnowledge(data.business_knowledge);
+                } else {
+                    document.getElementById('businessMetrics').innerHTML = 
+                        '<div class="empty-state"><h3>No business knowledge available</h3><p>Process some emails to build business intelligence</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading business knowledge:', error);
+            }
+        }
+        
+        function displayBusinessKnowledge(knowledge) {
+            // Metrics
+            document.getElementById('businessMetrics').innerHTML = `
+                <div class="grid grid-2">
+                    <div class="metric">
+                        <span class="metric-value">${knowledge.total_emails_analyzed}</span>
+                        <div class="metric-label">Emails Analyzed</div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">${knowledge.projects_count}</span>
+                        <div class="metric-label">Projects</div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">${knowledge.people_network_size}</span>
+                        <div class="metric-label">People in Network</div>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">${knowledge.active_projects}</span>
+                        <div class="metric-label">Active Projects</div>
+                    </div>
+                </div>
+            `;
+            
+            // Key Topics
+            if (knowledge.key_topics && knowledge.key_topics.length > 0) {
+                document.getElementById('keyTopics').innerHTML = knowledge.key_topics
+                    .map(topic => `<span class="badge badge-info" style="margin: 0.25rem;">${topic}</span>`)
+                    .join('');
+            } else {
+                document.getElementById('keyTopics').innerHTML = '<p class="empty-state">No topics identified yet</p>';
+            }
+            
+            // Opportunities
+            if (knowledge.opportunities && knowledge.opportunities.length > 0) {
+                document.getElementById('opportunities').innerHTML = knowledge.opportunities
+                    .map(opp => `<div class="list-item"><p>💡 ${opp}</p></div>`)
+                    .join('');
+            } else {
+                document.getElementById('opportunities').innerHTML = '<p class="empty-state">No opportunities identified yet</p>';
+            }
+            
+            // Key Decisions
+            if (knowledge.key_decisions && knowledge.key_decisions.length > 0) {
+                document.getElementById('keyDecisions').innerHTML = knowledge.key_decisions
+                    .map(decision => `<div class="list-item"><p>📈 ${decision}</p></div>`)
+                    .join('');
+            } else {
+                document.getElementById('keyDecisions').innerHTML = '<p class="empty-state">No key decisions identified yet</p>';
+            }
+            
+            // Challenges
+            if (knowledge.challenges && knowledge.challenges.length > 0) {
+                document.getElementById('challenges').innerHTML = knowledge.challenges
+                    .map(challenge => `<div class="list-item"><p>⚠️ ${challenge}</p></div>`)
+                    .join('');
+            } else {
+                document.getElementById('challenges').innerHTML = '<p class="empty-state">No challenges identified yet</p>';
+            }
+        }
+        
+        async function loadEmailInsights() {
+            try {
+                const response = await fetch('/api/email-insights');
+                const data = await response.json();
+                
+                if (data.success && data.email_insights.length > 0) {
+                    displayEmailInsights(data.email_insights);
+                } else {
+                    document.getElementById('emailInsights').innerHTML = 
+                        '<div class="empty-state"><h3>No email insights available</h3><p>Process some emails to see AI-generated insights</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading email insights:', error);
+            }
+        }
+        
+        function displayEmailInsights(insights) {
+            const insightsHtml = insights.map(email => {
+                const urgencyColor = email.urgency_score > 0.7 ? 'high' : email.urgency_score > 0.4 ? 'medium' : 'low';
+                const sentimentEmoji = email.sentiment_score > 0.3 ? '😊' : email.sentiment_score < -0.3 ? '😟' : '😐';
+                
+                return `
+                    <div class="list-item priority-${urgencyColor}">
+                        <h4>${email.subject}</h4>
+                        <p><strong>From:</strong> ${email.from_name}</p>
+                        <p><strong>Summary:</strong> ${email.ai_summary}</p>
+                        <p><strong>Category:</strong> ${email.ai_category || 'Not categorized'}</p>
+                        <div class="meta-info">
+                            <span>📅 ${new Date(email.email_date).toLocaleDateString()}</span>
+                            <span>🎯 Urgency: ${Math.round((email.urgency_score || 0) * 100)}%</span>
+                            <span>${sentimentEmoji} Sentiment: ${Math.round((email.sentiment_score || 0) * 100)}</span>
+                            ${email.action_required ? '<span class="badge badge-warning">Action Required</span>' : ''}
+                            ${email.follow_up_required ? '<span class="badge badge-info">Follow-up Needed</span>' : ''}
+                        </div>
+                        ${email.topics && email.topics.length > 0 ? 
+                            `<div style="margin-top: 0.5rem;">
+                                ${email.topics.map(topic => `<span class="badge badge-info" style="margin-right: 0.5rem;">${topic}</span>`).join('')}
+                            </div>` : ''
+                        }
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('emailInsights').innerHTML = `
+                <h3>📧 Email Intelligence (${insights.length} analyzed emails)</h3>
+                ${insightsHtml}
+            `;
+        }
+        
+        async function loadTasks() {
+            try {
+                const response = await fetch('/api/tasks');
+                const data = await response.json();
+                
+                if (data.success && data.tasks.length > 0) {
+                    displayTasks(data.tasks);
+                } else {
+                    document.getElementById('tasksContainer').innerHTML = 
+                        '<div class="empty-state"><h3>No tasks found</h3><p>Process some emails to extract actionable tasks</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+        
+        function displayTasks(tasks) {
+            // Filter tasks assigned to current user
+            const userTasks = tasks.filter(task => task.assignee && task.assignee.includes('@'));
+            
+            if (userTasks.length === 0) {
+                document.getElementById('tasksContainer').innerHTML = 
+                    '<div class="empty-state"><h3>No tasks assigned to you</h3><p>Tasks extracted from emails will appear here</p></div>';
+                return;
+            }
+            
+            const tasksHtml = userTasks.map(task => {
+                const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No deadline';
+                const createdDate = new Date(task.created_at).toLocaleDateString();
+                
+                return `
+                    <div class="list-item priority-${task.priority}">
+                        <h4>${task.description}</h4>
+                        <p><strong>Assigned to:</strong> ${task.assignee}</p>
+                        ${task.source_text ? `<p><strong>Context:</strong> "${task.source_text}"</p>` : ''}
+                        <div class="meta-info">
+                            <span>📅 Due: ${dueDate}</span>
+                            <span>🏷️ ${task.category}</span>
+                            <span>⚡ ${task.priority.toUpperCase()}</span>
+                            <span>✨ Created: ${createdDate}</span>
+                            <span>📧 Email ID: ${task.email_id}</span>
+                            ${task.confidence ? `<span>🎯 ${Math.round(task.confidence * 100)}% confidence</span>` : ''}
+                        </div>
+                        <div style="margin-top: 0.5rem;">
+                            <span class="badge ${task.status === 'completed' ? 'badge-success' : task.status === 'pending' ? 'badge-warning' : 'badge-info'}">
+                                ${task.status.toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('tasksContainer').innerHTML = `
+                <h3>✅ Your Tasks (${userTasks.length} assigned to you)</h3>
+                ${tasksHtml}
+            `;
+        }
+        
+        async function loadPeople() {
+            try {
+                const response = await fetch('/api/people');
+                const data = await response.json();
+                
+                if (data.success && data.people.length > 0) {
+                    displayPeople(data.people);
+                } else {
+                    document.getElementById('peopleContainer').innerHTML = 
+                        '<div class="empty-state"><h3>No people insights available</h3><p>Process some emails to build your professional network insights</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading people:', error);
+            }
+        }
+        
+        function displayPeople(people) {
+            const peopleHtml = people.map(person => {
+                const importance = person.importance_level || 0.5;
+                const importanceClass = importance > 0.7 ? 'high' : importance > 0.4 ? 'medium' : 'low';
+                
+                return `
+                    <div class="list-item priority-${importanceClass}">
+                        <h4>${person.name}</h4>
+                        ${person.email_address ? `<p><strong>Email:</strong> ${person.email_address}</p>` : ''}
+                        ${person.title ? `<p><strong>Title:</strong> ${person.title}</p>` : ''}
+                        ${person.company ? `<p><strong>Company:</strong> ${person.company}</p>` : ''}
+                        ${person.relationship_type ? `<p><strong>Relationship:</strong> ${person.relationship_type}</p>` : ''}
+                        ${person.communication_style ? `<p><strong>Communication Style:</strong> ${person.communication_style}</p>` : ''}
+                        ${person.notes ? `<p><strong>Notes:</strong> ${person.notes}</p>` : ''}
+                        <div class="meta-info">
+                            <span>📧 ${person.total_emails} emails</span>
+                            <span>⭐ Importance: ${Math.round(importance * 100)}%</span>
+                            ${person.last_interaction ? `<span>🕒 Last: ${new Date(person.last_interaction).toLocaleDateString()}</span>` : ''}
+                            ${person.communication_frequency ? `<span>📊 Frequency: ${person.communication_frequency}</span>` : ''}
+                        </div>
+                        ${person.skills && person.skills.length > 0 ? 
+                            `<div style="margin-top: 0.5rem;">
+                                <strong>Skills:</strong> ${person.skills.map(skill => `<span class="badge badge-info" style="margin-left: 0.25rem;">${skill}</span>`).join('')}
+                            </div>` : ''
+                        }
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('peopleContainer').innerHTML = `
+                <h3>👥 People Network (${people.length} contacts)</h3>
+                ${peopleHtml}
+            `;
+        }
+        
+        async function refreshAllData() {
+            const activeTab = document.querySelector('.tab-button.active').textContent.toLowerCase();
+            if (activeTab.includes('business')) await loadBusinessKnowledge();
+            if (activeTab.includes('email')) await loadEmailInsights();
+            if (activeTab.includes('tasks')) await loadTasks();
+            if (activeTab.includes('people')) await loadPeople();
+        }
+        
+        async function flushDatabase() {
+            if (!confirm('⚠️ This will delete ALL your data (emails, tasks, people, projects). Are you sure?')) {
+                return;
+            }
+            
+            const flushBtn = document.getElementById('flushBtn');
+            flushBtn.disabled = true;
+            flushBtn.textContent = '🗑️ Flushing...';
+            
+            try {
+                const response = await fetch('/api/flush-database', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Database flushed successfully! You can start fresh.');
+                    location.reload(); // Refresh the page
+                } else {
+                    alert('❌ Error flushing database: ' + data.error);
+                }
+                
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            } finally {
+                flushBtn.disabled = false;
+                flushBtn.textContent = '🗑️ Flush Database';
+            }
+        }
+        
+        // Auto-load data on page load
+        window.addEventListener('load', function() {
+            loadBusinessKnowledge(); // Load default tab
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,108 @@
+Here’s a clear and actionable project plan — broken into sequential, interdependent tasks — to build the Gmail E2E flow for your AI Chief of Staff.
+
+⸻
+
+📋 Gmail E2E Flow – Project Plan (v0.1)
+
+Each step builds upon the last. You can share this list with your devs or AI agents.
+
+⸻
+
+PHASE 1 – Setup & Gmail Ingestion
+	1.	✅ Set up project structure
+	•	Run the project scaffolding script
+	•	Initialize Git repo, create virtual environment
+	2.	🔑 Configure OAuth credentials
+	•	Create a Google Cloud project
+	•	Enable Gmail API
+	•	Generate OAuth 2.0 credentials
+	•	Store client_id and client_secret in .env
+	3.	🔐 Build Gmail OAuth handler
+	•	In auth/gmail_auth.py
+	•	Authenticate user and save access token locally (e.g., token.json)
+	4.	📥 Fetch Gmail messages
+	•	In ingest/gmail_fetcher.py
+	•	Use Gmail API to pull last 50 messages (from Inbox only)
+	•	Save raw JSON to data/email_store.json
+
+⸻
+
+PHASE 2 – Normalization & Processing
+	5.	🧹 Normalize email content
+	•	In processors/email_normalizer.py
+	•	Convert raw Gmail thread into clean schema:
+
+{
+  "sender": "john@example.com",
+  "subject": "...",
+  "timestamp": "...",
+  "body": "...",
+  "thread_id": "..."
+}
+
+
+	6.	🧠 Extract action items / tasks
+	•	In processors/task_extractor.py
+	•	Use GPT or regex to extract:
+	•	Task description
+	•	Owner (if found)
+	•	Due date (natural language → datetime)
+	•	Source reference
+	•	Return as task objects:
+
+{
+  "task": "Send investor update",
+  "due": "2024-07-02",
+  "source": "email",
+  "ref": "thread_id_xyz"
+}
+
+
+
+⸻
+
+PHASE 3 – Embeddings & Search
+	7.	🔎 Generate embeddings
+	•	In embeddings/embedder.py
+	•	Chunk normalized email text (e.g., 500 tokens)
+	•	Create vector embeddings via OpenAI API
+	8.	💾 Store in vector DB
+	•	In storage/vector_store.py
+	•	Use FAISS or Qdrant to store embeddings + metadata
+
+⸻
+
+PHASE 4 – Interface
+	9.	🖥️ Build simple interface
+	•	In interface/prompt_console.py (Streamlit or CLI)
+	•	Accept natural language input like:
+	•	“Summarize today’s unread emails”
+	•	“What do I need to follow up on from last week?”
+	•	Fetch relevant email chunks using vector search
+	•	Run prompt over them with GPT-4
+
+⸻
+
+PHASE 5 – Testing, Logging, Deployment
+	10.	🧪 Add logging and error handling
+	•	Log all API errors, failed tokens, extraction failures
+	11.	🔍 Unit test each module
+	•	Include example outputs from test emails
+	•	Add tests/ folder with mock Gmail data
+	12.	📦 Final integration test
+	•	Full flow from Gmail auth → task extraction → prompt answering
+	13.	🚀 Deploy locally or to cloud
+	•	Optional: Deploy as local Streamlit or lightweight FastAPI app
+	•	Add run.py as pipeline entry point
+
+⸻
+
+✅ BONUS (Stretch)
+	•	Save task list to a file or DB
+	•	Group tasks by sender or urgency
+	•	Add calendar integration for follow-ups
+	•	Build dashboard with priority view
+
+⸻
+
+Would you like me to turn this into a shared Notion doc or generate GitHub issues with assignees and labels?

@@ -1,0 +1,31 @@
+user claude 4 sonnet as the AI agent even when spec gives other options. 
+
+powering as much with cluade and AI to make this product great and unique. 
+
+make sure to test each step automatically and at every step test the full flow. 
+
+store the test files in a test files folder 
+
+don't use fake data as fallback, always use real data
+
+the goal of this product is to be the best AI assistant for work, try to find an interesting take when possible to make product more unique 
+
+remember i don't code, so no need to explain, just update code and move to next task 
+
+when you create a new file that replaces an old one, delete the old one. if you can't move it to an archive folder you create. 
+
+review the spec.txt file from time to time to make sure we're on the right path 
+
+it's ok to start with a basic html page to test functionality 
+
+before coding from scratch reviewe the code in the folder '/Users/oudiantebi/Session42 Dropbox/Oudi Antebi/Mac (3)/Documents/MyCode/ChiefOfStaff/personal-ai-assistant' to see if there is something there to reuse. 
+
+before letting me run the server to test, make sure you review your code 3 times and ensure it's clean and good. 
+
+never create huge files with tons of code. architect the product like the best coder in the world and keep things in different files to avoid huge code files 
+
+the system is multi tenent from the get go. meaning that we store things per authenticated user that authenticates wtih their gmail. 
+
+the system will run in heroku once we validate that it's working locally. 
+
+if we use files instread of a DB but we need a DB eventually to run on cloud, make sure we implement this already. 
