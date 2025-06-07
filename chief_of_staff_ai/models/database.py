@@ -3,7 +3,7 @@ import json
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, Float, ForeignKey, Index
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, Float, ForeignKey, Index, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, Session
 from sqlalchemy.dialects.postgresql import JSON
@@ -60,6 +60,7 @@ class User(Base):
     tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
     people = relationship("Person", back_populates="user", cascade="all, delete-orphan")
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
+    topics = relationship("Topic", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(email='{self.email}', name='{self.name}')>"
@@ -430,6 +431,71 @@ class Project(Base):
             'ai_version': self.ai_version
         }
 
+class Topic(Base):
+    """Topic model for organizing and categorizing content"""
+    __tablename__ = 'topics'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Topic identification
+    name = Column(String(255), nullable=False)
+    slug = Column(String(255), index=True)  # URL-friendly name
+    description = Column(Text)
+    
+    # Topic properties
+    is_official = Column(Boolean, default=False, index=True)  # Official vs AI-discovered
+    parent_topic_id = Column(Integer, ForeignKey('topics.id'), index=True)  # For hierarchical topics
+    merged_topics = Column(Text)  # JSON string of merged topic names
+    keywords = Column(Text)  # JSON string of keywords for matching (changed from JSONType for compatibility)
+    email_count = Column(Integer, default=0)  # Number of emails with this topic
+    
+    # Usage tracking
+    last_used = Column(DateTime)
+    usage_frequency = Column(Float)
+    confidence_threshold = Column(Float)
+    
+    # AI analysis
+    confidence_score = Column(Float, default=0.5)  # AI confidence in topic classification
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    ai_version = Column(String(50))
+    
+    # Relationships
+    user = relationship("User", back_populates="topics")
+    parent_topic = relationship("Topic", remote_side=[id], backref="child_topics")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_topic_user_official', 'user_id', 'is_official'),
+        Index('idx_topic_user_name', 'user_id', 'name'),
+        Index('idx_topic_slug', 'user_id', 'slug'),
+        Index('idx_topic_parent', 'parent_topic_id'),
+    )
+    
+    def __repr__(self):
+        return f"<Topic(name='{self.name}', is_official={self.is_official})>"
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'slug': self.slug,
+            'description': self.description,
+            'is_official': self.is_official,
+            'keywords': json.loads(self.keywords) if self.keywords else [],
+            'email_count': self.email_count,
+            'confidence_score': self.confidence_score,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'ai_version': self.ai_version,
+            'parent_topic_id': self.parent_topic_id,
+            'last_used': self.last_used.isoformat() if self.last_used else None
+        }
+
 class DatabaseManager:
     """Database manager for handling connections and sessions"""
     
@@ -596,13 +662,13 @@ class DatabaseManager:
                 Email.user_id == user_id
             ).order_by(Email.email_date.desc()).limit(limit).all()
     
-    def get_user_tasks(self, user_id: int, status: str = None) -> List[Task]:
+    def get_user_tasks(self, user_id: int, status: str = None, limit: int = 500) -> List[Task]:
         """Get tasks for a user"""
         with self.get_session() as session:
             query = session.query(Task).filter(Task.user_id == user_id)
             if status:
                 query = query.filter(Task.status == status)
-            return query.order_by(Task.created_at.desc()).all()
+            return query.order_by(Task.created_at.desc()).limit(limit).all()
 
     def create_or_update_person(self, user_id: int, person_data: Dict) -> Person:
         """Create or update a person record"""
@@ -673,7 +739,7 @@ class DatabaseManager:
             session.refresh(project)
             return project
     
-    def get_user_people(self, user_id: int, limit: int = None) -> List[Person]:
+    def get_user_people(self, user_id: int, limit: int = 500) -> List[Person]:
         """Get people for a user"""
         with self.get_session() as session:
             query = session.query(Person).filter(Person.user_id == user_id)
@@ -682,7 +748,7 @@ class DatabaseManager:
                 query = query.limit(limit)
             return query.all()
     
-    def get_user_projects(self, user_id: int, status: str = None, limit: int = None) -> List[Project]:
+    def get_user_projects(self, user_id: int, status: str = None, limit: int = 200) -> List[Project]:
         """Get projects for a user"""
         with self.get_session() as session:
             query = session.query(Project).filter(Project.user_id == user_id)
@@ -702,9 +768,10 @@ class DatabaseManager:
             ).first()
     
     def find_project_by_keywords(self, user_id: int, keywords: List[str]) -> Optional[Project]:
-        """Find project by matching keywords against name, description, or topics"""
+        """Find project by matching keywords against name, description, or topics - FIXED to prevent memory issues"""
         with self.get_session() as session:
-            projects = session.query(Project).filter(Project.user_id == user_id).all()
+            # CRITICAL FIX: Add limit to prevent loading too many projects
+            projects = session.query(Project).filter(Project.user_id == user_id).limit(50).all()
             
             for project in projects:
                 # Check name and description
@@ -720,6 +787,101 @@ class DatabaseManager:
                         return project
             
             return None
+
+    def get_user_topics(self, user_id: int, limit: int = 1000) -> List[Topic]:
+        """Get all topics for a user"""
+        with self.get_session() as session:
+            return session.query(Topic).filter(
+                Topic.user_id == user_id
+            ).order_by(Topic.is_official.desc(), Topic.name.asc()).limit(limit).all()
+    
+    def create_or_update_topic(self, user_id: int, topic_data: Dict) -> Topic:
+        """Create or update a topic record"""
+        with self.get_session() as session:
+            # Try to find existing topic by name
+            topic = session.query(Topic).filter(
+                Topic.user_id == user_id,
+                Topic.name == topic_data.get('name')
+            ).first()
+            
+            # Handle keywords conversion to JSON string
+            topic_data_copy = topic_data.copy()
+            if 'keywords' in topic_data_copy and isinstance(topic_data_copy['keywords'], list):
+                topic_data_copy['keywords'] = json.dumps(topic_data_copy['keywords'])
+            
+            if topic:
+                # Update existing topic
+                for key, value in topic_data_copy.items():
+                    if hasattr(topic, key) and value is not None:
+                        setattr(topic, key, value)
+                topic.updated_at = datetime.utcnow()
+            else:
+                # Create new topic
+                topic = Topic(
+                    user_id=user_id,
+                    **topic_data_copy,
+                    updated_at=datetime.utcnow()
+                )
+                session.add(topic)
+            
+            session.commit()
+            session.refresh(topic)
+            return topic
+    
+    def mark_topic_official(self, user_id: int, topic_id: int) -> bool:
+        """Mark a topic as official"""
+        with self.get_session() as session:
+            topic = session.query(Topic).filter(
+                Topic.user_id == user_id,
+                Topic.id == topic_id
+            ).first()
+            
+            if topic:
+                topic.is_official = True
+                topic.updated_at = datetime.utcnow()
+                session.commit()
+                return True
+            return False
+    
+    def merge_topics(self, user_id: int, source_topic_id: int, target_topic_id: int) -> bool:
+        """Merge one topic into another - FIXED to prevent stack overflow"""
+        with self.get_session() as session:
+            source_topic = session.query(Topic).filter(
+                Topic.user_id == user_id,
+                Topic.id == source_topic_id
+            ).first()
+            
+            target_topic = session.query(Topic).filter(
+                Topic.user_id == user_id,
+                Topic.id == target_topic_id
+            ).first()
+            
+            if source_topic and target_topic:
+                # CRITICAL FIX: Use efficient bulk operations instead of loading all emails
+                # Use raw SQL to efficiently update emails with topic references
+                session.execute(
+                    text("""
+                        UPDATE emails 
+                        SET topics = REPLACE(topics, :source_name, :target_name)
+                        WHERE user_id = :user_id 
+                        AND topics LIKE '%' || :source_name || '%'
+                    """),
+                    {
+                        'source_name': source_topic.name,
+                        'target_name': target_topic.name,
+                        'user_id': user_id
+                    }
+                )
+                
+                # Update target topic email count
+                target_topic.email_count += source_topic.email_count
+                target_topic.updated_at = datetime.utcnow()
+                
+                # Delete source topic
+                session.delete(source_topic)
+                session.commit()
+                return True
+            return False
 
 # Global database manager instance - Initialize lazily
 _db_manager = None

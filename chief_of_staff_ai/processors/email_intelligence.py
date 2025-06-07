@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 import anthropic
+import time
 
 from config.settings import settings
 from models.database import get_db_manager, Email, Person, Project, Task, User
@@ -37,8 +38,11 @@ class EmailIntelligenceProcessor:
             if not user:
                 return {'success': False, 'error': 'User not found'}
             
+            # Enforce a reasonable limit to prevent stack overflow
+            max_limit = min(limit or 20, 50)  # Never process more than 50 emails at once
+            
             # Get emails that need intelligent processing (only unreplied emails)
-            emails = self._get_unreplied_emails(user.id, limit or 50, force_refresh)
+            emails = self._get_emails_needing_processing(user.id, max_limit, force_refresh)
             
             if not emails:
                 return {
@@ -48,14 +52,33 @@ class EmailIntelligenceProcessor:
                     'message': 'No unreplied emails need processing'
                 }
             
+            # Additional safety check - limit to 10 emails per run to prevent issues
+            unreplied_emails = self._filter_unreplied_emails(emails, user.email)
+            emails_to_process = unreplied_emails[:10]
+
+            if not emails_to_process:
+                return {
+                    'success': True,
+                    'user_email': user_email,
+                    'processed_emails': 0,
+                    'message': 'No unreplied emails to process in this batch'
+                }
+            
             processed_count = 0
             insights_extracted = 0
             people_identified = 0
             projects_identified = 0
             tasks_created = 0
             
-            for email in emails:
+            for idx, email in enumerate(emails_to_process):
                 try:
+                    logger.info(f"Processing email {idx + 1}/{len(emails_to_process)} for {user_email}")
+                    
+                    # Skip if email has issues
+                    if not email.body_clean and not email.snippet:
+                        logger.warning(f"Skipping email {email.gmail_id} - no content")
+                        continue
+                    
                     # Get comprehensive email analysis from Claude
                     analysis = self._get_comprehensive_email_analysis(email, user)
                     
@@ -84,6 +107,9 @@ class EmailIntelligenceProcessor:
                     
                     processed_count += 1
                     
+                    # Add a small delay to prevent overwhelming the system
+                    time.sleep(0.1)
+                    
                 except Exception as e:
                     logger.error(f"Failed to intelligently process email {email.gmail_id}: {str(e)}")
                     continue
@@ -105,35 +131,47 @@ class EmailIntelligenceProcessor:
             logger.error(f"Failed intelligent email processing for {user_email}: {str(e)}")
             return {'success': False, 'error': str(e)}
     
-    def _get_unreplied_emails(self, user_id: int, limit: int, force_refresh: bool) -> List[Email]:
-        """Get emails that the user hasn't replied to and need processing"""
+    def _get_emails_needing_processing(self, user_id: int, limit: int, force_refresh: bool) -> List[Email]:
+        """Get emails that need Claude analysis (generic filter)"""
         with get_db_manager().get_session() as session:
             query = session.query(Email).filter(
                 Email.user_id == user_id,
-                Email.body_clean.isnot(None)  # Already normalized
+                Email.body_clean.isnot(None)
             )
             
             if not force_refresh:
-                # Only process emails that don't have AI analysis yet
                 query = query.filter(Email.ai_summary.is_(None))
             
+            # Detach from session before returning to avoid issues
             emails = query.order_by(Email.email_date.desc()).limit(limit).all()
-            
-            # Filter to only unreplied emails (basic heuristic)
-            unreplied_emails = []
-            for email in emails:
-                if self._is_unreplied_email(email):
-                    unreplied_emails.append(email)
-            
-            return unreplied_emails
+            session.expunge_all()
+            return emails
+
+    def _filter_unreplied_emails(self, emails: List[Email], user_email: str) -> List[Email]:
+        """Filter a list of emails to find ones that are likely unreplied"""
+        unreplied = []
+        for email in emails:
+            # If email is from the user themselves, skip
+            if email.sender and user_email.lower() in email.sender.lower():
+                continue
+
+            # If email contains certain patterns suggesting it's automated, skip
+            automated_patterns = [
+                'noreply', 'no-reply', 'donotreply', 'automated', 'newsletter',
+                'unsubscribe', 'notification only', 'system generated'
+            ]
+            sender_lower = (email.sender or '').lower()
+            subject_lower = (email.subject or '').lower()
+            if any(pattern in sender_lower or pattern in subject_lower for pattern in automated_patterns):
+                continue
+
+            # Default to including emails that seem personal/business oriented
+            unreplied.append(email)
+        return unreplied
     
-    def _is_unreplied_email(self, email: Email) -> bool:
+    def _is_unreplied_email(self, email: Email, user_email: str) -> bool:
         """Determine if an email is unreplied using heuristics"""
         # If email is from the user themselves, skip
-        user_email = get_db_manager().get_session().query(User).filter(
-            User.id == email.user_id
-        ).first().email
-        
         if email.sender and user_email.lower() in email.sender.lower():
             return False
         
@@ -160,7 +198,22 @@ class EmailIntelligenceProcessor:
     def _get_comprehensive_email_analysis(self, email: Email, user) -> Optional[Dict]:
         """Get comprehensive email analysis from Claude"""
         try:
+            # Safety check to prevent processing very large emails
+            email_content = email.body_clean or email.snippet or ""
+            if len(email_content) > 10000:  # Limit email content size
+                logger.warning(f"Email {email.gmail_id} too large ({len(email_content)} chars), truncating")
+                email_content = email_content[:10000] + "... [truncated]"
+            
+            if len(email_content) < 10:  # Skip very short emails
+                logger.warning(f"Email {email.gmail_id} too short, skipping AI analysis")
+                return None
+            
             email_context = self._prepare_enhanced_email_context(email, user)
+            
+            # Limit context size to prevent API issues
+            if len(email_context) > 15000:
+                logger.warning(f"Email context too large for {email.gmail_id}, truncating")
+                email_context = email_context[:15000] + "... [truncated]"
             
             system_prompt = f"""You are an expert AI Chief of Staff that provides comprehensive email analysis for business intelligence and productivity.
 
@@ -241,30 +294,57 @@ Only extract tasks that are clearly directed at or relevant to the email recipie
 
 Focus on extracting meaningful business intelligence and actionable insights."""
 
-            message = self.client.messages.create(
-                model=self.model,
-                max_tokens=3000,
-                temperature=0.1,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}]
-            )
+            # Add timeout and retry protection
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"Calling Claude API for email {email.gmail_id}, attempt {attempt + 1}")
+                    
+                    message = self.client.messages.create(
+                        model=self.model,
+                        max_tokens=3000,
+                        temperature=0.1,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_prompt}]
+                    )
+                    
+                    response_text = message.content[0].text.strip()
+                    
+                    # Parse JSON response with better error handling
+                    json_start = response_text.find('{')
+                    json_end = response_text.rfind('}') + 1
+                    
+                    if json_start != -1 and json_end > json_start:
+                        json_text = response_text[json_start:json_end]
+                        try:
+                            analysis = json.loads(json_text)
+                            logger.info(f"Successfully analyzed email {email.gmail_id}")
+                            return analysis
+                        except json.JSONDecodeError as json_error:
+                            logger.error(f"JSON parsing error for email {email.gmail_id}: {str(json_error)}")
+                            if attempt < max_retries - 1:
+                                time.sleep(1)  # Wait before retry
+                                continue
+                            return None
+                    else:
+                        logger.warning(f"No valid JSON found in Claude response for email {email.gmail_id}")
+                        if attempt < max_retries - 1:
+                            time.sleep(1)  # Wait before retry
+                            continue
+                        return None
+                        
+                except Exception as api_error:
+                    logger.error(f"Claude API error for email {email.gmail_id}, attempt {attempt + 1}: {str(api_error)}")
+                    if attempt < max_retries - 1:
+                        time.sleep(2)  # Wait longer before retry
+                        continue
+                    return None
             
-            response_text = message.content[0].text.strip()
-            
-            # Parse JSON response
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}') + 1
-            
-            if json_start != -1 and json_end > json_start:
-                json_text = response_text[json_start:json_end]
-                analysis = json.loads(json_text)
-                return analysis
-            
-            logger.warning(f"Could not parse Claude response for email {email.gmail_id}")
+            logger.warning(f"Failed to analyze email {email.gmail_id} after {max_retries} attempts")
             return None
             
         except Exception as e:
-            logger.error(f"Failed to get email analysis from Claude: {str(e)}")
+            logger.error(f"Failed to get email analysis from Claude for {email.gmail_id}: {str(e)}")
             return None
     
     def _prepare_enhanced_email_context(self, email: Email, user) -> str:
@@ -346,23 +426,28 @@ Additional Context:
         return people_count
     
     def _process_project_insights(self, user_id: int, project_data: Dict, email: Email) -> Optional[Project]:
-        """Process and update project information"""
+        """Process and update project information - SAFE VERSION"""
         if not project_data or not project_data.get('name'):
             return None
         
-        project_info = {
-            'name': project_data['name'],
-            'slug': self._create_slug(project_data['name']),
-            'description': project_data.get('description'),
-            'category': project_data.get('category'),
-            'priority': project_data.get('priority', 'medium'),
-            'status': project_data.get('status', 'active'),
-            'key_topics': project_data.get('key_topics', []),
-            'stakeholders': project_data.get('stakeholders', []),
-            'ai_version': self.version
-        }
-        
-        return get_db_manager().create_or_update_project(user_id, project_info)
+        try:
+            project_info = {
+                'name': project_data['name'],
+                'slug': self._create_slug(project_data['name']),
+                'description': project_data.get('description'),
+                'category': project_data.get('category'),
+                'priority': project_data.get('priority', 'medium'),
+                'status': project_data.get('status', 'active'),
+                'key_topics': project_data.get('key_topics', []),
+                'stakeholders': project_data.get('stakeholders', []),
+                'ai_version': self.version
+            }
+            
+            return get_db_manager().create_or_update_project(user_id, project_info)
+            
+        except Exception as e:
+            logger.error(f"Error processing project insights: {str(e)}")
+            return None
     
     def _process_intelligent_tasks(self, user_id: int, email_id: int, tasks_data: List[Dict]) -> int:
         """Process and save intelligent tasks"""
@@ -412,8 +497,8 @@ Additional Context:
             
             # Get all processed emails
             emails = get_db_manager().get_user_emails(user.id, limit=1000)
-            projects = get_db_manager().get_user_projects(user.id)
-            people = get_db_manager().get_user_people(user.id)
+            projects = get_db_manager().get_user_projects(user.id, limit=200)
+            people = get_db_manager().get_user_people(user.id, limit=500)
             
             # Compile business insights
             key_topics = set()
@@ -449,6 +534,94 @@ Additional Context:
             
         except Exception as e:
             logger.error(f"Failed to get business knowledge for {user_email}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+
+    def get_chat_knowledge_summary(self, user_email: str) -> Dict:
+        """Get comprehensive knowledge summary for chat interface"""
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            # Get all processed data
+            emails = get_db_manager().get_user_emails(user.id, limit=1000)
+            projects = get_db_manager().get_user_projects(user.id, limit=200)
+            people = get_db_manager().get_user_people(user.id, limit=500)
+            topics = get_db_manager().get_user_topics(user.id, limit=1000)
+            
+            # Compile rich contacts with professional context
+            rich_contacts = []
+            for person in people[:20]:  # Top 20 contacts
+                contact_info = {
+                    'name': person.name,
+                    'email': person.email_address,
+                    'title': person.title,
+                    'company': person.company,
+                    'relationship': person.relationship_type,
+                    'communication_style': person.communication_style,
+                    'total_emails': person.total_emails,
+                    'last_interaction': person.last_interaction.isoformat() if person.last_interaction else None
+                }
+                rich_contacts.append(contact_info)
+            
+            # Compile business intelligence
+            business_decisions = []
+            opportunities = []
+            challenges = []
+            
+            for email in emails:
+                if email.key_insights:
+                    insights = email.key_insights
+                    if isinstance(insights, dict):
+                        business_decisions.extend(insights.get('key_decisions', []))
+                        opportunities.extend(insights.get('opportunities', []))
+                        challenges.extend(insights.get('challenges', []))
+            
+            # Get topic knowledge with contexts
+            topic_knowledge = {
+                'all_topics': [topic.name for topic in topics],
+                'official_topics': [topic.name for topic in topics if topic.is_official],
+                'topic_contexts': {}
+            }
+            
+            for topic in topics:
+                topic_emails = [email for email in emails if email.topics and topic.name in email.topics]
+                contexts = []
+                for email in topic_emails[:5]:  # Top 5 emails per topic
+                    if email.ai_summary:
+                        contexts.append({
+                            'summary': email.ai_summary,
+                            'sender': email.sender_name or email.sender,
+                            'date': email.email_date.isoformat() if email.email_date else None
+                        })
+                topic_knowledge['topic_contexts'][topic.name] = contexts
+            
+            return {
+                'success': True,
+                'user_email': user_email,
+                'knowledge_base': {
+                    'rich_contacts': rich_contacts,
+                    'business_intelligence': {
+                        'recent_decisions': business_decisions[:10],
+                        'top_opportunities': opportunities[:10],
+                        'current_challenges': challenges[:10]
+                    },
+                    'topic_knowledge': topic_knowledge,
+                    'projects_summary': [
+                        {
+                            'name': project.name,
+                            'status': project.status,
+                            'priority': project.priority,
+                            'stakeholders': project.stakeholders or [],
+                            'key_topics': project.key_topics or []
+                        }
+                        for project in projects
+                    ]
+                }
+            }
+        
+        except Exception as e:
+            logger.error(f"Failed to get chat knowledge for {user_email}: {str(e)}")
             return {'success': False, 'error': str(e)}
 
 # Global instance

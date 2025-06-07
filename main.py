@@ -12,10 +12,12 @@ This is the main web application that provides:
 import os
 import sys
 import logging
-from datetime import timedelta
-from flask import Flask, session, render_template, redirect, url_for, request, jsonify
+from datetime import timedelta, datetime
+from flask import Flask, session, render_template, redirect, url_for, request, jsonify, make_response
 from flask_session import Session
 import tempfile
+import time
+import uuid
 
 # Add the chief_of_staff_ai directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'chief_of_staff_ai'))
@@ -28,7 +30,7 @@ try:
     from processors.task_extractor import task_extractor
     from processors.email_intelligence import email_intelligence
     from models.database import get_db_manager, Person, Project
-    from models.database import Task, Email
+    from models.database import Task, Email, Topic
     import anthropic
 except ImportError as e:
     print(f"Failed to import AI Chief of Staff modules: {e}")
@@ -60,6 +62,32 @@ def create_app():
     if settings.ANTHROPIC_API_KEY:
         claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
     
+    def get_current_user():
+        """Get current authenticated user with proper session isolation"""
+        if 'user_email' not in session or 'db_user_id' not in session:
+            return None
+        
+        try:
+            # Use the db_user_id from session for proper isolation
+            user_id = session['db_user_id']
+            
+            # This check is safer than re-fetching by email every time
+            # For this request context, we can trust the session's user_id
+            # Re-fetching the user should only be for sensitive operations
+            # or to refresh data, not for basic authentication checks.
+            # A full user object is not always needed here.
+            # For simplicity, we'll return a lightweight object or dict.
+            
+            # Placeholder for a more robust user object if needed later
+            # For now, this is enough to confirm an active session.
+            current_user = {'id': user_id, 'email': session['user_email']}
+            return current_user
+            
+        except Exception as e:
+            logger.error(f"Error retrieving current user from session: {e}")
+            session.clear()
+            return None
+    
     # Routes
     @app.route('/')
     def index():
@@ -79,7 +107,17 @@ def create_app():
     @app.route('/login')
     def login():
         """Login page with Google OAuth"""
-        return render_template('login.html')
+        # Check for logout/switching parameters
+        logged_out = request.args.get('logged_out') == 'true'
+        force_logout = request.args.get('force_logout') == 'true'
+        
+        context = {
+            'logged_out': logged_out,
+            'force_logout': force_logout,
+            'switching_users': logged_out or force_logout
+        }
+        
+        return render_template('login.html', **context)
     
     @app.route('/auth/google')
     def google_auth():
@@ -105,7 +143,7 @@ def create_app():
     
     @app.route('/auth/google/callback')
     def google_callback():
-        """Handle Google OAuth callback"""
+        """Handle Google OAuth callback with enhanced session management"""
         try:
             # Get authorization code and state
             code = request.args.get('code')
@@ -137,18 +175,41 @@ def create_app():
                 logger.error(f"OAuth callback failed: {error_msg}")
                 return redirect(url_for('login') + f'?error=oauth_failed')
             
-            # Store user info in session
+            # COMPLETE SESSION RESET - Critical for user isolation
+            session.clear()
+            
+            # Extract user info from OAuth result
             user_info = result.get('user_info', {})
-            session.clear()  # Clear any existing session data
-            session['user_email'] = user_info.get('email')
+            user_email = user_info.get('email')
+            
+            if not user_email:
+                logger.error("No email received from OAuth")
+                return redirect(url_for('login') + '?error=no_email')
+            
+            # Get or create user in database
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                logger.error(f"User not found in database: {user_email}")
+                return redirect(url_for('login') + '?error=user_not_found')
+            
+            # Set new session data with unique session ID
+            session_id = str(uuid.uuid4())
+            session['session_id'] = session_id
+            session['user_email'] = user_email
             session['user_name'] = user_info.get('name')
-            session['user_id'] = user_info.get('id')
+            session['google_id'] = user_info.get('id')  # Google ID
             session['authenticated'] = True
+            session['db_user_id'] = user.id  # Database ID for queries - CRITICAL
+            session['login_time'] = datetime.now().isoformat()
             session.permanent = True
             
-            logger.info(f"User successfully authenticated: {user_info.get('email')}")
+            logger.info(f"User authenticated successfully: {user_email} (DB ID: {user.id}, Session: {session_id})")
             
-            return redirect(url_for('index'))
+            # Create response with cache busting
+            response = redirect(url_for('index') + '?login_success=true&t=' + str(int(datetime.now().timestamp())))
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            
+            return response
             
         except Exception as e:
             logger.error(f"OAuth callback error: {str(e)}")
@@ -156,11 +217,89 @@ def create_app():
     
     @app.route('/logout')
     def logout():
-        """Logout and clear session"""
+        """Logout and clear session completely"""
         user_email = session.get('user_email')
+        
+        # Complete session cleanup
         session.clear()
-        logger.info(f"User logged out: {user_email}")
-        return redirect(url_for('login'))
+        
+        # Clear any persistent session files
+        try:
+            import shutil
+            import tempfile
+            session_dir = os.path.join(tempfile.gettempdir(), 'cos_flask_session')
+            if os.path.exists(session_dir):
+                # Clear old session files
+                for filename in os.listdir(session_dir):
+                    if filename.startswith('flask_session_'):
+                        try:
+                            os.remove(os.path.join(session_dir, filename))
+                        except:
+                            pass
+        except Exception as e:
+            logger.warning(f"Could not clear session files: {e}")
+        
+        logger.info(f"User logged out completely: {user_email}")
+        
+        # Redirect to login with cache-busting parameter
+        response = redirect(url_for('login') + '?logged_out=true')
+        
+        # Clear all cookies
+        response.set_cookie('session', '', expires=0)
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
+    
+    @app.route('/debug/session')
+    def debug_session():
+        """Debug session information"""
+        return jsonify({
+            'session_data': dict(session),
+            'user_email': session.get('user_email'),
+            'authenticated': session.get('authenticated'),
+            'session_keys': list(session.keys())
+        })
+    
+    @app.route('/force-logout')
+    def force_logout():
+        """Force complete logout and session reset - use when switching users"""
+        try:
+            # Clear current session
+            user_email = session.get('user_email', 'unknown')
+            session.clear()
+            
+            # Clear all session files
+            import tempfile
+            session_dir = os.path.join(tempfile.gettempdir(), 'cos_flask_session')
+            if os.path.exists(session_dir):
+                for filename in os.listdir(session_dir):
+                    if filename.startswith('flask_session_'):
+                        try:
+                            os.remove(os.path.join(session_dir, filename))
+                            logger.info(f"Cleared session file: {filename}")
+                        except Exception as e:
+                            logger.warning(f"Could not clear session file {filename}: {e}")
+            
+            logger.info(f"Force logout completed for: {user_email}")
+            
+            # Create response with aggressive cache clearing
+            response = redirect(url_for('login') + '?force_logout=true&t=' + str(int(datetime.now().timestamp())))
+            
+            # Clear all possible cookies and cache
+            response.set_cookie('session', '', expires=0, path='/')
+            response.set_cookie('flask-session', '', expires=0, path='/')
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            response.headers['Clear-Site-Data'] = '"cache", "cookies", "storage"'
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Force logout error: {e}")
+            return jsonify({'error': 'Force logout failed', 'details': str(e)}), 500
     
     @app.route('/api/fetch-emails', methods=['POST'])
     def api_fetch_emails():
@@ -426,6 +565,9 @@ Be helpful, professional, and actionable in your responses."""
                 # Delete projects
                 db_session.query(Project).filter(Project.user_id == user.id).delete()
                 
+                # CRITICAL FIX: Also delete topics to ensure a complete flush
+                db_session.query(Topic).filter(Topic.user_id == user.id).delete()
+                
                 db_session.commit()
             
             logger.info(f"Flushed all data for user: {user_email}")
@@ -507,39 +649,39 @@ Be helpful, professional, and actionable in your responses."""
             knowledge = email_intelligence.get_business_knowledge_summary(user_email)
             return jsonify(knowledge)
         except Exception as e:
-            logger.error(f"Failed to get business knowledge: {str(e)}")
+            logger.error(f"Failed to get business knowledge for {user_email}: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/chat-knowledge', methods=['GET'])
     def api_get_chat_knowledge():
         """API endpoint to get comprehensive knowledge summary for chat queries"""
-        if 'user_email' not in session:
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
-        user_email = session['user_email']
+        user_email = user['email']
         
         try:
             knowledge = email_intelligence.get_chat_knowledge_summary(user_email)
             return jsonify(knowledge)
         except Exception as e:
-            logger.error(f"Failed to get chat knowledge: {str(e)}")
+            logger.error(f"Failed to get chat knowledge for {user_email}: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/api/email-insights', methods=['GET'])
     def api_get_email_insights():
         """API endpoint to get email insights with AI analysis"""
-        if 'user_email' not in session:
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
-        user_email = session['user_email']
-        
         try:
-            user = get_db_manager().get_user_by_email(user_email)
-            if not user:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
                 return jsonify({'error': 'User not found'}), 404
             
             limit = int(request.args.get('limit', 20))
-            emails = get_db_manager().get_user_emails(user.id, limit)
+            emails = get_db_manager().get_user_emails(db_user.id, limit)
             
             # Filter to only emails with AI insights
             analyzed_emails = []
@@ -563,39 +705,38 @@ Be helpful, professional, and actionable in your responses."""
     @app.route('/api/topics', methods=['GET'])
     def api_get_topics():
         """API endpoint to get all topics for a user"""
-        if 'user_email' not in session:
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
-        user_email = session['user_email']
-        
         try:
-            user = get_db_manager().get_user_by_email(user_email)
-            if not user:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
                 return jsonify({'error': 'User not found'}), 404
             
-            topics = get_db_manager().get_user_topics(user.id)
+            topics = get_db_manager().get_user_topics(db_user.id)
             
             return jsonify({
                 'success': True,
                 'topics': [topic.to_dict() for topic in topics],
-                'count': len(topics)
+                'count': len(topics),
+                'user_info': {'email': db_user.email, 'db_id': db_user.id}  # Debug info
             })
             
         except Exception as e:
-            logger.error(f"Get topics API error: {str(e)}")
+            logger.error(f"Get topics API error for user {user['email']}: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/topics', methods=['POST'])
     def api_create_topic():
         """API endpoint to create a new topic manually"""
-        if 'user_email' not in session:
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
-        user_email = session['user_email']
-        
         try:
-            user = get_db_manager().get_user_by_email(user_email)
-            if not user:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
                 return jsonify({'error': 'User not found'}), 404
             
             data = request.get_json()
@@ -610,7 +751,7 @@ Be helpful, professional, and actionable in your responses."""
                 'keywords': data.get('keywords', [])
             }
             
-            topic = get_db_manager().create_or_update_topic(user.id, topic_data)
+            topic = get_db_manager().create_or_update_topic(db_user.id, topic_data)
             
             return jsonify({
                 'success': True,
@@ -625,17 +766,16 @@ Be helpful, professional, and actionable in your responses."""
     @app.route('/api/topics/<int:topic_id>/official', methods=['POST'])
     def api_mark_topic_official(topic_id):
         """API endpoint to mark a topic as official"""
-        if 'user_email' not in session:
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
-        user_email = session['user_email']
-        
         try:
-            user = get_db_manager().get_user_by_email(user_email)
-            if not user:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
                 return jsonify({'error': 'User not found'}), 404
             
-            success = get_db_manager().mark_topic_official(user.id, topic_id)
+            success = get_db_manager().mark_topic_official(db_user.id, topic_id)
             
             if success:
                 return jsonify({
@@ -652,14 +792,13 @@ Be helpful, professional, and actionable in your responses."""
     @app.route('/api/topics/<int:topic_id>/merge', methods=['POST'])
     def api_merge_topic(topic_id):
         """API endpoint to merge one topic into another"""
-        if 'user_email' not in session:
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
-        user_email = session['user_email']
-        
         try:
-            user = get_db_manager().get_user_by_email(user_email)
-            if not user:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
                 return jsonify({'error': 'User not found'}), 404
             
             data = request.get_json()
@@ -668,7 +807,7 @@ Be helpful, professional, and actionable in your responses."""
             if not target_topic_id:
                 return jsonify({'error': 'Target topic ID is required'}), 400
             
-            success = get_db_manager().merge_topics(user.id, topic_id, target_topic_id)
+            success = get_db_manager().merge_topics(db_user.id, topic_id, target_topic_id)
             
             if success:
                 return jsonify({
@@ -685,10 +824,11 @@ Be helpful, professional, and actionable in your responses."""
     @app.route('/api/topics/resync', methods=['POST'])
     def api_resync_topics():
         """API endpoint to resync all content with updated topics using Claude"""
-        if 'user_email' not in session:
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
-        user_email = session['user_email']
+        user_email = user['email']
         
         try:
             # This would trigger a resync of all emails with the updated topic definitions
@@ -705,7 +845,8 @@ Be helpful, professional, and actionable in your responses."""
     @app.route('/api/chat-with-knowledge', methods=['POST'])
     def api_chat_with_knowledge():
         """API endpoint for enhanced Claude chat with full business knowledge context"""
-        if 'user_email' not in session:
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
         if not claude_client:
@@ -719,7 +860,7 @@ Be helpful, professional, and actionable in your responses."""
             if not message:
                 return jsonify({'error': 'No message provided'}), 400
             
-            user_email = session['user_email']
+            user_email = user['email']
             
             # Get comprehensive knowledge context
             context_parts = []
@@ -759,9 +900,9 @@ Be helpful, professional, and actionable in your responses."""
                                 context_parts.append("KEY BUSINESS CONTACTS:\n" + "\n".join([f"- {contact}" for contact in contacts_summary]))
                         
                         # Add recent tasks
-                        user = get_db_manager().get_user_by_email(user_email)
-                        if user:
-                            tasks = get_db_manager().get_user_tasks(user.id)
+                        db_user = get_db_manager().get_user_by_email(user_email)
+                        if db_user:
+                            tasks = get_db_manager().get_user_tasks(db_user.id)
                             if tasks:
                                 recent_tasks = [f"{task.description}" for task in tasks[:10]]
                                 context_parts.append("CURRENT TASKS:\n" + "\n".join([f"- {task}" for task in recent_tasks]))
@@ -812,6 +953,40 @@ Always think about the bigger picture and provide strategic, helpful advice base
             logger.error(f"Enhanced chat API error: {str(e)}")
             return jsonify({'success': False, 'error': f'Enhanced chat error: {str(e)}'}), 500
     
+    @app.route('/dashboard')
+    def dashboard():
+        """Main dashboard - requires authentication"""
+        user = get_current_user()
+        if not user:
+            logger.warning("Unauthenticated access attempt to dashboard")
+            return redirect(url_for('login'))
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            logger.warning(f"User not found in database: {user_email}")
+            return redirect(url_for('login'))
+        
+        logger.info(f"Dashboard access by user: {db_user.email} (ID: {db_user.id})")
+        
+        # Add user context to prevent frontend confusion
+        context = {
+            'user_email': db_user.email,
+            'user_id': db_user.id,
+            'session_id': session.get('session_id', 'unknown'),
+            'cache_buster': int(time.time())  # Force fresh data load
+        }
+        
+        response = make_response(render_template('dashboard.html', **context))
+        
+        # Ensure no caching of dashboard
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        return response
+    
     # Error handlers
     @app.errorhandler(404)
     def not_found_error(error):
@@ -824,6 +999,20 @@ Always think about the bigger picture and provide strategic, helpful advice base
         return render_template('error.html', 
                              error_code=500, 
                              error_message="Internal server error"), 500
+    
+    @app.after_request
+    def after_request(response):
+        """Add cache-busting headers to prevent session contamination"""
+        # Prevent caching for API endpoints and sensitive pages
+        if (request.endpoint and 
+            (request.endpoint.startswith('api_') or 
+             request.path.startswith('/api/') or
+             request.path in ['/dashboard', '/debug/session'])):
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+        return response
     
     return app
 

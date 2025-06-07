@@ -1151,8 +1151,86 @@
     </div>
 
     <script>
-        // Global variables
-        let currentUser = "{{ user_email }}";
+        // CRITICAL: Session isolation and cache busting for multi-user support
+        const SESSION_INFO = {
+            userEmail: '{{ user_email }}',
+            userId: '{{ user_id }}',
+            sessionId: '{{ session_id }}',
+            cacheBuster: '{{ cache_buster }}'
+        };
+        
+        // Validate session on page load
+        async function validateSession() {
+            try {
+                const response = await fetch('/debug/session?t=' + Date.now(), {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                const sessionData = await response.json();
+                
+                // Check if session matches expected user
+                if (!sessionData.user_email || sessionData.user_email !== SESSION_INFO.userEmail) {
+                    console.warn('Session mismatch detected, redirecting to login');
+                    window.location.href = '/force-logout';
+                    return false;
+                }
+                
+                console.log('Session validated for user:', sessionData.user_email);
+                return true;
+            } catch (error) {
+                console.error('Session validation failed:', error);
+                return false;
+            }
+        }
+        
+        // Enhanced fetch with cache busting and session validation
+        async function safeFetch(url, options = {}) {
+            // Add cache busting
+            const separator = url.includes('?') ? '&' : '?';
+            const cacheBustedUrl = url + separator + 't=' + Date.now() + '&session=' + SESSION_INFO.sessionId;
+            
+            // Add no-cache headers
+            const headers = {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+                ...options.headers
+            };
+            
+            return originalFetch(cacheBustedUrl, {
+                ...options,
+                headers,
+                cache: 'no-cache'
+            });
+        }
+        
+        // Override all API calls to use safeFetch
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options) {
+            if (typeof url === 'string' && url.startsWith('/api/')) {
+                return safeFetch(url, options);
+            }
+            return originalFetch(url, options);
+        };
+        
+        // Validate session on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            const isValid = await validateSession();
+            if (!isValid) {
+                return; // Will redirect to login
+            }
+            
+            // Continue with normal initialization
+            loadSavedPrompts();
+        });
+        
+        // Modal functions
+        function closeKnowledgeModal() {
+            document.getElementById('knowledgeModal').style.display = 'none';
+        }
         
         // Tab switching functionality
         function switchTab(tabName) {
@@ -1174,66 +1252,6 @@
             
             // Load data for the selected tab
             loadTabData(tabName);
-        }
-        
-        // Enhanced email processing
-        async function processEmails() {
-            const processBtn = document.getElementById('processBtn');
-            const statusText = document.getElementById('statusText');
-            const resultsDiv = document.getElementById('processingResults');
-            const maxEmails = document.getElementById('maxEmails').value;
-            const daysBack = document.getElementById('daysBack').value;
-            const forceRefresh = document.getElementById('forceRefresh').checked;
-            
-            processBtn.disabled = true;
-            processBtn.textContent = '🧠 Processing...';
-            statusText.textContent = 'Enhanced AI processing in progress...';
-            resultsDiv.style.display = 'none';
-            
-            try {
-                const response = await fetch('/api/process-emails', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        max_emails: parseInt(maxEmails),
-                        days_back: parseInt(daysBack),
-                        force_refresh: forceRefresh,
-                        enhanced_processing: true
-                    }),
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    resultsDiv.innerHTML = `
-                        <div class="success">
-                            <h4>✅ Enhanced Processing Complete!</h4>
-                            <div style="margin-top: 0.5rem; font-size: 0.875rem;">
-                                📧 Emails processed: ${result.processed_emails || 0}<br>
-                                🔍 Quality filtered: ${result.filtered_emails || 0}<br>
-                                🧠 AI insights extracted: ${result.insights_extracted || 0}<br>
-                                👥 People identified: ${result.people_identified || 0}<br>
-                                📊 Projects classified: ${result.projects_identified || 0}<br>
-                                ✅ Tasks created: ${result.tasks_created || 0}
-                            </div>
-                        </div>
-                    `;
-                    statusText.textContent = 'Enhanced processing completed successfully';
-                    refreshAllData();
-                } else {
-                    resultsDiv.innerHTML = `<div class="error">❌ Processing failed: ${result.error}</div>`;
-                    statusText.textContent = 'Processing failed';
-                }
-            } catch (error) {
-                resultsDiv.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
-                statusText.textContent = 'Network error occurred';
-            }
-            
-            resultsDiv.style.display = 'block';
-            processBtn.disabled = false;
-            processBtn.textContent = '🧠 Intelligent Processing';
         }
         
         // Load data for specific tab
@@ -2537,6 +2555,138 @@
             localStorage.setItem('monitoringPrompts', JSON.stringify(prompts));
             
             loadSavedPrompts();
+        }
+        
+        // Process emails with enhanced intelligence
+        async function processEmails() {
+            const processBtn = document.getElementById('processBtn');
+            const statusText = document.getElementById('statusText');
+            const resultsDiv = document.getElementById('processingResults');
+            
+            // Get form values
+            const maxEmails = parseInt(document.getElementById('maxEmails').value) || 20;
+            const daysBack = parseInt(document.getElementById('daysBack').value) || 14;
+            const forceRefresh = document.getElementById('forceRefresh').checked;
+            
+            // Disable button and update status
+            processBtn.disabled = true;
+            processBtn.textContent = '🔄 Processing...';
+            statusText.textContent = 'Starting enhanced email processing...';
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = '<div class="loading">🔄 Initializing enhanced processing...</div>';
+            
+            try {
+                statusText.textContent = 'Processing emails with AI intelligence...';
+                resultsDiv.innerHTML = '<div class="loading">🧠 Analyzing emails with Claude AI...</div>';
+                
+                const response = await fetch('/api/process-emails', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        max_emails: maxEmails,
+                        days_back: daysBack,
+                        force_refresh: forceRefresh
+                    }),
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusText.textContent = 'Enhanced processing completed successfully!';
+                    
+                    // Display comprehensive results
+                    const summary = result.summary;
+                    resultsDiv.innerHTML = `
+                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1.5rem; margin-top: 1rem;">
+                            <h4 style="margin: 0 0 1rem 0; color: #166534;">✅ Enhanced Processing Complete</h4>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                                <div style="background: white; padding: 1rem; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #3b82f6;">${summary.emails_fetched || 0}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Emails Fetched</div>
+                                </div>
+                                <div style="background: white; padding: 1rem; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #059669;">${summary.emails_analyzed || 0}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Emails Analyzed</div>
+                                </div>
+                                <div style="background: white; padding: 1rem; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #7c3aed;">${summary.people_identified || 0}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">People Identified</div>
+                                </div>
+                                <div style="background: white; padding: 1rem; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #ea580c;">${summary.projects_identified || 0}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Projects Identified</div>
+                                </div>
+                                <div style="background: white; padding: 1rem; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #dc2626;">${summary.tasks_created || 0}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Tasks Created</div>
+                                </div>
+                                <div style="background: white; padding: 1rem; border-radius: 6px; text-align: center;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #059669;">${summary.insights_extracted || 0}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Insights Extracted</div>
+                                </div>
+                            </div>
+                            
+                            <div style="font-size: 0.875rem; color: #166534; background: #dcfce7; padding: 0.75rem; border-radius: 6px;">
+                                🎉 <strong>Success!</strong> Your emails have been processed with enhanced AI intelligence. 
+                                Check the tabs above to explore your business insights, tasks, and professional network.
+                            </div>
+                            
+                            <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button onclick="switchTab('business-knowledge')" style="padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                                    📊 View Business Intelligence
+                                </button>
+                                <button onclick="switchTab('tasks')" style="padding: 0.5rem 1rem; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                                    ✅ View Tasks
+                                </button>
+                                <button onclick="switchTab('people')" style="padding: 0.5rem 1rem; background: #7c3aed; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                                    👥 View People Network
+                                </button>
+                                <button onclick="askQuickQuestion('What are the most important insights from my recent emails?')" style="padding: 0.5rem 1rem; background: #ea580c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                                    🤖 Ask AI About Results
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Refresh all tabs data
+                    await refreshAllData();
+                    
+                } else {
+                    statusText.textContent = 'Processing failed';
+                    resultsDiv.innerHTML = `
+                        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 1.5rem; margin-top: 1rem;">
+                            <h4 style="margin: 0 0 1rem 0; color: #dc2626;">❌ Processing Failed</h4>
+                            <div style="font-size: 0.875rem; color: #dc2626;">
+                                ${result.error || 'Unknown error occurred during processing'}
+                            </div>
+                            <div style="margin-top: 1rem; font-size: 0.875rem; color: #64748b;">
+                                Please try again. If the problem persists, check your internet connection and Gmail access.
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                statusText.textContent = 'Network error occurred';
+                resultsDiv.innerHTML = `
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 1.5rem; margin-top: 1rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: #dc2626;">❌ Network Error</h4>
+                        <div style="font-size: 0.875rem; color: #dc2626;">
+                            Failed to connect to the server: ${error.message}
+                        </div>
+                        <div style="margin-top: 1rem; font-size: 0.875rem; color: #64748b;">
+                            Please check your internet connection and try again.
+                        </div>
+                    </div>
+                `;
+                console.error('Email processing error:', error);
+            }
+            
+            // Re-enable button
+            processBtn.disabled = false;
+            processBtn.textContent = '🧠 Intelligent Processing';
         }
     </script>
     
