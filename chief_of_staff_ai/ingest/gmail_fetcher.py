@@ -32,7 +32,9 @@ class GmailFetcher:
         force_refresh: bool = False
     ) -> Dict:
         """
-        Fetch recent emails for a user from their Gmail account
+        Fetch recent emails for a user from their Gmail account - BUSINESS FOCUSED
+        Only fetches from important labels: INBOX, IMPORTANT, STARRED, CATEGORY_PRIMARY
+        Excludes promotional, social, updates, and forums to focus on real business communications
         
         Args:
             user_email: Gmail address of the user
@@ -73,41 +75,77 @@ class GmailFetcher:
             
             # Calculate date range
             since_date = datetime.utcnow() - timedelta(days=days_back)
-            query = f"after:{since_date.strftime('%Y/%m/%d')}"
             
-            logger.info(f"Fetching emails for {user_email} with query: {query}")
+            # ENHANCED: Business-focused Gmail query - only important labels
+            # Focus on genuine business communications by including only:
+            # - INBOX (regular inbox emails)  
+            # - IMPORTANT (user-marked important emails)
+            # - STARRED (user-starred emails)
+            # - CATEGORY_PRIMARY (primary tab - most important emails)
+            # 
+            # Explicitly exclude noise:
+            # - CATEGORY_PROMOTIONS (promotional emails, newsletters)
+            # - CATEGORY_SOCIAL (social notifications) 
+            # - CATEGORY_UPDATES (automated updates)
+            # - CATEGORY_FORUMS (forum notifications)
+            # - SPAM and TRASH
             
-            # Fetch email list
-            email_list = self._fetch_email_list(service, query, limit)
+            important_labels_query = (
+                f"after:{since_date.strftime('%Y/%m/%d')} "
+                f"(in:inbox OR label:important OR label:starred OR category:primary) "
+                f"-category:promotions -category:social -category:updates -category:forums "
+                f"-in:spam -in:trash"
+            )
+            
+            logger.info(f"Fetching BUSINESS-FOCUSED emails for {user_email} with enhanced query: {important_labels_query}")
+            
+            # Fetch email list with business-focused query
+            email_list = self._fetch_email_list(service, important_labels_query, limit)
             if not email_list:
                 return {
                     'success': True,
                     'user_email': user_email,
                     'emails': [],
                     'count': 0,
-                    'source': 'gmail_api',
+                    'source': 'gmail_api_business_focused',
                     'fetched_at': datetime.utcnow().isoformat(),
-                    'message': 'No emails found in the specified time range'
+                    'message': 'No business emails found in the specified time range with important labels',
+                    'query_used': important_labels_query
                 }
             
             # Fetch full email content in batches
             emails = self._fetch_emails_batch(service, email_list, user.id)
             
-            logger.info(f"Successfully fetched {len(emails)} emails for {user_email}")
+            # Filter stats for logging
+            inbox_count = len([e for e in emails if 'INBOX' in e.get('processing_metadata', {}).get('gmail_labels', [])])
+            important_count = len([e for e in emails if 'IMPORTANT' in e.get('processing_metadata', {}).get('gmail_labels', [])])
+            starred_count = len([e for e in emails if 'STARRED' in e.get('processing_metadata', {}).get('gmail_labels', [])])
+            primary_count = len([e for e in emails if 'CATEGORY_PRIMARY' in e.get('processing_metadata', {}).get('gmail_labels', [])])
+            
+            logger.info(f"Successfully fetched {len(emails)} BUSINESS emails for {user_email} - "
+                       f"Inbox: {inbox_count}, Important: {important_count}, Starred: {starred_count}, Primary: {primary_count}")
             
             return {
                 'success': True,
                 'user_email': user_email,
                 'emails': emails,
                 'count': len(emails),
-                'source': 'gmail_api',
+                'source': 'gmail_api_business_focused',
                 'fetched_at': datetime.utcnow().isoformat(),
-                'query_used': query,
-                'days_back': days_back
+                'query_used': important_labels_query,
+                'days_back': days_back,
+                'filter_stats': {
+                    'inbox_emails': inbox_count,
+                    'important_emails': important_count, 
+                    'starred_emails': starred_count,
+                    'primary_category_emails': primary_count,
+                    'total_business_emails': len(emails)
+                },
+                'filtering_approach': 'business_focused_labels_only'
             }
             
         except Exception as e:
-            logger.error(f"Failed to fetch emails for {user_email}: {str(e)}")
+            logger.error(f"Failed to fetch business-focused emails for {user_email}: {str(e)}")
             return self._error_response(str(e))
     
     def _fetch_email_list(self, service, query: str, limit: int = None) -> List[Dict]:
@@ -232,22 +270,23 @@ class GmailFetcher:
     
     def _process_gmail_message(self, gmail_message: Dict) -> Dict:
         """
-        Process a Gmail message into our standard format
+        Process a Gmail message into our standard format with enhanced business intelligence
         
         Args:
             gmail_message: Raw Gmail message from API
             
         Returns:
-            Processed email dictionary
+            Processed email dictionary with business priority indicators
         """
         try:
             headers = {h['name'].lower(): h['value'] for h in gmail_message['payload'].get('headers', [])}
+            label_ids = gmail_message.get('labelIds', [])
             
             # Extract basic email info
             email_data = {
                 'id': gmail_message['id'],
                 'thread_id': gmail_message.get('threadId'),
-                'label_ids': gmail_message.get('labelIds', []),
+                'label_ids': label_ids,
                 'snippet': gmail_message.get('snippet', ''),
                 'size_estimate': gmail_message.get('sizeEstimate', 0),
                 
@@ -264,17 +303,31 @@ class GmailFetcher:
                 'body_html': '',
                 'attachments': [],
                 
-                # Metadata
-                'is_read': 'UNREAD' not in gmail_message.get('labelIds', []),
-                'is_important': 'IMPORTANT' in gmail_message.get('labelIds', []),
-                'is_starred': 'STARRED' in gmail_message.get('labelIds', []),
+                # ENHANCED: Business priority metadata from Gmail labels
+                'is_read': 'UNREAD' not in label_ids,
+                'is_important': 'IMPORTANT' in label_ids,
+                'is_starred': 'STARRED' in label_ids,
+                'is_in_inbox': 'INBOX' in label_ids,
+                'is_primary_category': 'CATEGORY_PRIMARY' in label_ids,
                 'has_attachments': False,
                 
-                # Processing metadata
+                # BUSINESS INTELLIGENCE: Calculate priority score based on Gmail signals
+                'business_priority_score': self._calculate_business_priority(label_ids, headers),
+                'label_based_category': self._determine_business_category(label_ids),
+                
+                # Processing metadata with enhanced label tracking
                 'processing_metadata': {
-                    'fetcher_version': '1.0',
+                    'fetcher_version': '2.0_business_focused',
                     'processed_at': datetime.utcnow().isoformat(),
-                    'gmail_labels': gmail_message.get('labelIds', [])
+                    'gmail_labels': label_ids,
+                    'business_filtering': {
+                        'is_inbox': 'INBOX' in label_ids,
+                        'is_important': 'IMPORTANT' in label_ids,
+                        'is_starred': 'STARRED' in label_ids,
+                        'is_primary': 'CATEGORY_PRIMARY' in label_ids,
+                        'excluded_categories': [label for label in label_ids if 'CATEGORY_' in label and label not in ['CATEGORY_PRIMARY']],
+                        'priority_level': self._get_priority_level(label_ids)
+                    }
                 }
             }
             
@@ -290,11 +343,14 @@ class GmailFetcher:
             # Extract body content
             self._extract_email_body(gmail_message['payload'], email_data)
             
-            # Extract sender name
+            # Extract sender name and normalize sender information
             sender_full = email_data['sender']
             if '<' in sender_full and '>' in sender_full:
                 email_data['sender_name'] = sender_full.split('<')[0].strip().strip('"')
                 email_data['sender'] = sender_full.split('<')[1].split('>')[0]
+            else:
+                # Handle plain email addresses
+                email_data['sender_name'] = sender_full.split('@')[0] if '@' in sender_full else sender_full
             
             return email_data
             
@@ -304,8 +360,90 @@ class GmailFetcher:
                 'id': gmail_message.get('id', 'unknown'),
                 'error': True,
                 'error_message': str(e),
-                'timestamp': datetime.utcnow()
+                'timestamp': datetime.utcnow(),
+                'business_priority_score': 0
             }
+    
+    def _calculate_business_priority(self, label_ids: List[str], headers: Dict) -> float:
+        """
+        Calculate business priority score based on Gmail labels and headers
+        
+        Args:
+            label_ids: Gmail label IDs
+            headers: Email headers
+            
+        Returns:
+            Priority score (0.0 to 1.0, higher = more important)
+        """
+        score = 0.0
+        
+        # Base score for being in our business-focused filter
+        score += 0.3
+        
+        # Label-based scoring
+        if 'IMPORTANT' in label_ids:
+            score += 0.4  # User explicitly marked as important
+        if 'STARRED' in label_ids:
+            score += 0.3  # User starred
+        if 'CATEGORY_PRIMARY' in label_ids:
+            score += 0.2  # Primary tab (Gmail's own importance filter)
+        if 'INBOX' in label_ids:
+            score += 0.1  # In main inbox
+            
+        # Header-based indicators
+        priority_header = headers.get('x-priority', headers.get('priority', ''))
+        if priority_header:
+            if '1' in priority_header or 'high' in priority_header.lower():
+                score += 0.2
+        
+        # Sender reputation indicators (simple heuristics)
+        sender = headers.get('from', '').lower()
+        if any(domain in sender for domain in ['.gov', '.edu', '@yourcompany.com']):
+            score += 0.1
+            
+        return min(1.0, score)  # Cap at 1.0
+    
+    def _determine_business_category(self, label_ids: List[str]) -> str:
+        """
+        Determine business category based on Gmail labels
+        
+        Args:
+            label_ids: Gmail label IDs
+            
+        Returns:
+            Business category string
+        """
+        if 'IMPORTANT' in label_ids:
+            return 'high_priority'
+        elif 'STARRED' in label_ids:
+            return 'starred_business'  
+        elif 'CATEGORY_PRIMARY' in label_ids:
+            return 'primary_business'
+        elif 'INBOX' in label_ids:
+            return 'inbox_business'
+        else:
+            return 'business_communication'
+    
+    def _get_priority_level(self, label_ids: List[str]) -> str:
+        """
+        Get human-readable priority level
+        
+        Args:
+            label_ids: Gmail label IDs
+            
+        Returns:
+            Priority level string
+        """
+        if 'IMPORTANT' in label_ids and 'STARRED' in label_ids:
+            return 'critical'
+        elif 'IMPORTANT' in label_ids:
+            return 'high'
+        elif 'STARRED' in label_ids:
+            return 'medium-high'
+        elif 'CATEGORY_PRIMARY' in label_ids:
+            return 'medium'
+        else:
+            return 'standard'
     
     def _extract_email_body(self, payload: Dict, email_data: Dict):
         """

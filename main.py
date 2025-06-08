@@ -953,6 +953,333 @@ Always think about the bigger picture and provide strategic, helpful advice base
             logger.error(f"Enhanced chat API error: {str(e)}")
             return jsonify({'success': False, 'error': f'Enhanced chat error: {str(e)}'}), 500
     
+    @app.route('/api/download-knowledge', methods=['GET'])
+    def api_download_knowledge():
+        """API endpoint to download comprehensive knowledge base as text file"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        try:
+            user_email = user['email']
+            knowledge_response = email_intelligence.get_chat_knowledge_summary(user_email)
+            
+            if not knowledge_response.get('success'):
+                return jsonify({'error': 'Failed to get knowledge base'}), 500
+
+            knowledge = knowledge_response['knowledge_base']
+            
+            # Generate comprehensive text content
+            content_lines = []
+            content_lines.append("AI CHIEF OF STAFF - COMPREHENSIVE KNOWLEDGE BASE")
+            content_lines.append("=" * 60)
+            content_lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            content_lines.append(f"User: {user_email}")
+            content_lines.append("")
+
+            # Summary Statistics
+            if knowledge.get('summary_stats'):
+                stats = knowledge['summary_stats']
+                content_lines.append("SUMMARY STATISTICS")
+                content_lines.append("-" * 30)
+                content_lines.append(f"Quality Emails Analyzed: {stats.get('total_emails_analyzed', 0)}")
+                content_lines.append(f"Human Contacts: {stats.get('rich_contacts', 0)}")
+                content_lines.append(f"Business Decisions: {stats.get('business_decisions', 0)}")
+                content_lines.append(f"Opportunities: {stats.get('opportunities_identified', 0)}")
+                content_lines.append(f"Active Projects: {stats.get('active_projects', 0)}")
+                content_lines.append("")
+
+            # Strategic Business Intelligence
+            if knowledge.get('business_intelligence'):
+                bi = knowledge['business_intelligence']
+                
+                if bi.get('recent_decisions'):
+                    content_lines.append("STRATEGIC BUSINESS DECISIONS")
+                    content_lines.append("-" * 40)
+                    for i, decision in enumerate(bi['recent_decisions'], 1):
+                        if isinstance(decision, dict):
+                            content_lines.append(f"{i}. {decision.get('decision', 'Unknown decision')}")
+                            if decision.get('context'):
+                                content_lines.append(f"   Context: {decision['context']}")
+                            if decision.get('sender'):
+                                content_lines.append(f"   Source: {decision['sender']}")
+                            if decision.get('date'):
+                                content_lines.append(f"   Date: {decision['date']}")
+                        else:
+                            content_lines.append(f"{i}. {decision}")
+                        content_lines.append("")
+                    content_lines.append("")
+
+                if bi.get('top_opportunities'):
+                    content_lines.append("BUSINESS OPPORTUNITIES")
+                    content_lines.append("-" * 40)
+                    for i, opportunity in enumerate(bi['top_opportunities'], 1):
+                        if isinstance(opportunity, dict):
+                            content_lines.append(f"{i}. {opportunity.get('opportunity', 'Unknown opportunity')}")
+                            if opportunity.get('context'):
+                                content_lines.append(f"   Context: {opportunity['context']}")
+                            if opportunity.get('source'):
+                                content_lines.append(f"   Source: {opportunity['source']}")
+                        else:
+                            content_lines.append(f"{i}. {opportunity}")
+                        content_lines.append("")
+                    content_lines.append("")
+
+                if bi.get('current_challenges'):
+                    content_lines.append("CURRENT CHALLENGES")
+                    content_lines.append("-" * 40)
+                    for i, challenge in enumerate(bi['current_challenges'], 1):
+                        if isinstance(challenge, dict):
+                            content_lines.append(f"{i}. {challenge.get('challenge', 'Unknown challenge')}")
+                            if challenge.get('context'):
+                                content_lines.append(f"   Context: {challenge['context']}")
+                            if challenge.get('source'):
+                                content_lines.append(f"   Source: {challenge['source']}")
+                        else:
+                            content_lines.append(f"{i}. {challenge}")
+                        content_lines.append("")
+                    content_lines.append("")
+
+            # Professional Contact Intelligence
+            if knowledge.get('rich_contacts'):
+                content_lines.append("PROFESSIONAL CONTACT INTELLIGENCE")
+                content_lines.append("-" * 40)
+                for i, contact in enumerate(knowledge['rich_contacts'], 1):
+                    content_lines.append(f"{i}. {contact.get('name', 'Unknown')}")
+                    if contact.get('title'):
+                        content_lines.append(f"   Title: {contact['title']}")
+                    if contact.get('company'):
+                        content_lines.append(f"   Company: {contact['company']}")
+                    if contact.get('relationship'):
+                        content_lines.append(f"   Relationship: {contact['relationship']}")
+                    if contact.get('story'):
+                        content_lines.append(f"   Professional Story:")
+                        content_lines.append(f"   {contact['story']}")
+                    if contact.get('total_emails'):
+                        content_lines.append(f"   Email Interactions: {contact['total_emails']}")
+                    content_lines.append("")
+                content_lines.append("")
+
+            # Business Topics & Knowledge
+            if knowledge.get('topic_knowledge') and knowledge['topic_knowledge'].get('all_topics'):
+                content_lines.append("BUSINESS TOPICS & KNOWLEDGE")
+                content_lines.append("-" * 40)
+                for topic in knowledge['topic_knowledge']['all_topics']:
+                    content_lines.append(f"TOPIC: {topic}")
+                    contexts = knowledge['topic_knowledge'].get('topic_contexts', {}).get(topic, [])
+                    if contexts:
+                        content_lines.append("Related Communications:")
+                        for context in contexts:
+                            if context.get('email_subject'):
+                                content_lines.append(f"  - {context['email_subject']} ({context.get('date', 'Unknown date')})")
+                            if context.get('summary'):
+                                content_lines.append(f"    {context['summary']}")
+                            if context.get('sender'):
+                                content_lines.append(f"    From: {context['sender']}")
+                    content_lines.append("")
+                content_lines.append("")
+
+            # Active Projects
+            if knowledge.get('projects_summary'):
+                content_lines.append("ACTIVE BUSINESS PROJECTS")
+                content_lines.append("-" * 40)
+                for i, project in enumerate(knowledge['projects_summary'], 1):
+                    content_lines.append(f"{i}. {project.get('name', 'Unknown Project')}")
+                    if project.get('description'):
+                        content_lines.append(f"   Description: {project['description']}")
+                    content_lines.append(f"   Status: {project.get('status', 'Unknown')}")
+                    content_lines.append(f"   Priority: {project.get('priority', 'Unknown')}")
+                    if project.get('stakeholders'):
+                        content_lines.append(f"   Stakeholders: {', '.join(project['stakeholders'])}")
+                    if project.get('key_topics'):
+                        content_lines.append(f"   Key Topics: {', '.join(project['key_topics'])}")
+                    content_lines.append("")
+
+            # Create response
+            text_content = "\n".join(content_lines)
+            
+            response = make_response(text_content)
+            response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+            response.headers['Content-Disposition'] = f'attachment; filename=AI_Chief_of_Staff_Knowledge_Base_{datetime.now().strftime("%Y-%m-%d")}.txt'
+            
+            return response
+
+        except Exception as e:
+            logger.error(f"Knowledge download error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/email-diagnostics', methods=['GET'])
+    def api_email_diagnostics():
+        """API endpoint to diagnose email processing and filtering"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Get all user emails
+            all_emails = get_db_manager().get_user_emails(db_user.id, limit=100)
+            
+            # Analyze filtering results
+            newsletter_count = 0
+            automated_count = 0
+            business_count = 0
+            quality_emails = []
+            
+            diagnostics = {
+                'total_emails': len(all_emails),
+                'filtered_breakdown': {},
+                'sample_emails': {
+                    'newsletters': [],
+                    'automated': [],
+                    'business': [],
+                    'quality': []
+                }
+            }
+            
+            for email in all_emails:
+                # Check if email would be filtered out
+                if email_intelligence._is_newsletter_or_promotional(email):
+                    newsletter_count += 1
+                    if len(diagnostics['sample_emails']['newsletters']) < 3:
+                        diagnostics['sample_emails']['newsletters'].append({
+                            'subject': email.subject,
+                            'sender': email.sender,
+                            'sender_name': email.sender_name,
+                            'date': email.email_date.isoformat() if email.email_date else None,
+                            'reason': 'Newsletter/Promotional content detected'
+                        })
+                elif email_intelligence._is_non_human_contact(email.sender or ''):
+                    automated_count += 1
+                    if len(diagnostics['sample_emails']['automated']) < 3:
+                        diagnostics['sample_emails']['automated'].append({
+                            'subject': email.subject,
+                            'sender': email.sender,
+                            'sender_name': email.sender_name,
+                            'date': email.email_date.isoformat() if email.email_date else None,
+                            'reason': 'Non-human sender detected'
+                        })
+                else:
+                    business_count += 1
+                    if len(diagnostics['sample_emails']['business']) < 3:
+                        diagnostics['sample_emails']['business'].append({
+                            'subject': email.subject,
+                            'sender': email.sender,
+                            'sender_name': email.sender_name,
+                            'date': email.email_date.isoformat() if email.email_date else None,
+                            'has_ai_summary': bool(email.ai_summary),
+                            'ai_summary_length': len(email.ai_summary) if email.ai_summary else 0
+                        })
+                    
+                    # Check if it's a quality email with AI insights
+                    if email.ai_summary and len(email.ai_summary) > 15:
+                        quality_emails.append(email)
+                        if len(diagnostics['sample_emails']['quality']) < 5:
+                            diagnostics['sample_emails']['quality'].append({
+                                'subject': email.subject,
+                                'sender': email.sender,
+                                'sender_name': email.sender_name,
+                                'date': email.email_date.isoformat() if email.email_date else None,
+                                'ai_summary': email.ai_summary[:200] + '...' if len(email.ai_summary) > 200 else email.ai_summary,
+                                'key_insights': bool(email.key_insights),
+                                'topics': email.topics[:3] if email.topics else []
+                            })
+            
+            diagnostics['filtered_breakdown'] = {
+                'newsletters_filtered': newsletter_count,
+                'automated_filtered': automated_count, 
+                'business_emails': business_count,
+                'quality_emails_with_ai': len(quality_emails)
+            }
+            
+            # Get recent knowledge base content for comparison
+            knowledge_response = email_intelligence.get_business_knowledge_summary(user['email'])
+            if knowledge_response.get('success'):
+                knowledge = knowledge_response['business_knowledge']
+                diagnostics['current_knowledge'] = {
+                    'summary_stats': knowledge.get('summary_stats', {}),
+                    'decision_sources': [],
+                    'opportunity_sources': []
+                }
+                
+                # Sample the sources of business intelligence
+                strategic = knowledge.get('strategic_intelligence', {})
+                if strategic.get('key_decisions'):
+                    diagnostics['current_knowledge']['decision_sources'] = strategic['key_decisions'][:3]
+                if strategic.get('business_opportunities'):
+                    diagnostics['current_knowledge']['opportunity_sources'] = strategic['business_opportunities'][:3]
+            
+            return jsonify({
+                'success': True,
+                'user_email': user['email'],
+                'diagnostics': diagnostics
+            })
+            
+        except Exception as e:
+            logger.error(f"Email diagnostics error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/sync-topics', methods=['POST'])
+    def api_sync_topics():
+        """API endpoint to sync email topics to the topics table"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Get all emails with topics
+            emails = get_db_manager().get_user_emails(db_user.id, limit=1000)
+            topic_counts = {}
+            
+            # Count topic usage across emails
+            for email in emails:
+                if email.topics and isinstance(email.topics, list):
+                    for topic in email.topics:
+                        if topic and len(topic.strip()) > 2:  # Valid topic
+                            topic_name = topic.strip()
+                            if topic_name not in topic_counts:
+                                topic_counts[topic_name] = 0
+                            topic_counts[topic_name] += 1
+            
+            # Create Topic records for topics with 2+ usages
+            topics_created = 0
+            for topic_name, count in topic_counts.items():
+                if count >= 2:  # Only create topics used in multiple emails
+                    # Check if topic already exists
+                    existing_topics = get_db_manager().get_user_topics(db_user.id)
+                    topic_exists = any(t.name.lower() == topic_name.lower() for t in existing_topics)
+                    
+                    if not topic_exists:
+                        topic_data = {
+                            'name': topic_name,
+                            'slug': topic_name.lower().replace(' ', '-'),
+                            'description': f'Auto-discovered topic from {count} emails',
+                            'is_official': False,  # Mark as AI-discovered
+                            'email_count': count,
+                            'confidence_score': min(0.9, count / 10.0),  # Higher confidence for more usage
+                            'keywords': [topic_name.lower()]
+                        }
+                        get_db_manager().create_or_update_topic(db_user.id, topic_data)
+                        topics_created += 1
+            
+            return jsonify({
+                'success': True,
+                'topics_created': topics_created,
+                'total_topic_usage': len(topic_counts),
+                'message': f'Synced {topics_created} topics from email analysis'
+            })
+            
+        except Exception as e:
+            logger.error(f"Sync topics API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
     @app.route('/dashboard')
     def dashboard():
         """Main dashboard - requires authentication"""

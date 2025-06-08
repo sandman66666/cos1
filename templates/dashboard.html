@@ -12,36 +12,46 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8fafc;
-            color: #1e293b;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            color: #1a202c;
             line-height: 1.6;
+            min-height: 100vh;
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            color: #1a202c;
             padding: 1.5rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .header h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
+            font-size: 1.875rem;
+            font-weight: 800;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .version-badge {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 8px;
             font-size: 0.75rem;
-            font-weight: 500;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
         
         .user-info {
@@ -51,26 +61,30 @@
         }
         
         .user-email {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-weight: 500;
+            background: rgba(79, 70, 229, 0.1);
+            color: #4f46e5;
+            padding: 0.625rem 1.25rem;
+            border-radius: 12px;
+            font-weight: 600;
+            border: 1px solid rgba(79, 70, 229, 0.2);
         }
         
         .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
+            background: linear-gradient(135deg, #ef4444, #dc2626);
             color: white;
-            padding: 0.5rem 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 6px;
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 12px;
             text-decoration: none;
             font-size: 0.875rem;
-            font-weight: 500;
-            transition: all 0.2s;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
         }
         
         .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
         }
         
         .container {
@@ -80,91 +94,107 @@
         }
         
         .status-bar {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 1.5rem;
         }
         
         .status-info {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 1.5rem;
         }
         
         .status-indicator {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         
         .status-success {
-            background: #dcfce7;
-            color: #166534;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
         }
         
         .status-error {
-            background: #fef2f2;
-            color: #dc2626;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
         }
         
         .control-buttons {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.75rem;
             flex-wrap: wrap;
         }
         
         .btn {
-            background: #3b82f6;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
             color: white;
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 1.75rem;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
         
         .btn:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
         }
         
         .btn:disabled {
             background: #9ca3af;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
         
         .btn-danger {
-            background: #dc2626;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
         }
         
         .btn-danger:hover {
-            background: #b91c1c;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
         }
         
         .btn-secondary {
-            background: #6b7280;
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
         }
         
         .btn-secondary:hover {
-            background: #4b5563;
+            box-shadow: 0 8px 24px rgba(107, 114, 128, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-success:hover {
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
         }
         
         .btn-small {
@@ -188,16 +218,20 @@
         }
         
         .tabs {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             overflow: hidden;
         }
         
         .tab-buttons {
             display: flex;
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
+            background: rgba(248, 250, 252, 0.8);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+            padding: 0.5rem;
+            gap: 0.5rem;
         }
         
         .tab-button {
@@ -206,24 +240,27 @@
             background: none;
             border: none;
             font-size: 1rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
             color: #64748b;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
+            border-radius: 12px;
         }
         
         .tab-button:hover {
-            background: #e2e8f0;
+            background: rgba(255, 255, 255, 0.8);
+            color: #475569;
+            transform: translateY(-1px);
         }
         
         .tab-button.active {
-            background: white;
-            color: #3b82f6;
-            border-bottom: 2px solid #3b82f6;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
         
         .tab-content {
@@ -260,43 +297,52 @@
         }
         
         .card {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
         
         .card:hover {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         }
         
         .card h3 {
             color: #1e293b;
-            margin-bottom: 1rem;
-            font-size: 1.125rem;
-            font-weight: 600;
+            margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 700;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
         
         .metric {
             text-align: center;
-            padding: 1rem;
+            padding: 1.5rem;
         }
         
         .metric-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #3b82f6;
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             display: block;
+            margin-bottom: 0.5rem;
         }
         
         .metric-label {
             font-size: 0.875rem;
             color: #64748b;
-            margin-top: 0.25rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .list-item {
@@ -470,16 +516,19 @@
         }
         
         .processing-form {
-            background: #f8fafc;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            background: rgba(248, 250, 252, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
         
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
-            gap: 1rem;
+            gap: 1.5rem;
             align-items: end;
         }
         
@@ -490,23 +539,31 @@
         }
         
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
         
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
             color: #374151;
             font-size: 0.875rem;
         }
         
         .form-control {
             width: 100%;
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(209, 213, 219, 0.5);
+            border-radius: 12px;
             font-size: 0.875rem;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
         
         .results {
@@ -800,7 +857,7 @@
         <!-- Enhanced Features Notice -->
         <div class="enhanced-features">
             <h3>🚀 Enhanced AI Intelligence Active</h3>
-            <p>Quality email filtering • Enhanced task context • Professional people network • Gmail integration • Topic management</p>
+            <p>🎯 <strong>NEW: Business-Focused Gmail Sync</strong> • Only fetches INBOX, IMPORTANT, STARRED & PRIMARY emails • Excludes promotions, social, updates & forums • Quality email filtering • Professional people network • Gmail integration • Topic management</p>
         </div>
         
         <!-- Status Bar -->
@@ -824,6 +881,12 @@
                 </button>
                 <button onclick="refreshAllData()" class="btn btn-secondary">
                     📊 Refresh Data
+                </button>
+                <button onclick="syncTopics()" class="btn btn-success">
+                    🔄 Sync Topics
+                </button>
+                <button onclick="showEmailDiagnostics()" class="btn btn-secondary">
+                    🔍 Debug Email Processing
                 </button>
                 <button onclick="flushDatabase()" class="btn btn-danger" id="flushBtn">
                     🗑️ Flush Database
@@ -856,7 +919,7 @@
                     <span>🔄 Force refresh existing emails (re-analyze with enhanced AI insights)</span>
                 </label>
                 <p style="font-size: 0.75rem; color: #64748b; margin: 0.5rem 0 0 1.5rem;">
-                    Apply v2.0 enhancements: quality filtering, sender context, Gmail links, professional insights
+                    🎯 <strong>NEW:</strong> Business-focused Gmail sync only fetches INBOX, IMPORTANT, STARRED & PRIMARY emails while excluding promotions, social updates, and forums for maximum relevance.
                 </p>
             </div>
             
@@ -1278,22 +1341,25 @@
                 const response = await fetch('/api/business-knowledge');
                 const data = await response.json();
                 
-                if (data.success) {
+                if (data.success && data.business_knowledge) {
                     const knowledge = data.business_knowledge;
                     
-                    // Update metrics
-                    document.getElementById('businessMetricEmails').textContent = knowledge.total_emails_analyzed || 0;
-                    document.getElementById('businessMetricProjects').textContent = knowledge.active_projects || 0;
-                    document.getElementById('businessMetricPeople').textContent = knowledge.people_network_size || 0;
-                    document.getElementById('businessMetricTopics').textContent = knowledge.key_topics?.length || 0;
+                    // FIX: Correctly update metrics from the proper API structure
+                    const summaryStats = knowledge.summary_stats || {};
+                    const networkIntel = knowledge.network_intelligence || {};
+                    
+                    document.getElementById('businessMetricEmails').textContent = summaryStats.quality_emails_analyzed || 0;
+                    document.getElementById('businessMetricProjects').textContent = networkIntel.active_projects || 0;
+                    document.getElementById('businessMetricPeople').textContent = networkIntel.total_human_contacts || 0;
+                    document.getElementById('businessMetricTopics').textContent = knowledge.business_topics?.length || 0;
                     
                     // Load topic management sections
                     await loadOfficialTopics();
                     await loadDiscoveredTopics();
                     
-                    // Enhanced Topics from email analysis (legacy)
-                    if (knowledge.key_topics && knowledge.key_topics.length > 0) {
-                        const topicsHtml = knowledge.key_topics.map((topic, index) => `
+                    // Enhanced Topics from business knowledge (not flat key_topics)
+                    if (knowledge.business_topics && knowledge.business_topics.length > 0) {
+                        const topicsHtml = knowledge.business_topics.map((topic, index) => `
                             <span style="display: inline-block; background: #f1f5f9; color: #374151; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem; margin: 0.25rem;">
                                 ${topic}
                             </span>
@@ -1303,11 +1369,89 @@
                         document.getElementById('businessTopics').innerHTML = '<div style="color: #64748b; font-size: 0.875rem;">No topics identified yet from recent email analysis</div>';
                     }
                     
-                    // Load Business Intelligence Table
+                    // Load Business Intelligence Table with corrected mapping
                     loadBusinessIntelligenceTable(knowledge);
+                    
+                    // FIX: Load individual sections that were missing
+                    const strategic = knowledge.strategic_intelligence || {};
+                    
+                    // Load Business Opportunities section
+                    if (strategic.business_opportunities && strategic.business_opportunities.length > 0) {
+                        const opportunitiesHtml = strategic.business_opportunities.map((opportunity, index) => {
+                            const oppText = typeof opportunity === 'string' ? opportunity : 
+                                           (opportunity.opportunity || opportunity.content || 'Unknown opportunity format');
+                            const context = typeof opportunity === 'object' ? opportunity.context : null;
+                            const source = typeof opportunity === 'object' ? opportunity.source : 'Email Analysis';
+                            
+                            return `
+                                <div class="list-item">
+                                    <h4>💡 Opportunity ${index + 1}</h4>
+                                    <p>${oppText}</p>
+                                    ${context ? `<div class="task-context">${context}</div>` : ''}
+                                    <div class="meta-info">
+                                        <span>📧 Source: ${source}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                        document.getElementById('businessOpportunities').innerHTML = opportunitiesHtml;
+                    } else {
+                        document.getElementById('businessOpportunities').innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No opportunities identified yet</div>';
+                    }
+                    
+                    // Load Business Decisions section
+                    if (strategic.key_decisions && strategic.key_decisions.length > 0) {
+                        const decisionsHtml = strategic.key_decisions.map((decision, index) => {
+                            const decisionText = typeof decision === 'string' ? decision : 
+                                               (decision.decision || decision.content || 'Unknown decision format');
+                            const context = typeof decision === 'object' ? decision.context : null;
+                            const sender = typeof decision === 'object' ? decision.sender : 'Email Analysis';
+                            
+                            return `
+                                <div class="list-item">
+                                    <h4>⚡ Decision ${index + 1}</h4>
+                                    <p>${decisionText}</p>
+                                    ${context ? `<div class="task-context">${context}</div>` : ''}
+                                    <div class="meta-info">
+                                        <span>📧 Source: ${sender}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                        document.getElementById('businessDecisions').innerHTML = decisionsHtml;
+                    } else {
+                        document.getElementById('businessDecisions').innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No decisions identified yet</div>';
+                    }
+                    
+                    // Load Business Challenges section
+                    if (strategic.key_challenges && strategic.key_challenges.length > 0) {
+                        const challengesHtml = strategic.key_challenges.map((challenge, index) => {
+                            const challengeText = typeof challenge === 'string' ? challenge : 
+                                                 (challenge.challenge || challenge.content || 'Unknown challenge format');
+                            const context = typeof challenge === 'object' ? challenge.context : null;
+                            const source = typeof challenge === 'object' ? challenge.source : 'Email Analysis';
+                            
+                            return `
+                                <div class="list-item">
+                                    <h4>🚨 Challenge ${index + 1}</h4>
+                                    <p>${challengeText}</p>
+                                    ${context ? `<div class="task-context">${context}</div>` : ''}
+                                    <div class="meta-info">
+                                        <span>📧 Source: ${source}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                        document.getElementById('businessChallenges').innerHTML = challengesHtml;
+                    } else {
+                        document.getElementById('businessChallenges').innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No challenges identified yet</div>';
+                    }
                     
                     // Load chat knowledge preview
                     await loadChatKnowledgePreview();
+                } else {
+                    console.error('Failed to load business knowledge:', data.error || 'Unknown error');
+                    document.getElementById('businessTopics').innerHTML = `<div class="error">Failed to load business knowledge: ${data.error || 'Unknown error'}</div>`;
                 }
             } catch (error) {
                 console.error('Failed to load business knowledge:', error);
@@ -1392,12 +1536,24 @@
                                         <p style="margin: 0.5rem 0 0 2rem; color: #3730a3; font-size: 0.875rem;">Click to view all decision details with context, stakeholders, and impact analysis</p>
                                     </div>
                                     <div id="decisionsContent" style="display: none; background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #3b82f6;">
-                                        ${bi.recent_decisions.map((decision, index) => `
-                                            <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
-                                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Decision ${index + 1}:</div>
-                                                <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">${decision}</div>
-                                            </div>
-                                        `).join('')}
+                                        ${bi.recent_decisions.map((decision, index) => {
+                                            // Handle both string and object formats
+                                            const decisionText = typeof decision === 'string' ? decision : 
+                                                               (decision.decision || decision.content || 'Unknown decision format');
+                                            const context = typeof decision === 'object' ? decision.context : null;
+                                            const sender = typeof decision === 'object' ? decision.sender : null;
+                                            const date = typeof decision === 'object' ? decision.date : null;
+                                            
+                                            return `
+                                                <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                                    <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Decision ${index + 1}:</div>
+                                                    <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">${decisionText}</div>
+                                                    ${context ? `<div style="margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;"><strong>Context:</strong> ${context}</div>` : ''}
+                                                    ${sender ? `<div style="margin-top: 0.25rem; font-size: 0.75rem; color: #64748b;"><strong>Source:</strong> ${sender}</div>` : ''}
+                                                    ${date ? `<div style="margin-top: 0.25rem; font-size: 0.75rem; color: #64748b;"><strong>Date:</strong> ${new Date(date).toLocaleDateString()}</div>` : ''}
+                                                </div>
+                                            `;
+                                        }).join('')}
                                     </div>
                                 </div>
                             `;
@@ -1414,12 +1570,24 @@
                                         <p style="margin: 0.5rem 0 0 2rem; color: #047857; font-size: 0.875rem;">Click to view all identified opportunities with potential value and requirements</p>
                                     </div>
                                     <div id="opportunitiesContent" style="display: none; background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #10b981;">
-                                        ${bi.top_opportunities.map((opportunity, index) => `
-                                            <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
-                                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Opportunity ${index + 1}:</div>
-                                                <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">${opportunity}</div>
-                                            </div>
-                                        `).join('')}
+                                        ${bi.top_opportunities.map((opportunity, index) => {
+                                            // Handle both string and object formats
+                                            const opportunityText = typeof opportunity === 'string' ? opportunity : 
+                                                                   (opportunity.opportunity || opportunity.content || 'Unknown opportunity format');
+                                            const context = typeof opportunity === 'object' ? opportunity.context : null;
+                                            const source = typeof opportunity === 'object' ? opportunity.source : null;
+                                            const date = typeof opportunity === 'object' ? opportunity.date : null;
+                                            
+                                            return `
+                                                <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                                    <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Opportunity ${index + 1}:</div>
+                                                    <div style="font-size: 0.875rem; color: #374151; white-space: pre-line; line-height: 1.5;">${opportunityText}</div>
+                                                    ${context ? `<div style="margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;"><strong>Context:</strong> ${context}</div>` : ''}
+                                                    ${source ? `<div style="margin-top: 0.25rem; font-size: 0.75rem; color: #64748b;"><strong>Source:</strong> ${source}</div>` : ''}
+                                                    ${date ? `<div style="margin-top: 0.25rem; font-size: 0.75rem; color: #64748b;"><strong>Date:</strong> ${new Date(date).toLocaleDateString()}</div>` : ''}
+                                                </div>
+                                            `;
+                                        }).join('')}
                                     </div>
                                 </div>
                             `;
@@ -1605,97 +1773,11 @@
         // Download knowledge as text file
         async function downloadKnowledgeAsText() {
             try {
-                const response = await fetch('/api/chat-knowledge');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const knowledge = data.knowledge_base;
-                    let textContent = "AI CHIEF OF STAFF - COMPREHENSIVE KNOWLEDGE BASE\n";
-                    textContent += "=" * 60 + "\n\n";
-                    textContent += `Generated: ${new Date().toLocaleString()}\n`;
-                    textContent += `Total Emails Analyzed: ${knowledge.summary_stats.total_emails_analyzed}\n`;
-                    textContent += `Rich Contacts: ${knowledge.summary_stats.rich_contacts}\n`;
-                    textContent += `Business Decisions: ${knowledge.summary_stats.business_decisions}\n`;
-                    textContent += `Active Projects: ${knowledge.summary_stats.active_projects}\n\n`;
-                    
-                    // Business Intelligence
-                    if (knowledge.business_intelligence) {
-                        const bi = knowledge.business_intelligence;
-                        
-                        if (bi.recent_decisions && bi.recent_decisions.length > 0) {
-                            textContent += "BUSINESS DECISIONS\n" + "-" * 30 + "\n";
-                            bi.recent_decisions.forEach((decision, index) => {
-                                textContent += `${index + 1}. ${decision}\n\n`;
-                            });
-                        }
-                        
-                        if (bi.top_opportunities && bi.top_opportunities.length > 0) {
-                            textContent += "BUSINESS OPPORTUNITIES\n" + "-" * 30 + "\n";
-                            bi.top_opportunities.forEach((opportunity, index) => {
-                                textContent += `${index + 1}. ${opportunity}\n\n`;
-                            });
-                        }
-                        
-                        if (bi.current_challenges && bi.current_challenges.length > 0) {
-                            textContent += "CURRENT CHALLENGES\n" + "-" * 30 + "\n";
-                            bi.current_challenges.forEach((challenge, index) => {
-                                textContent += `${index + 1}. ${challenge}\n\n`;
-                            });
-                        }
-                        
-                        if (bi.key_metrics && bi.key_metrics.length > 0) {
-                            textContent += "KEY METRICS & DATA\n" + "-" * 30 + "\n";
-                            bi.key_metrics.forEach((metric, index) => {
-                                textContent += `${index + 1}. ${metric}\n\n`;
-                            });
-                        }
-                    }
-                    
-                    // Rich Contacts
-                    if (knowledge.rich_contacts && knowledge.rich_contacts.length > 0) {
-                        textContent += "RICH CONTACT INTELLIGENCE\n" + "-" * 30 + "\n";
-                        knowledge.rich_contacts.forEach((contact, index) => {
-                            textContent += `${index + 1}. ${contact.name}\n`;
-                            textContent += `   Title: ${contact.title || 'Unknown'}\n`;
-                            textContent += `   Company: ${contact.company || 'Unknown'}\n`;
-                            textContent += `   Relationship: ${contact.relationship || 'Unknown'}\n`;
-                            textContent += `   Intelligence Profile:\n   ${contact.story.replace(/\n/g, '\n   ')}\n\n`;
-                        });
-                    }
-                    
-                    // Topic Knowledge
-                    if (knowledge.topic_knowledge && knowledge.topic_knowledge.all_topics) {
-                        textContent += "KNOWLEDGE BY TOPICS\n" + "-" * 30 + "\n";
-                        knowledge.topic_knowledge.all_topics.forEach(topic => {
-                            textContent += `TOPIC: ${topic}\n`;
-                            const contexts = knowledge.topic_knowledge.topic_contexts[topic] || [];
-                            if (contexts.length > 0) {
-                                textContent += "Related Email Contexts:\n";
-                                contexts.forEach(context => {
-                                    textContent += `  - ${context.email_subject} (${context.date})\n`;
-                                    if (context.summary) {
-                                        textContent += `    ${context.summary}\n`;
-                                    }
-                                });
-                            }
-                            textContent += "\n";
-                        });
-                    }
-                    
-                    // Create and download file
-                    const blob = new Blob([textContent], { type: 'text/plain' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `AI_Chief_of_Staff_Knowledge_Base_${new Date().toISOString().split('T')[0]}.txt`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                }
+                // Use the new server-side download endpoint for better reliability
+                window.location.href = '/api/download-knowledge';
             } catch (error) {
                 console.error('Failed to download knowledge:', error);
-                alert('Failed to download knowledge base');
+                alert('Failed to download knowledge base: ' + error.message);
             }
         }
         
@@ -2237,38 +2319,80 @@
         function loadBusinessIntelligenceTable(knowledge) {
             const allInsights = [];
             
-            // Combine all types of insights
-            if (knowledge.opportunities) {
-                knowledge.opportunities.forEach((item, index) => {
+            // FIX: Correctly access the nested strategic_intelligence structure
+            const strategic = knowledge.strategic_intelligence || {};
+            
+            // Extract opportunities from correct path - handle both string and object formats
+            if (strategic.business_opportunities && strategic.business_opportunities.length > 0) {
+                strategic.business_opportunities.forEach((item, index) => {
+                    // Handle both string and object formats
+                    const content = typeof item === 'string' ? item : (item.opportunity || item.content || JSON.stringify(item));
+                    const context = typeof item === 'object' ? item.context : null;
+                    const source = typeof item === 'object' ? item.source : 'Email Analysis';
+                    
                     allInsights.push({
                         type: 'opportunities',
                         icon: '💡',
-                        content: item,
-                        source: 'Email Analysis',
+                        content: content,
+                        context: context,
+                        source: source,
                         index: index
                     });
                 });
             }
             
-            if (knowledge.key_decisions) {
-                knowledge.key_decisions.forEach((item, index) => {
+            // Extract decisions from correct path - handle both string and object formats
+            if (strategic.key_decisions && strategic.key_decisions.length > 0) {
+                strategic.key_decisions.forEach((item, index) => {
+                    // Handle both string and object formats
+                    const content = typeof item === 'string' ? item : (item.decision || item.content || JSON.stringify(item));
+                    const context = typeof item === 'object' ? item.context : null;
+                    const source = typeof item === 'object' ? item.source : 'Email Analysis';
+                    
                     allInsights.push({
                         type: 'decisions',
                         icon: '⚡',
-                        content: item,
-                        source: 'Email Analysis',
+                        content: content,
+                        context: context,
+                        source: source,
                         index: index
                     });
                 });
             }
             
-            if (knowledge.challenges) {
-                knowledge.challenges.forEach((item, index) => {
+            // Extract challenges from correct path - handle both string and object formats
+            if (strategic.key_challenges && strategic.key_challenges.length > 0) {
+                strategic.key_challenges.forEach((item, index) => {
+                    // Handle both string and object formats
+                    const content = typeof item === 'string' ? item : (item.challenge || item.content || JSON.stringify(item));
+                    const context = typeof item === 'object' ? item.context : null;
+                    const source = typeof item === 'object' ? item.source : 'Email Analysis';
+                    
                     allInsights.push({
                         type: 'challenges',
                         icon: '🚨',
-                        content: item,
-                        source: 'Email Analysis',
+                        content: content,
+                        context: context,
+                        source: source,
+                        index: index
+                    });
+                });
+            }
+            
+            // Extract competitive intelligence - handle both string and object formats
+            if (strategic.competitive_intelligence && strategic.competitive_intelligence.length > 0) {
+                strategic.competitive_intelligence.forEach((item, index) => {
+                    // Handle both string and object formats
+                    const content = typeof item === 'string' ? item : (item.intelligence || item.content || JSON.stringify(item));
+                    const context = typeof item === 'object' ? item.context : null;
+                    const source = typeof item === 'object' ? item.source : 'Email Analysis';
+                    
+                    allInsights.push({
+                        type: 'competitive',
+                        icon: '🏆',
+                        content: content,
+                        context: context,
+                        source: source,
                         index: index
                     });
                 });
@@ -2297,10 +2421,15 @@
                                     </td>
                                     <td style="padding: 1rem;">
                                         <div style="font-size: 0.875rem; color: #374151; line-height: 1.5;">
-                                            ${insight.content.length > 200 ? insight.content.substring(0, 200) + '...' : insight.content}
+                                            ${insight.content && insight.content.length > 200 ? insight.content.substring(0, 200) + '...' : insight.content}
                                         </div>
-                                        ${insight.content.length > 200 ? `
-                                            <button onclick="showFullInsight('${insight.type}', ${insight.index}, \`${insight.content.replace(/`/g, '\\`')}\`)" 
+                                        ${insight.context ? `
+                                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f8fafc; border-radius: 4px; font-size: 0.75rem; color: #64748b;">
+                                                <strong>Context:</strong> ${insight.context.length > 100 ? insight.context.substring(0, 100) + '...' : insight.context}
+                                            </div>
+                                        ` : ''}
+                                        ${insight.content && insight.content.length > 200 ? `
+                                            <button onclick="showFullInsight('${insight.type}', ${insight.index}, \`${insight.content.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)" 
                                                     style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
                                                 View Full Content
                                             </button>
@@ -2598,14 +2727,38 @@
                     
                     // Display comprehensive results
                     const summary = result.summary;
+                    const fetchResult = result.fetch_result || {};
+                    const filterStats = fetchResult.filter_stats || {};
+                    
+                    let filteringInfoHtml = '';
+                    if (filterStats.total_business_emails !== undefined) {
+                        filteringInfoHtml = `
+                            <div style="margin-bottom: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 6px; border: 1px solid #bfdbfe;">
+                                <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem;">🎯 Business-Focused Gmail Filtering Results:</div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; font-size: 0.875rem; color: #1e40af;">
+                                    <div>📥 Inbox: ${filterStats.inbox_emails || 0}</div>
+                                    <div>⭐ Important: ${filterStats.important_emails || 0}</div>
+                                    <div>🌟 Starred: ${filterStats.starred_emails || 0}</div>
+                                    <div>🎯 Primary: ${filterStats.primary_category_emails || 0}</div>
+                                    <div><strong>Total: ${filterStats.total_business_emails || 0}</strong></div>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #3730a3; margin-top: 0.5rem;">
+                                    ✅ Excluded: Promotions, Social, Updates, Forums, Spam & Trash for maximum business relevance
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
                     resultsDiv.innerHTML = `
                         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1.5rem; margin-top: 1rem;">
                             <h4 style="margin: 0 0 1rem 0; color: #166534;">✅ Enhanced Processing Complete</h4>
                             
+                            ${filteringInfoHtml}
+                            
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                                 <div style="background: white; padding: 1rem; border-radius: 6px; text-align: center;">
                                     <div style="font-size: 1.5rem; font-weight: 600; color: #3b82f6;">${summary.emails_fetched || 0}</div>
-                                    <div style="font-size: 0.875rem; color: #64748b;">Emails Fetched</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Business Emails Fetched</div>
                                 </div>
                                 <div style="background: white; padding: 1rem; border-radius: 6px; text-align: center;">
                                     <div style="font-size: 1.5rem; font-weight: 600; color: #059669;">${summary.emails_analyzed || 0}</div>
@@ -2630,7 +2783,7 @@
                             </div>
                             
                             <div style="font-size: 0.875rem; color: #166534; background: #dcfce7; padding: 0.75rem; border-radius: 6px;">
-                                🎉 <strong>Success!</strong> Your emails have been processed with enhanced AI intelligence. 
+                                🎉 <strong>Success!</strong> Your emails have been processed with enhanced AI intelligence and business-focused filtering. 
                                 Check the tabs above to explore your business insights, tasks, and professional network.
                             </div>
                             
@@ -2687,6 +2840,197 @@
             // Re-enable button
             processBtn.disabled = false;
             processBtn.textContent = '🧠 Intelligent Processing';
+        }
+        
+        // Show email processing diagnostics
+        async function showEmailDiagnostics() {
+            const modal = document.getElementById('knowledgeModal');
+            const content = document.getElementById('detailedKnowledgeContent');
+            
+            content.innerHTML = 'Loading email processing diagnostics...';
+            modal.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/email-diagnostics');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const diagnostics = data.diagnostics;
+                    
+                    let html = `
+                        <h3>🔍 Email Processing Diagnostics</h3>
+                        <div style="margin-bottom: 1.5rem;">
+                            <p style="color: #64748b; margin: 0;">Understanding what emails are being processed and why certain content appears in your business intelligence.</p>
+                        </div>
+                        
+                        <div style="background: #f8fafc; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1rem 0; color: #1e293b;">📊 Email Processing Summary</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                <div style="text-align: center; padding: 1rem; background: white; border-radius: 6px;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #3b82f6;">${diagnostics.total_emails}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Total Emails</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: white; border-radius: 6px;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #dc2626;">${diagnostics.filtered_breakdown.newsletters_filtered}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Newsletters Filtered</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: white; border-radius: 6px;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #f59e0b;">${diagnostics.filtered_breakdown.automated_filtered}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Automated Filtered</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: white; border-radius: 6px;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #059669;">${diagnostics.filtered_breakdown.business_emails}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">Business Emails</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: white; border-radius: 6px;">
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #7c3aed;">${diagnostics.filtered_breakdown.quality_emails_with_ai}</div>
+                                    <div style="font-size: 0.875rem; color: #64748b;">AI Analyzed</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Sample emails sections
+                    if (diagnostics.sample_emails.newsletters.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 1.5rem;">
+                                <h4 style="margin: 0 0 1rem 0; color: #dc2626;">🚫 Filtered: Newsletter/Promotional Content</h4>
+                                <div style="background: #fef2f2; border-radius: 6px; padding: 1rem; border: 1px solid #fecaca;">
+                                    ${diagnostics.sample_emails.newsletters.map(email => `
+                                        <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: white; border-radius: 4px;">
+                                            <div style="font-weight: 600; color: #dc2626; margin-bottom: 0.25rem;">${email.subject}</div>
+                                            <div style="font-size: 0.875rem; color: #64748b;">From: ${email.sender_name || email.sender}</div>
+                                            <div style="font-size: 0.75rem; color: #991b1b; margin-top: 0.25rem;">${email.reason}</div>
+                                        </div>
+                                    `).join('')}
+                                    <div style="font-size: 0.875rem; color: #991b1b; margin-top: 0.5rem; font-style: italic;">
+                                        ✅ These emails were correctly filtered out to focus on genuine business communications.
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    if (diagnostics.sample_emails.quality.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 1.5rem;">
+                                <h4 style="margin: 0 0 1rem 0; color: #059669;">✅ Quality Business Emails (AI Analyzed)</h4>
+                                <div style="background: #f0fdf4; border-radius: 6px; padding: 1rem; border: 1px solid #bbf7d0;">
+                                    ${diagnostics.sample_emails.quality.map(email => `
+                                        <div style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 4px; border-left: 3px solid #059669;">
+                                            <div style="font-weight: 600; color: #059669; margin-bottom: 0.25rem;">${email.subject}</div>
+                                            <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.5rem;">From: ${email.sender_name || email.sender}</div>
+                                            <div style="font-size: 0.875rem; color: #374151; background: #f8fafc; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem;">
+                                                <strong>AI Summary:</strong> ${email.ai_summary}
+                                            </div>
+                                            <div style="font-size: 0.75rem; color: #059669;">
+                                                Insights: ${email.key_insights ? '✅' : '❌'} | Topics: ${email.topics.join(', ') || 'None identified'}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Current knowledge sources
+                    if (diagnostics.current_knowledge) {
+                        html += `
+                            <div style="margin-bottom: 1.5rem;">
+                                <h4 style="margin: 0 0 1rem 0; color: #3b82f6;">📊 Current Business Intelligence Sources</h4>
+                                <div style="background: #f0f9ff; border-radius: 6px; padding: 1rem; border: 1px solid #bfdbfe;">
+                                    <div style="margin-bottom: 1rem;">
+                                        <strong>Summary Stats:</strong>
+                                        <div style="font-size: 0.875rem; color: #374151; margin-top: 0.25rem;">
+                                            Quality Emails: ${diagnostics.current_knowledge.summary_stats.quality_emails_analyzed || 0} | 
+                                            Human Contacts: ${diagnostics.current_knowledge.summary_stats.human_contacts || 0} | 
+                                            Projects: ${diagnostics.current_knowledge.summary_stats.substantial_projects || 0}
+                                        </div>
+                                    </div>
+                                    
+                                    ${diagnostics.current_knowledge.decision_sources && diagnostics.current_knowledge.decision_sources.length > 0 ? `
+                                        <div style="margin-bottom: 1rem;">
+                                            <strong>Sample Decisions in Knowledge Base:</strong>
+                                            ${diagnostics.current_knowledge.decision_sources.slice(0, 2).map((decision, idx) => `
+                                                <div style="font-size: 0.875rem; color: #374151; margin: 0.5rem 0; padding: 0.5rem; background: white; border-radius: 4px;">
+                                                    ${idx + 1}. ${typeof decision === 'string' ? decision.substring(0, 150) + '...' : decision.decision?.substring(0, 150) + '...' || 'Unknown decision format'}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                    
+                                    ${diagnostics.current_knowledge.opportunity_sources && diagnostics.current_knowledge.opportunity_sources.length > 0 ? `
+                                        <div>
+                                            <strong>Sample Opportunities in Knowledge Base:</strong>
+                                            ${diagnostics.current_knowledge.opportunity_sources.slice(0, 2).map((opp, idx) => `
+                                                <div style="font-size: 0.875rem; color: #374151; margin: 0.5rem 0; padding: 0.5rem; background: white; border-radius: 4px;">
+                                                    ${idx + 1}. ${typeof opp === 'string' ? opp.substring(0, 150) + '...' : opp.opportunity?.substring(0, 150) + '...' || 'Unknown opportunity format'}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Recommendations
+                    html += `
+                        <div style="background: #f0fdf4; border-radius: 6px; padding: 1rem; border: 1px solid #bbf7d0;">
+                            <h4 style="margin: 0 0 0.5rem 0; color: #166534;">💡 Recommendations</h4>
+                            <div style="font-size: 0.875rem; color: #166534;">
+                                ${diagnostics.filtered_breakdown.newsletters_filtered > 0 ? `✅ Newsletter filtering is working - ${diagnostics.filtered_breakdown.newsletters_filtered} promotional emails filtered out<br>` : ''}
+                                ${diagnostics.filtered_breakdown.quality_emails_with_ai === 0 ? `⚠️ No quality emails with AI analysis found. Try processing more recent emails or check Gmail connection.<br>` : `✅ ${diagnostics.filtered_breakdown.quality_emails_with_ai} quality emails analyzed successfully<br>`}
+                                ${diagnostics.filtered_breakdown.business_emails < 5 ? `💡 Low business email count (${diagnostics.filtered_breakdown.business_emails}). Consider processing more emails or check if important senders are being filtered.<br>` : `✅ Good business email volume (${diagnostics.filtered_breakdown.business_emails})<br>`}
+                                <br><strong>Next Steps:</strong> If you see newsletter content in your business intelligence, try re-processing with "Force Refresh" to apply improved filtering.
+                            </div>
+                        </div>
+                    `;
+                    
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = `<div class="error">Failed to load diagnostics: ${data.error}</div>`;
+                }
+            } catch (error) {
+                console.error('Failed to load email diagnostics:', error);
+                content.innerHTML = '<div class="error">Failed to load email diagnostics</div>';
+            }
+        }
+        
+        // Sync topics from emails to topics table
+        async function syncTopics() {
+            const statusText = document.getElementById('statusText');
+            
+            try {
+                statusText.textContent = 'Syncing topics from email analysis...';
+                
+                const response = await fetch('/api/sync-topics', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusText.textContent = `✅ Synced ${result.topics_created} topics successfully!`;
+                    
+                    // Show success notification
+                    alert(`✅ Topic Sync Complete!\n\n${result.topics_created} topics created from ${result.total_topic_usage} topic usages.\n\n${result.message}`);
+                    
+                    // Refresh topics data
+                    await refreshAllData();
+                    
+                } else {
+                    statusText.textContent = 'Topic sync failed';
+                    alert(`❌ Topic sync failed: ${result.error}`);
+                }
+            } catch (error) {
+                statusText.textContent = 'Topic sync error';
+                alert(`❌ Network error during topic sync: ${error.message}`);
+                console.error('Topic sync error:', error);
+            }
         }
     </script>
     

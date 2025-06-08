@@ -1,33 +1,198 @@
-chief_of_staff_ai/
-├── README.md
-├── .env.example
-├── requirements.txt
-├── run.py
+🏗️ AI Chief of Staff - Current Project Structure
 
-├── config/
-│   └── settings.py
+Production Flask Web Application Structure (v3.0)
 
-├── auth/
-│   └── gmail_auth.py
+⸻
 
-├── data/
-│   └── email_store.json         # optional local JSON store for raw fetched data
+COS1/                                    # Root project directory
+├── main.py                             # Flask application entry point (1206 lines)
+├── requirements.txt                    # Python dependencies for production
+├── Procfile                           # Heroku deployment configuration
+├── README.md                          # Project documentation and setup guide
+├── .gitignore                         # Git ignore patterns
+├── .env                               # Environment variables (not in repo)
+├── users.db                           # SQLite database (development)
+├── cookies.txt                        # Session data (temporary)
 
-├── ingest/
-│   └── gmail_fetcher.py         # fetch Gmail messages using Gmail API
+├── templates/                         # Flask HTML templates
+│   ├── dashboard.html                 # Main 4-section dashboard interface
+│   ├── login.html                     # Google OAuth login page
+│   └── base.html                      # Base template with common UI elements
 
-├── processors/
-│   ├── email_normalizer.py      # convert Gmail format into a clean schema
-│   └── task_extractor.py        # extract tasks, deadlines, follow-ups from email body
+├── static/                            # Static web assets
+│   ├── css/
+│   │   └── styles.css                 # Dashboard styling and responsive design
+│   ├── js/
+│   │   └── dashboard.js               # Frontend JavaScript for API integration
+│   └── images/                        # Icons and graphics
 
-├── embeddings/
-│   └── embedder.py              # creates vector embeddings from normalized emails
+├── chief_of_staff_ai/                 # Core AI processing modules
+│   ├── config/
+│   │   └── settings.py                # Application configuration and environment
+│   │
+│   ├── auth/
+│   │   └── gmail_auth.py              # Google OAuth 2.0 and Gmail API integration
+│   │
+│   ├── ingest/
+│   │   └── gmail_fetcher.py           # Gmail message fetching with thread handling
+│   │
+│   ├── processors/
+│   │   ├── email_normalizer.py        # Email content normalization and cleaning
+│   │   ├── task_extractor.py          # AI-powered task extraction from emails
+│   │   └── email_intelligence.py      # Claude 4 Sonnet business intelligence analysis
+│   │
+│   └── models/
+│       └── database.py                # SQLAlchemy models and database management
+│                                      # Models: User, Email, Task, Person, Project, Topic
 
-├── storage/
-│   └── vector_store.py          # manages FAISS or other vector DB
+├── data/                              # Data storage and processing
+│   ├── gmail_tokens/                  # OAuth tokens per user (secure storage)
+│   ├── processed_emails/              # Processed email cache by user
+│   └── user_data/                     # User-specific data isolation
 
-├── interface/
-│   └── prompt_console.py        # CLI interface or basic Streamlit frontend (v0.1)
+├── logs/                              # Application logging
+│   ├── app.log                        # Main application logs
+│   ├── gmail_api.log                  # Gmail API interaction logs
+│   └── claude_ai.log                  # Claude AI processing logs
 
-├── utils/
-│   └── datetime_utils.py        # handles natural language dates, etc.
+├── tests/                             # Test suite
+│   ├── test_gmail_auth.py             # OAuth flow testing
+│   ├── test_email_processing.py       # Email ingestion and processing tests
+│   ├── test_ai_intelligence.py        # Claude AI integration tests
+│   └── test_data/                     # Sample emails and test fixtures
+
+├── test_files/                        # Real test data for development
+│   ├── sample_emails.json             # Actual Gmail message samples
+│   └── test_scenarios/                # Various test cases and edge cases
+
+└── Spec_and_architecture/            # Project specifications and documentation
+    ├── Spec.txt                      # Main technical specification (current: v3.0)
+    ├── Enhanced_Requirements_v2.txt   # Enhancement roadmap and priorities
+    ├── rules.txt                     # Development guidelines and principles
+    ├── Structure.txt                 # This file - project organization
+    ├── step_by_step_build_plan.txt   # Historical build plan (completed)
+    └── create_project_structure.py   # Initial scaffolding script (legacy)
+
+⸻
+
+🗃️ Database Models (SQLAlchemy)
+
+User Model:
+- Multi-tenant user management
+- Gmail integration metadata
+- Session tracking and security
+
+Email Model:
+- Normalized email content and metadata
+- AI analysis results and insights
+- Thread relationships and context
+- Quality scoring and filtering flags
+
+Task Model:
+- AI-extracted actionable items
+- Sender context and relationship info
+- Confidence scoring and priority levels
+- Source email references and links
+
+Person Model:
+- Professional network contacts
+- Relationship analysis and classification
+- Communication patterns and frequency
+- Professional context (titles, companies)
+
+Project Model:
+- Business initiative organization
+- Email and task associations
+- Timeline and dependency tracking
+
+Topic Model:
+- Intelligent content categorization
+- Official topic management and merging
+- Hierarchical organization support
+- Content-topic confidence scoring
+
+⸻
+
+🌐 Flask Application Architecture
+
+Main Routes (/):
+- / : Dashboard with 4-section interface
+- /login : Google OAuth authentication
+- /logout : Session cleanup and security
+- /auth/google : OAuth initiation
+- /auth/google/callback : OAuth completion
+
+API Endpoints (/api/):
+- /api/fetch-emails : Gmail integration and email fetching
+- /api/process-emails : Comprehensive AI analysis pipeline
+- /api/chat : Claude conversation interface
+- /api/chat-with-knowledge : Context-aware AI assistance
+- /api/status : System health and user metrics
+- /api/emails : Email data access and management
+- /api/tasks : Task management and organization
+- /api/people : Professional network insights
+- /api/projects : Business initiative tracking
+- /api/topics : Topic management and merging
+- /api/business-knowledge : Strategic insights synthesis
+- /api/email-insights : AI-analyzed email summaries
+
+Authentication & Security:
+- Google OAuth 2.0 with proper state validation
+- Multi-tenant session isolation with UUID tracking
+- CSRF protection and secure token storage
+- Per-user data access controls and validation
+
+⸻
+
+🚀 Deployment Configuration
+
+Local Development:
+- SQLite database for rapid iteration
+- Flask debug mode with hot reload
+- Environment variable configuration
+- Comprehensive logging and error handling
+
+Production (Heroku):
+- PostgreSQL database with connection pooling
+- Gunicorn WSGI server configuration
+- Environment-based configuration management
+- Automatic dependency installation and setup
+
+Required Environment Variables:
+- GOOGLE_CLIENT_ID : Google OAuth client identifier
+- GOOGLE_CLIENT_SECRET : Google OAuth client secret
+- ANTHROPIC_API_KEY : Claude 4 Sonnet API access
+- SECRET_KEY : Flask session security key
+- DATABASE_URL : PostgreSQL connection (production)
+
+⸻
+
+🔧 Key Implementation Features
+
+Multi-Tenant Architecture:
+- Complete user data isolation and security
+- Per-user database queries with ID validation
+- Secure session management and cleanup
+- User-specific data directories and token storage
+
+AI Integration:
+- Claude 4 Sonnet for comprehensive email analysis
+- Business intelligence extraction and insights
+- Context-aware conversation capabilities
+- Confidence scoring for AI-generated content
+
+Gmail Integration:
+- Complete OAuth 2.0 flow with error handling
+- Intelligent email fetching and thread management
+- Rate limiting and API quota management
+- Direct Gmail linking for source verification
+
+Web Interface:
+- Responsive 4-section dashboard design
+- Real-time API integration with progress indicators
+- Professional UI/UX with modern styling
+- Mobile-optimized interface and navigation
+
+⸻
+
+This structure represents a mature, production-ready Flask web application with comprehensive AI capabilities, secure multi-tenant architecture, and professional-grade deployment configuration.
