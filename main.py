@@ -2140,6 +2140,116 @@ Remember: This knowledge base represents their actual business communications an
             logger.error(f"Error getting task contexts: {str(e)}")
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/strategic-intelligence', methods=['POST'])
+    def api_generate_strategic_intelligence():
+        """
+        NEW: Strategic Intelligence Generation API
+        
+        Replaces email-centric processing with unified strategic intelligence.
+        Transforms all communications into strategic business contexts, insights, and recommendations.
+        """
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        if not claude_client:
+            return jsonify({'error': 'Claude integration not configured'}), 500
+        
+        try:
+            from chief_of_staff_ai.strategic_intelligence import StrategyEngine
+            
+            user_email = user['email']
+            
+            # Initialize Strategic Intelligence Engine
+            strategy_engine = StrategyEngine(claude_client, get_db_manager())
+            
+            # Generate comprehensive strategic intelligence
+            logger.info(f"Generating strategic intelligence for {user_email}")
+            intelligence_result = strategy_engine.generate_strategic_intelligence(user_email)
+            
+            if not intelligence_result.get('success'):
+                return jsonify({
+                    'success': False,
+                    'error': intelligence_result.get('error', 'Strategic intelligence generation failed')
+                }), 500
+            
+            # Format response for frontend
+            response_data = {
+                'success': True,
+                'message': 'Strategic intelligence generated successfully',
+                'intelligence_brief': intelligence_result['intelligence_brief'],
+                'business_contexts': [
+                    {
+                        'id': ctx.context_id,
+                        'name': ctx.name,
+                        'description': ctx.description,
+                        'type': ctx.context_type,
+                        'status': ctx.current_status,
+                        'priority_score': ctx.priority_score,
+                        'impact_assessment': ctx.impact_assessment,
+                        'key_people': ctx.key_people,
+                        'confidence_level': ctx.confidence_level
+                    } for ctx in intelligence_result['business_contexts']
+                ],
+                'strategic_insights': [
+                    {
+                        'id': insight.insight_id,
+                        'title': insight.title,
+                        'type': insight.insight_type,
+                        'description': insight.description,
+                        'business_implications': insight.business_implications,
+                        'recommended_response': insight.recommended_response,
+                        'confidence_level': insight.confidence_level
+                    } for insight in intelligence_result['strategic_insights']
+                ],
+                'recommendations': [
+                    {
+                        'id': rec.recommendation_id,
+                        'title': rec.title,
+                        'description': rec.description,
+                        'rationale': rec.rationale,
+                        'impact_analysis': rec.impact_analysis,
+                        'urgency_level': rec.urgency_level,
+                        'estimated_impact': rec.estimated_impact,
+                        'time_sensitivity': rec.time_sensitivity,
+                        'suggested_actions': rec.suggested_actions,
+                        'confidence_score': rec.confidence_score
+                    } for rec in intelligence_result['recommendations']
+                ],
+                'generated_at': intelligence_result['generated_at'],
+                'processing_type': 'strategic_intelligence'
+            }
+            
+            logger.info(f"Strategic intelligence generated: {len(intelligence_result['business_contexts'])} contexts, "
+                       f"{len(intelligence_result['strategic_insights'])} insights, "
+                       f"{len(intelligence_result['recommendations'])} recommendations")
+            
+            return jsonify(response_data)
+            
+        except Exception as e:
+            logger.error(f"Strategic intelligence API error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': f'Strategic intelligence generation failed: {str(e)}',
+                'processing_type': 'strategic_intelligence'
+            }), 500
+
+    @app.route('/strategic-intelligence')
+    def strategic_intelligence_page():
+        """Strategic Intelligence page for unified business intelligence"""
+        user = get_current_user()
+        if not user:
+            return redirect('/login')
+        return render_template('strategic_intelligence.html')
+    
+    @app.route('/settings')
+    def settings_page():
+        """Settings page for configuring email sync and other preferences"""
+        user = get_current_user()
+        if not user:
+            return redirect('/login')
+        return render_template('settings.html')
+
     return app
 
 # Create the Flask application
