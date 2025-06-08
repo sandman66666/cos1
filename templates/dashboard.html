@@ -3,7 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chief of Staff v2.0 - Enhanced Dashboard</title>
+    <title>AI Chief of Staff - Enhanced Dashboard</title>
+    
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+        rel="stylesheet"
+        as="style"
+        onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Inter%3Awght%40400%3B500%3B700%3B900&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
+    />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <!-- Custom Dark Theme Styles -->
     <style>
         * {
             margin: 0;
@@ -12,1202 +26,647 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            background-attachment: fixed;
-            color: #1a202c;
-            line-height: 1.6;
-            min-height: 100vh;
+            font-family: Inter, "Noto Sans", sans-serif;
         }
         
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            color: #1a202c;
-            padding: 1.5rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar {
+            width: 6px;
         }
         
-        .header h1 {
-            font-size: 1.875rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        ::-webkit-scrollbar-track {
+            background: #101a23;
         }
         
-        .version-badge {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
-            padding: 0.375rem 0.75rem;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        ::-webkit-scrollbar-thumb {
+            background: #223649;
+            border-radius: 3px;
         }
         
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #314d68;
         }
         
-        .user-email {
-            background: rgba(79, 70, 229, 0.1);
-            color: #4f46e5;
-            padding: 0.625rem 1.25rem;
-            border-radius: 12px;
-            font-weight: 600;
-            border: 1px solid rgba(79, 70, 229, 0.2);
+        /* Custom utilities */
+        .text-secondary {
+            color: #90aecb;
         }
         
-        .logout-btn {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-            padding: 0.625rem 1.25rem;
-            border: none;
-            border-radius: 12px;
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        .bg-card {
+            background-color: #223649;
         }
         
-        .logout-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+        .bg-primary {
+            background-color: #0b80ee;
         }
         
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
+        .border-dark {
+            border-color: #314d68;
         }
         
-        .status-bar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-        }
-        
-        .status-info {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-        
-        .status-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        .status-success {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-        }
-        
-        .status-error {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-        }
-        
-        .control-buttons {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
-            padding: 0.875rem 1.75rem;
-            border: none;
-            border-radius: 12px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
-        }
-        
-        .btn:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-        }
-        
-        .btn-danger:hover {
-            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(135deg, #6b7280, #4b5563);
-            box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
-        }
-        
-        .btn-secondary:hover {
-            box-shadow: 0 8px 24px rgba(107, 114, 128, 0.4);
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, #10b981, #059669);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-        
-        .btn-success:hover {
-            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);
-        }
-        
-        .btn-small {
-            padding: 0.375rem 0.75rem;
-            font-size: 0.75rem;
-        }
-        
-        .gmail-link {
-            background: #ea4335;
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 0.75rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        
-        .gmail-link:hover {
-            background: #d23825;
-        }
-        
-        .tabs {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            overflow: hidden;
-        }
-        
-        .tab-buttons {
-            display: flex;
-            background: rgba(248, 250, 252, 0.8);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-            padding: 0.5rem;
-            gap: 0.5rem;
-        }
-        
-        .tab-button {
-            flex: 1;
-            padding: 1rem 1.5rem;
-            background: none;
-            border: none;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: #64748b;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            border-radius: 12px;
-        }
-        
-        .tab-button:hover {
-            background: rgba(255, 255, 255, 0.8);
-            color: #475569;
-            transform: translateY(-1px);
-        }
-        
-        .tab-button.active {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-        }
-        
-        .tab-content {
-            display: none;
-            padding: 2rem;
-            min-height: 600px;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .grid {
-            display: grid;
-            gap: 1.5rem;
-        }
-        
-        .grid-2 {
-            grid-template-columns: 1fr 1fr;
-        }
-        
-        .grid-3 {
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        }
-        
-        .grid-4 {
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        }
-        
-        @media (max-width: 768px) {
-            .grid-2, .grid-3, .grid-4 {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
-        
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-        }
-        
-        .card h3 {
-            color: #1e293b;
-            margin-bottom: 1.5rem;
-            font-size: 1.25rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .metric {
-            text-align: center;
-            padding: 1.5rem;
-        }
-        
-        .metric-value {
-            font-size: 2.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-        
-        .metric-label {
-            font-size: 0.875rem;
-            color: #64748b;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .list-item {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            transition: all 0.2s;
-        }
-        
-        .list-item:hover {
-            background: #f1f5f9;
-            border-color: #cbd5e1;
-        }
-        
-        .list-item h4 {
-            margin-bottom: 0.5rem;
-            color: #1e293b;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            justify-content: space-between;
-        }
-        
-        .list-item p {
-            color: #64748b;
-            font-size: 0.875rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .task-context {
-            background: #f1f5f9;
-            border-radius: 6px;
-            padding: 0.75rem;
-            margin: 0.5rem 0;
-            font-size: 0.875rem;
-        }
-        
-        .sender-info {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-        }
-        
-        .sender-name {
-            font-weight: 600;
-            color: #1e293b;
-        }
-        
-        .sender-details {
-            color: #64748b;
-        }
-        
-        .meta-info {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            font-size: 0.75rem;
-            color: #94a3b8;
-            align-items: center;
-        }
-        
-        .meta-info span {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        
-        .priority-high {
-            border-left: 4px solid #dc2626;
-        }
-        
-        .priority-medium {
-            border-left: 4px solid #d97706;
-        }
-        
-        .priority-low {
-            border-left: 4px solid #059669;
-        }
-        
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        
-        .badge-success {
-            background: #dcfce7;
-            color: #166534;
-        }
-        
-        .badge-warning {
-            background: #fef3c7;
-            color: #d97706;
-        }
-        
-        .badge-info {
-            background: #dbeafe;
-            color: #2563eb;
-        }
-        
-        .badge-high {
-            background: #fef2f2;
-            color: #dc2626;
-        }
-        
-        .badge-medium {
-            background: #fef3c7;
-            color: #d97706;
-        }
-        
-        .badge-low {
-            background: #dcfce7;
-            color: #166534;
-        }
-        
-        .quality-score {
-            background: linear-gradient(90deg, #fef2f2 0%, #fef3c7 50%, #dcfce7 100%);
-            height: 4px;
-            border-radius: 2px;
-            margin: 0.5rem 0;
-            position: relative;
-        }
-        
-        .quality-indicator {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            border-radius: 2px;
-            transition: width 0.3s ease;
-        }
-        
-        .quality-high {
-            background: #059669;
-        }
-        
-        .quality-medium {
-            background: #d97706;
-        }
-        
-        .quality-low {
-            background: #dc2626;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: #64748b;
-        }
-        
-        .empty-state h3 {
-            font-size: 1.125rem;
-            margin-bottom: 0.5rem;
-            color: #94a3b8;
+        /* Loading animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
         
         .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            color: #64748b;
-        }
-        
-        .processing-form {
-            background: rgba(248, 250, 252, 0.8);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            border: 1px solid rgba(226, 232, 240, 0.5);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
-        
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr auto;
-            gap: 1.5rem;
-            align-items: end;
-        }
-        
-        @media (max-width: 768px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.75rem;
-            font-weight: 600;
-            color: #374151;
-            font-size: 0.875rem;
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid rgba(209, 213, 219, 0.5);
-            border-radius: 12px;
-            font-size: 0.875rem;
-            background: rgba(255, 255, 255, 0.8);
-            transition: all 0.3s ease;
-        }
-        
-        .form-control:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-        
-        .results {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            border-radius: 6px;
-        }
-        
-        .error {
-            background: #fef2f2;
-            color: #dc2626;
-            padding: 1rem;
-            border-radius: 6px;
-            border: 1px solid #fecaca;
-        }
-        
-        .success {
-            background: #f0fdf4;
-            color: #166534;
-            padding: 1rem;
-            border-radius: 6px;
-            border: 1px solid #bbf7d0;
-        }
-        
-        .person-profile {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 0.75rem;
-        }
-        
-        .person-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-        
-        .person-details h4 {
-            margin: 0 0 0.25rem 0;
-            font-size: 1rem;
-        }
-        
-        .person-role {
-            color: #64748b;
-            font-size: 0.875rem;
-            margin: 0;
-        }
-        
-        .topic-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.75rem;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-        }
-        
-        .topic-name {
-            font-weight: 500;
-            color: #1e293b;
-        }
-        
-        .topic-count {
-            background: #e2e8f0;
-            color: #64748b;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-        }
-        
-        .official-topic {
-            border-left: 4px solid #059669;
-        }
-        
-        .confidence-score {
-            font-size: 0.75rem;
-            color: #64748b;
-            background: #f1f5f9;
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-        }
-        
-        .enhanced-features {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-        }
-        
-        .enhanced-features h3 {
-            margin: 0 0 0.5rem 0;
-            color: white;
-        }
-        
-        .enhanced-features p {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 0.875rem;
-        }
-        
-        .topic-management {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.75rem;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-        }
-        
-        .topic-details {
-            flex: 1;
-        }
-        
-        .topic-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .btn-topic {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
-            border-radius: 4px;
-            border: 1px solid #e2e8f0;
-            background: white;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn-topic:hover {
-            background: #f1f5f9;
-        }
-        
-        .btn-official {
-            background: #059669;
-            color: white;
-            border-color: #059669;
-        }
-        
-        .btn-official:hover {
-            background: #047857;
-        }
-        
-        .topic-official {
-            border-left: 4px solid #059669;
-            background: #f0fdf4;
-        }
-        
-        .content-item {
-            background: #f8fafc;
-            border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            border-left: 4px solid #e2e8f0;
-        }
-        
-        .content-item.has-source {
-            border-left-color: #3b82f6;
-        }
-        
-        .content-source {
-            font-size: 0.75rem;
-            color: #64748b;
-            margin-top: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .task-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-        }
-        
-        .task-row {
-            border-bottom: 1px solid #e2e8f0;
-            padding: 1rem 0;
-            display: grid;
-            grid-template-columns: 2fr 1fr 120px 100px 80px;
-            gap: 1rem;
-            align-items: center;
-        }
-        
-        .task-row:hover {
-            background: #f8fafc;
-        }
-        
-        .task-description {
-            font-weight: 500;
-            color: #1e293b;
-        }
-        
-        .task-context {
-            font-size: 0.875rem;
-            color: #64748b;
-            margin-top: 0.25rem;
-        }
-        
-        .task-sender {
-            font-size: 0.875rem;
-            color: #64748b;
-        }
-        
-        .task-due {
-            font-size: 0.875rem;
-            color: #dc2626;
-            font-weight: 500;
-        }
-        
-        .task-priority {
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            text-align: center;
-        }
-        
-        .priority-high {
-            background: #fef2f2;
-            color: #dc2626;
-        }
-        
-        .priority-medium {
-            background: #fef3c7;
-            color: #d97706;
-        }
-        
-        .priority-low {
-            background: #dcfce7;
-            color: #059669;
-        }
-        
-        .task-confidence {
-            font-size: 0.75rem;
-            color: #64748b;
-            text-align: center;
-        }
-        
-        /* People table specific styling */
-        .people-table-row {
-            border-bottom: 1px solid #e2e8f0;
-            padding: 1rem 0;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 100px;
-            gap: 1rem;
-            align-items: center;
-        }
-        
-        .people-table-row:hover {
-            background: #f8fafc;
-        }
-        
-        /* Override any existing card styling for people */
-        #peopleNetwork .list-item {
-            background: none;
-            border: none;
-            border-radius: 0;
-            padding: 0;
-            margin: 0;
-            display: block;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
     </style>
 </head>
-<body>
-    <div class="header">
-        <h1>
-            🤖 AI Chief of Staff 
-            <span class="version-badge">v2.0 Enhanced</span>
-        </h1>
-        <div class="user-info">
-            <div class="user-email">{{ user_email }}</div>
-            <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
-        </div>
-    </div>
-    
-    <div class="container">
-        <!-- Enhanced Features Notice -->
-        <div class="enhanced-features">
-            <h3>🚀 Enhanced AI Intelligence Active</h3>
-            <p>🎯 <strong>NEW: Business-Focused Gmail Sync</strong> • Only fetches INBOX, IMPORTANT, STARRED & PRIMARY emails • Excludes promotions, social, updates & forums • Quality email filtering • Professional people network • Gmail integration • Topic management</p>
-        </div>
-        
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <div class="status-info">
-                {% if gmail_status.authenticated and gmail_status.gmail_access %}
-                    <div class="status-indicator status-success">
-                        ✓ Gmail Connected
+<body class="bg-[#101a23] text-white min-h-screen">
+    <div class="relative flex size-full min-h-screen flex-col bg-[#101a23] dark group/design-root overflow-x-hidden">
+        <div class="layout-container flex h-full grow flex-col">
+            <div class="gap-1 px-6 flex flex-1 justify-center py-5">
+                
+                <!-- Left Sidebar -->
+                <div class="layout-content-container flex flex-col w-80">
+                    <div class="flex h-full min-h-[700px] flex-col justify-between bg-[#101a23] p-4">
+                        <div class="flex flex-col gap-4">
+                            <!-- Logo/Header -->
+                            <div class="flex gap-3 items-center">
+                                <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                                    🤖
+                                </div>
+                                <h1 class="text-white text-base font-medium leading-normal">AI Chief of Staff</h1>
+                            </div>
+                            
+                            <!-- Navigation Menu -->
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center gap-3 px-3 py-2 rounded-full bg-[#223649]" id="nav-home">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0,1.14,1.14,0,0,0,.11.11l80,75.48A16,16,0,0,1,224,115.55Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Home</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="switchTab('business-knowledge')" id="nav-knowledge">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M224,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h64a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Knowledge</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="switchTab('tasks')" id="nav-tasks">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M56,128a16,16,0,1,1-16-16A16,16,0,0,1,56,128ZM40,48A16,16,0,1,0,56,64,16,16,0,0,0,40,48Zm0,128a16,16,0,1,0,16,16A16,16,0,0,0,40,176Zm176-64H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V120A8,8,0,0,0,216,112Zm0-64H88a8,8,0,0,0-8,8V72a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V56A8,8,0,0,0,216,48Zm0,128H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V184A8,8,0,0,0,216,176Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Tasks</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="switchTab('people')" id="nav-people">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">People</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Settings</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="logout()">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M112,216a8,8,0,0,1-8,8H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32h56a8,8,0,0,1,0,16H48V208h56A8,8,0,0,1,112,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L188.69,112H104a8,8,0,0,0,0,16h84.69l-18.35,18.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,221.66,122.34Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Logout</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- User Info -->
+                        <div class="flex flex-col gap-3">
+                            <div class="bg-[#223649] rounded-xl p-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full size-8 flex items-center justify-center text-white text-sm font-bold">
+                                        {{ user_email[0].upper() if user_email else 'U' }}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-white text-sm font-medium truncate">{{ user_email }}</p>
+                                        <p class="text-secondary text-xs">Chief of Staff</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                {% else %}
-                    <div class="status-indicator status-error">
-                        ✗ Gmail Not Connected
-                    </div>
-                {% endif %}
-                <span id="statusText">Ready for Enhanced Processing</span>
-            </div>
-            
-            <div class="control-buttons">
-                <button onclick="processEmails()" class="btn" id="processBtn">
-                    🧠 Intelligent Processing
-                </button>
-                <button onclick="refreshAllData()" class="btn btn-secondary">
-                    📊 Refresh Data
-                </button>
-                <button onclick="syncTopics()" class="btn btn-success">
-                    🔄 Sync Topics
-                </button>
-                <button onclick="showEmailDiagnostics()" class="btn btn-secondary">
-                    🔍 Debug Email Processing
-                </button>
-                <button onclick="flushDatabase()" class="btn btn-danger" id="flushBtn">
-                    🗑️ Flush Database
-                </button>
-            </div>
-        </div>
-        
-        <!-- Email Processing Form -->
-        <div class="processing-form">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="maxEmails">Emails to process (quality filtered):</label>
-                    <input type="number" id="maxEmails" class="form-control" value="20" min="1" max="100">
                 </div>
-                <div class="form-group">
-                    <label for="daysBack">Days back to fetch:</label>
-                    <input type="number" id="daysBack" class="form-control" value="14" min="1" max="90">
-                </div>
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <button onclick="processEmails()" class="btn" style="width: 100%;">
-                        🚀 Enhanced Processing
-                    </button>
-                </div>
-            </div>
-            
-            <div style="margin-top: 1rem; padding: 1rem; background: #f1f5f9; border-radius: 6px;">
-                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;">
-                    <input type="checkbox" id="forceRefresh" style="margin: 0;">
-                    <span>🔄 Force refresh existing emails (re-analyze with enhanced AI insights)</span>
-                </label>
-                <p style="font-size: 0.75rem; color: #64748b; margin: 0.5rem 0 0 1.5rem;">
-                    🎯 <strong>NEW:</strong> Business-focused Gmail sync only fetches INBOX, IMPORTANT, STARRED & PRIMARY emails while excluding promotions, social updates, and forums for maximum relevance.
-                </p>
-            </div>
-            
-            <div id="processingResults" style="display: none;"></div>
-        </div>
-        
-        <!-- Enhanced Tabs -->
-        <div class="tabs">
-            <div class="tab-buttons">
-                <button class="tab-button active" onclick="switchTab('ai-chat')">
-                    🤖 AI Chat
-                </button>
-                <button class="tab-button" onclick="switchTab('business-knowledge')">
-                    📊 Settings & Topics
-                </button>
-                <button class="tab-button" onclick="switchTab('tasks')">
-                    ✅ Actionable Tasks
-                </button>
-                <button class="tab-button" onclick="switchTab('people')">
-                    👥 People Network
-                </button>
-            </div>
-            
-            <!-- AI Chat Tab -->
-            <div id="ai-chat" class="tab-content active">
-                <div class="card">
-                    <h3>🤖 AI Chief of Staff Chat</h3>
-                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
-                        <strong>💡 Smart Context:</strong> Chat with Claude using your complete knowledge base • People insights • Business intelligence • Tasks & projects • Historical context
+                
+                <!-- Main Content Area -->
+                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+                    
+                    <!-- Top Search Bar -->
+                    <div class="px-4 py-3">
+                        <label class="flex flex-col min-w-40 h-12 w-full">
+                            <div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+                                <div class="text-secondary flex border-none bg-[#223649] items-center justify-center pl-4 rounded-l-xl border-r-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                        <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
+                                    </svg>
+                                </div>
+                                <input placeholder="Search your knowledge base..." 
+                                       class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#223649] focus:border-none h-full placeholder:text-secondary px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" />
+                            </div>
+                        </label>
                     </div>
                     
-                    <!-- Chat Interface -->
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
-                        <!-- Main Chat Area -->
-                        <div>
-                            <div id="chatMessages" style="height: 400px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-y: auto; background: #f8fafc; margin-bottom: 1rem;">
-                                <div style="text-align: center; color: #64748b; padding: 2rem;">
-                                    <div style="font-size: 3rem; margin-bottom: 1rem;">🤖</div>
-                                    <h4 style="margin: 0 0 0.5rem 0;">Welcome to your AI Chief of Staff</h4>
-                                    <p style="margin: 0; font-size: 0.875rem;">I have access to your complete business knowledge. Ask me about people, decisions, opportunities, tasks, or any insights from your emails.</p>
+                    <!-- Status Cards -->
+                    <div class="px-4 mb-6">
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            <!-- Gmail Status -->
+                            <div class="bg-[#223649] rounded-xl p-4 border border-[#314d68]">
+                                <div class="flex items-center gap-3">
+                                    <div class="text-white bg-green-600 rounded-lg p-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-white text-sm font-medium">Gmail Connected</p>
+                                        <p class="text-secondary text-xs">Ready for processing</p>
+                                    </div>
                                 </div>
                             </div>
                             
-                            <div style="display: flex; gap: 0.5rem;">
-                                <input type="text" id="chatInput" placeholder="Ask about your business knowledge, people, tasks, or any insights..." 
-                                       style="flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;"
-                                       onkeypress="if(event.key==='Enter') sendChatMessage()">
-                                <button onclick="sendChatMessage()" class="btn" style="white-space: nowrap;">
-                                    💬 Send
+                            <!-- AI Status -->
+                            <div class="bg-[#223649] rounded-xl p-4 border border-[#314d68]">
+                                <div class="flex items-center gap-3">
+                                    <div class="text-white bg-blue-600 rounded-lg p-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM74.08,197.5a64,64,0,0,1,107.84,0,87.83,87.83,0,0,1-107.84,0ZM96,120a32,32,0,1,1,32,32A32,32,0,0,1,96,120Zm97.76,66.41a79.66,79.66,0,0,0-36.06-28.75,48,48,0,1,0-59.4,0,79.66,79.66,0,0,0-36.06,28.75,88,88,0,1,1,131.52,0Z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-white text-sm font-medium">Claude AI Active</p>
+                                        <p class="text-secondary text-xs">Enhanced intelligence</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Processing Controls -->
+                            <div class="bg-[#223649] rounded-xl p-4 border border-[#314d68]">
+                                <button onclick="processEmails()" class="w-full bg-[#0b80ee] hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2" id="processBtn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" fill="currentColor" viewBox="0 0 256 256">
+                                        <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a8,8,0,0,1-8,8H136v32a8,8,0,0,1-16,0V136H88a8,8,0,0,1,0-16h32V88a8,8,0,0,1,16,0v32h32A8,8,0,0,1,176,128Z"></path>
+                                    </svg>
+                                    <span>Process Emails</span>
                                 </button>
                             </div>
-                            
-                            <!-- Quick Prompts -->
-                            <div style="margin-top: 1rem;">
-                                <div style="font-weight: 500; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem;">Quick Questions:</div>
-                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                    <button onclick="askQuickQuestion('What are my most urgent tasks and deadlines?')" 
-                                            style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
-                                        📋 Urgent Tasks
-                                    </button>
-                                    <button onclick="askQuickQuestion('Who are my most important business contacts and what are they working on?')" 
-                                            style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
-                                        👥 Key Contacts
-                                    </button>
-                                    <button onclick="askQuickQuestion('What are the biggest opportunities and challenges I should focus on?')" 
-                                            style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
-                                        💡 Opportunities
-                                    </button>
-                                    <button onclick="askQuickQuestion('What important decisions were made recently and what impact do they have?')" 
-                                            style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
-                                        ⚡ Recent Decisions
+                        </div>
+                    </div>
+                    
+                    <!-- Processing Configuration -->
+                    <div class="px-4 mb-6">
+                        <div class="bg-[#223649] rounded-xl p-6 border border-[#314d68]">
+                            <h3 class="text-white text-lg font-semibold mb-4">Email Processing Configuration</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-secondary text-sm font-medium mb-2">Emails to process</label>
+                                    <input type="number" id="maxEmails" value="20" min="1" max="100"
+                                           class="w-full bg-[#101a23] border border-[#314d68] rounded-lg px-3 py-2 text-white placeholder-secondary focus:outline-none focus:border-[#0b80ee]">
+                                </div>
+                                <div>
+                                    <label class="block text-secondary text-sm font-medium mb-2">Days back to fetch</label>
+                                    <input type="number" id="daysBack" value="14" min="1" max="90"
+                                           class="w-full bg-[#101a23] border border-[#314d68] rounded-lg px-3 py-2 text-white placeholder-secondary focus:outline-none focus:border-[#0b80ee]">
+                                </div>
+                                <div class="flex items-end">
+                                    <button onclick="processEmails()" class="w-full bg-[#0b80ee] hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors">
+                                        🚀 Enhanced Processing
                                     </button>
                                 </div>
                             </div>
+                            <div class="flex items-center gap-2 text-sm">
+                                <input type="checkbox" id="forceRefresh" class="rounded">
+                                <label for="forceRefresh" class="text-secondary">🔄 Force refresh existing emails (re-analyze with enhanced AI insights)</label>
+                            </div>
+                            <div id="processingResults" class="mt-4 hidden"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tab Navigation -->
+                    <div class="pb-3">
+                        <div class="flex border-b border-[#314d68] px-4 gap-8">
+                            <a class="flex flex-col items-center justify-center border-b-[3px] border-b-[#0b80ee] text-white pb-[13px] pt-4 tab-button active" href="#" onclick="switchTab('ai-chat')">
+                                <p class="text-white text-sm font-bold leading-normal tracking-[0.015em]">AI Chat</p>
+                            </a>
+                            <a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-secondary pb-[13px] pt-4 tab-button" href="#" onclick="switchTab('business-knowledge')">
+                                <p class="text-secondary text-sm font-bold leading-normal tracking-[0.015em]">Knowledge</p>
+                            </a>
+                            <a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-secondary pb-[13px] pt-4 tab-button" href="#" onclick="switchTab('tasks')">
+                                <p class="text-secondary text-sm font-bold leading-normal tracking-[0.015em]">Tasks</p>
+                            </a>
+                            <a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-secondary pb-[13px] pt-4 tab-button" href="#" onclick="switchTab('people')">
+                                <p class="text-secondary text-sm font-bold leading-normal tracking-[0.015em]">People</p>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Features Notice -->
+                    <div class="enhanced-features">
+                        <h3>🚀 Enhanced AI Intelligence Active</h3>
+                        <p>🎯 <strong>NEW: Business-Focused Gmail Sync</strong> • Only fetches INBOX, IMPORTANT, STARRED & PRIMARY emails • Excludes promotions, social, updates & forums • Quality email filtering • Professional people network • Gmail integration • Topic management</p>
+                    </div>
+                    
+                    <!-- Status Bar -->
+                    <div class="status-bar">
+                        <div class="status-info">
+                            {% if gmail_status.authenticated and gmail_status.gmail_access %}
+                                <div class="status-indicator status-success">
+                                    ✓ Gmail Connected
+                                </div>
+                            {% else %}
+                                <div class="status-indicator status-error">
+                                    ✗ Gmail Not Connected
+                                </div>
+                            {% endif %}
+                            <span id="statusText">Ready for Enhanced Processing</span>
                         </div>
                         
-                        <!-- Saved Prompts & Monitoring -->
-                        <div>
-                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem;">📌 Saved Prompts & Monitoring</h4>
-                            
-                            <!-- Add New Prompt -->
-                            <div style="background: #f8fafc; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0;">
-                                <div style="font-weight: 500; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem;">Create Monitoring Prompt:</div>
-                                <textarea id="newPromptText" placeholder="E.g., 'What new urgent tasks appeared this week?' or 'Any changes in key relationships?'" 
-                                          style="width: 100%; height: 60px; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; resize: vertical;"></textarea>
-                                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: center;">
-                                    <select id="promptFrequency" style="flex: 1; padding: 0.375rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem;">
-                                        <option value="daily">Daily</option>
-                                        <option value="weekly">Weekly</option>
-                                        <option value="manual">Manual Only</option>
-                                    </select>
-                                    <button onclick="saveMonitoringPrompt()" style="padding: 0.375rem 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
-                                        💾 Save
-                                    </button>
-                                </div>
+                        <div class="control-buttons">
+                            <button onclick="processEmails()" class="btn" id="processBtn">
+                                🧠 Intelligent Processing
+                            </button>
+                            <button onclick="refreshAllData()" class="btn btn-secondary">
+                                📊 Refresh Data
+                            </button>
+                            <button onclick="syncTopics()" class="btn btn-success">
+                                🔄 Sync Topics
+                            </button>
+                            <button onclick="showEmailDiagnostics()" class="btn btn-secondary">
+                                🔍 Debug Email Processing
+                            </button>
+                            <button onclick="flushDatabase()" class="btn btn-danger" id="flushBtn">
+                                🗑️ Flush Database
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Email Processing Form -->
+                    <div class="processing-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="maxEmails">Emails to process (quality filtered):</label>
+                                <input type="number" id="maxEmails" class="form-control" value="20" min="1" max="100">
                             </div>
-                            
-                            <!-- Saved Prompts List -->
-                            <div id="savedPrompts" style="max-height: 300px; overflow-y: auto;">
-                                <div style="text-align: center; color: #94a3b8; padding: 1rem; font-size: 0.875rem;">
-                                    No saved prompts yet.<br>Create monitoring prompts to track changes in your business intelligence.
-                                </div>
+                            <div class="form-group">
+                                <label for="daysBack">Days back to fetch:</label>
+                                <input type="number" id="daysBack" class="form-control" value="14" min="1" max="90">
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Business Knowledge Tab -->
-            <div id="business-knowledge" class="tab-content">
-                <!-- Quick metrics bar -->
-                <div class="grid grid-4" style="margin-bottom: 1.5rem;">
-                    <div class="card" style="padding: 1rem;">
-                        <div class="metric">
-                            <span class="metric-value" id="businessMetricEmails" style="font-size: 1.5rem;">-</span>
-                            <div class="metric-label">Quality Emails</div>
-                        </div>
-                    </div>
-                    <div class="card" style="padding: 1rem;">
-                        <div class="metric">
-                            <span class="metric-value" id="businessMetricProjects" style="font-size: 1.5rem;">-</span>
-                            <div class="metric-label">Projects</div>
-                        </div>
-                    </div>
-                    <div class="card" style="padding: 1rem;">
-                        <div class="metric">
-                            <span class="metric-value" id="businessMetricPeople" style="font-size: 1.5rem;">-</span>
-                            <div class="metric-label">Contacts</div>
-                        </div>
-                    </div>
-                    <div class="card" style="padding: 1rem;">
-                        <div class="metric">
-                            <span class="metric-value" id="businessMetricTopics" style="font-size: 1.5rem;">-</span>
-                            <div class="metric-label">Topics</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Main content sections -->
-                <div class="grid grid-1">
-                    <div class="card">
-                        <h3>🎯 Topic Management & Trends</h3>
-                        <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
-                            <strong>🆕 Enhanced Topic Management:</strong> Create topics manually • Add descriptions for Claude • Mark as official • Merge similar topics • Consistent categorization
-                        </div>
-                        
-                        <!-- Knowledge Overview for Chat Feature -->
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-                            <h4 style="margin: 0 0 0.75rem 0; color: #1e293b; font-size: 1rem;">💬 Knowledge Base for AI Chat</h4>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.875rem;">
-                                <div>
-                                    <strong style="color: #475569;">Rich Contacts:</strong>
-                                    <div id="chatKnowledgeContacts" style="color: #64748b;">Loading...</div>
-                                </div>
-                                <div>
-                                    <strong style="color: #475569;">Business Intelligence:</strong>
-                                    <div id="chatKnowledgeBusiness" style="color: #64748b;">Loading...</div>
-                                </div>
-                                <div>
-                                    <strong style="color: #475569;">Projects & Topics:</strong>
-                                    <div id="chatKnowledgeProjects" style="color: #64748b;">Loading...</div>
-                                </div>
-                                <div>
-                                    <strong style="color: #475569;">Searchable Data:</strong>
-                                    <div id="chatKnowledgeSearch" style="color: #64748b;">Loading...</div>
-                                </div>
-                            </div>
-                            <button onclick="showDetailedKnowledge()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">View Detailed Knowledge Base</button>
-                        </div>
-                        
-                        <!-- Manual Topic Creation Form -->
-                        <div style="background: #f8fafc; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #e2e8f0;">
-                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem;">➕ Create New Topic</h4>
-                            <div style="display: grid; grid-template-columns: 1fr 2fr auto; gap: 1rem; align-items: end;">
-                                <div>
-                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Topic Name *</label>
-                                    <input type="text" id="topicName" class="form-control" placeholder="e.g. Apple Inc, Series A Funding" style="width: 100%;">
-                                </div>
-                                <div>
-                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; font-size: 0.875rem;">Description (helps Claude understand)</label>
-                                    <input type="text" id="topicDescription" class="form-control" placeholder="Detailed description for precise AI categorization" style="width: 100%;">
-                                </div>
-                                <button onclick="createTopic()" class="btn" style="white-space: nowrap;">
-                                    ➕ Create Topic
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <button onclick="processEmails()" class="btn" style="width: 100%;">
+                                    🚀 Enhanced Processing
                                 </button>
                             </div>
-                            <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #64748b;">
-                                💡 <strong>Tip:</strong> Focus on company names, project names, strategic goals, or personal goals. Claude will use your description to categorize content more accurately.
+                        </div>
+                        
+                        <div style="margin-top: 1rem; padding: 1rem; background: #f1f5f9; border-radius: 6px;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;">
+                                <input type="checkbox" id="forceRefresh" style="margin: 0;">
+                                <span>🔄 Force refresh existing emails (re-analyze with enhanced AI insights)</span>
+                            </label>
+                            <p style="font-size: 0.75rem; color: #64748b; margin: 0.5rem 0 0 1.5rem;">
+                                🎯 <strong>NEW:</strong> Business-focused Gmail sync only fetches INBOX, IMPORTANT, STARRED & PRIMARY emails while excluding promotions, social updates, and forums for maximum relevance.
+                            </p>
+                        </div>
+                        
+                        <div id="processingResults" style="display: none;"></div>
+                    </div>
+                    
+                    <!-- Enhanced Tabs -->
+                    <div class="tabs">
+                        <div class="tab-buttons">
+                            <button class="tab-button active" onclick="switchTab('ai-chat')">
+                                🤖 AI Chat
+                            </button>
+                            <button class="tab-button" onclick="switchTab('business-knowledge')">
+                                📊 Settings & Topics
+                            </button>
+                            <button class="tab-button" onclick="switchTab('tasks')">
+                                ✅ Actionable Tasks
+                            </button>
+                            <button class="tab-button" onclick="switchTab('people')">
+                                👥 People Network
+                            </button>
+                        </div>
+                        
+                        <!-- AI Chat Tab -->
+                        <div id="ai-chat" class="tab-content active">
+                            <div class="card">
+                                <h3>🤖 AI Chief of Staff Chat</h3>
+                                <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                                    <strong>💡 Smart Context:</strong> Chat with Claude using your complete knowledge base • People insights • Business intelligence • Tasks & projects • Historical context
+                                </div>
+                                
+                                <!-- Chat Interface -->
+                                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+                                    <!-- Main Chat Area -->
+                                    <div>
+                                        <div id="chatMessages" style="height: 400px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; overflow-y: auto; background: #f8fafc; margin-bottom: 1rem;">
+                                            <div style="text-align: center; color: #64748b; padding: 2rem;">
+                                                <div style="font-size: 3rem; margin-bottom: 1rem;">🤖</div>
+                                                <h4 style="margin: 0 0 0.5rem 0;">Welcome to your AI Chief of Staff</h4>
+                                                <p style="margin: 0; font-size: 0.875rem;">I have access to your complete business knowledge. Ask me about people, decisions, opportunities, tasks, or any insights from your emails.</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <input type="text" id="chatInput" placeholder="Ask about your business knowledge, people, tasks, or any insights..." 
+                                                   style="flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;"
+                                                   onkeypress="if(event.key==='Enter') sendChatMessage()">
+                                            <button onclick="sendChatMessage()" class="btn" style="white-space: nowrap;">
+                                                💬 Send
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- Quick Prompts -->
+                                        <div style="margin-top: 1rem;">
+                                            <div style="font-weight: 500; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem;">Quick Questions:</div>
+                                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                                <button onclick="askQuickQuestion('What are my most urgent tasks and deadlines?')" 
+                                                        style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                                    📋 Urgent Tasks
+                                                </button>
+                                                <button onclick="askQuickQuestion('Who are my most important business contacts and what are they working on?')" 
+                                                        style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                                    👥 Key Contacts
+                                                </button>
+                                                <button onclick="askQuickQuestion('What are the biggest opportunities and challenges I should focus on?')" 
+                                                        style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                                    💡 Opportunities
+                                                </button>
+                                                <button onclick="askQuickQuestion('What important decisions were made recently and what impact do they have?')" 
+                                                        style="padding: 0.375rem 0.75rem; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                                    ⚡ Recent Decisions
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Saved Prompts & Monitoring -->
+                                    <div>
+                                        <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem;">📌 Saved Prompts & Monitoring</h4>
+                                        
+                                        <!-- Add New Prompt -->
+                                        <div style="background: #f8fafc; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #e2e8f0;">
+                                            <div style="font-weight: 500; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem;">Create Monitoring Prompt:</div>
+                                            <textarea id="newPromptText" placeholder="E.g., 'What new urgent tasks appeared this week?' or 'Any changes in key relationships?'" 
+                                                      style="width: 100%; height: 60px; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem; resize: vertical;"></textarea>
+                                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; align-items: center;">
+                                                <select id="promptFrequency" style="flex: 1; padding: 0.375rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.75rem;">
+                                                    <option value="daily">Daily</option>
+                                                    <option value="weekly">Weekly</option>
+                                                    <option value="manual">Manual Only</option>
+                                                </select>
+                                                <button onclick="saveMonitoringPrompt()" style="padding: 0.375rem 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                                                    💾 Save
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Saved Prompts List -->
+                                        <div id="savedPrompts" style="max-height: 300px; overflow-y: auto;">
+                                            <div style="text-align: center; color: #94a3b8; padding: 1rem; font-size: 0.875rem;">
+                                                No saved prompts yet.<br>Create monitoring prompts to track changes in your business intelligence.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
-                        <!-- Topic Management Sections -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                            <!-- Official Topics -->
-                            <div>
-                                <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                    ⭐ Official Topics
-                                    <button onclick="resyncTopics()" class="btn btn-small" style="margin-left: auto;">
-                                        🔄 Resync All Content
-                                    </button>
-                                </h4>
-                                <div id="officialTopics" style="min-height: 200px;">
-                                    <div class="loading">Loading official topics...</div>
+                        <!-- Business Knowledge Tab -->
+                        <div id="business-knowledge" class="tab-content">
+                            <!-- Quick metrics bar -->
+                            <div class="grid grid-4" style="margin-bottom: 1.5rem;">
+                                <div class="card" style="padding: 1rem;">
+                                    <div class="metric">
+                                        <span class="metric-value" id="businessMetricEmails" style="font-size: 1.5rem;">-</span>
+                                        <div class="metric-label">Quality Emails</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding: 1rem;">
+                                    <div class="metric">
+                                        <span class="metric-value" id="businessMetricProjects" style="font-size: 1.5rem;">-</span>
+                                        <div class="metric-label">Projects</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding: 1rem;">
+                                    <div class="metric">
+                                        <span class="metric-value" id="businessMetricPeople" style="font-size: 1.5rem;">-</span>
+                                        <div class="metric-label">Contacts</div>
+                                    </div>
+                                </div>
+                                <div class="card" style="padding: 1rem;">
+                                    <div class="metric">
+                                        <span class="metric-value" id="businessMetricTopics" style="font-size: 1.5rem;">-</span>
+                                        <div class="metric-label">Topics</div>
+                                    </div>
                                 </div>
                             </div>
                             
-                            <!-- AI-Discovered Topics -->
-                            <div>
-                                <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem;">🤖 AI-Discovered Topics</h4>
-                                <div id="discoveredTopics" style="min-height: 200px;">
-                                    <div class="loading">Loading discovered topics...</div>
+                            <!-- Main content sections -->
+                            <div class="grid grid-1">
+                                <div class="card">
+                                    <h3>🎯 Topic Management & Trends</h3>
+                                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                                        <strong>🆕 Enhanced Topic Management:</strong> Create topics manually • Add descriptions for Claude • Mark as official • Merge similar topics • Consistent categorization
+                                    </div>
+                                    
+                                    <!-- Knowledge Overview for Chat Feature -->
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                                        <h4 style="margin: 0 0 0.75rem 0; color: #1e293b; font-size: 1rem;">💬 Knowledge Base for AI Chat</h4>
+                                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.875rem;">
+                                            <div>
+                                                <strong style="color: #475569;">Rich Contacts:</strong>
+                                                <div id="chatKnowledgeContacts" style="color: #64748b;">Loading...</div>
+                                            </div>
+                                            <div>
+                                                <strong style="color: #475569;">Business Intelligence:</strong>
+                                                <div id="chatKnowledgeBusiness" style="color: #64748b;">Loading...</div>
+                                            </div>
+                                            <div>
+                                                <strong style="color: #475569;">Projects & Topics:</strong>
+                                                <div id="chatKnowledgeProjects" style="color: #64748b;">Loading...</div>
+                                            </div>
+                                            <div>
+                                                <strong style="color: #475569;">Searchable Data:</strong>
+                                                <div id="chatKnowledgeSearch" style="color: #64748b;">Loading...</div>
+                                            </div>
+                                        </div>
+                                        <button onclick="showDetailedKnowledge()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">View Detailed Knowledge Base</button>
+                                    </div>
+                                    
+                                    <!-- Manual Topic Creation Form -->
+                                    <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; border: 2px solid #bae6fd; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);">
+                                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                                            <span style="font-size: 1.5rem;">➕</span>
+                                            <h4 style="margin: 0; color: #0c4a6e; font-size: 1.25rem; font-weight: 700;">Create New Topic</h4>
+                                        </div>
+                                        
+                                        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                                            <div>
+                                                <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: #0c4a6e; font-size: 0.95rem;">Topic Name *</label>
+                                                <input type="text" id="topicName" class="form-control" placeholder="e.g. Apple Inc, Series A Funding" 
+                                                       style="width: 100%; padding: 0.875rem; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s;">
+                                            </div>
+                                            <div>
+                                                <label style="display: block; margin-bottom: 0.75rem; font-weight: 600; color: #0c4a6e; font-size: 0.95rem;">Description (helps Claude understand)</label>
+                                                <input type="text" id="topicDescription" class="form-control" placeholder="Detailed description for precise AI categorization" 
+                                                       style="width: 100%; padding: 0.875rem; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s;">
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div style="font-size: 0.875rem; color: #0369a1; background: rgba(59, 130, 246, 0.1); padding: 0.75rem; border-radius: 8px; flex: 1; margin-right: 1rem;">
+                                                <span style="font-weight: 600;">💡 Tip:</span> Focus on company names, project names, strategic goals, or personal goals. Claude will use your description to categorize content more accurately.
+                                            </div>
+                                            <button onclick="createTopic()" class="btn" style="padding: 0.875rem 2rem; font-size: 0.95rem; font-weight: 600; white-space: nowrap; min-width: 160px;">
+                                                ➕ Create Topic
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Topic Management Sections -->
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                                        <!-- Official Topics -->
+                                        <div style="background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                                                <h4 style="margin: 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                                    ⭐ Official Topics
+                                                    <span id="officialTopicsCount" style="background: #f1f5f9; color: #64748b; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 500;"></span>
+                                                </h4>
+                                                <button onclick="resyncTopics()" class="btn btn-small" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                                    🔄 Resync All Content
+                                                </button>
+                                            </div>
+                                            <div id="officialTopics" style="min-height: 200px;">
+                                                <div class="loading" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                                                    <div style="font-size: 1.2rem; margin-bottom: 0.5rem;">⏳</div>
+                                                    Loading official topics...
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- AI-Discovered Topics -->
+                                        <div style="background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+                                            <div style="margin-bottom: 1.5rem;">
+                                                <h4 style="margin: 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                                    🤖 AI-Discovered Topics
+                                                    <span id="discoveredTopicsCount" style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 500;"></span>
+                                                </h4>
+                                                <p style="font-size: 0.875rem; color: #64748b; margin: 0.5rem 0 0 0;">Process emails to let AI discover topics automatically</p>
+                                            </div>
+                                            <div id="discoveredTopics" style="min-height: 200px;">
+                                                <div class="loading" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                                                    <div style="font-size: 1.2rem; margin-bottom: 0.5rem;">⏳</div>
+                                                    Loading discovered topics...
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Legacy Topics Display (from email analysis) -->
+                                    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+                                        <h4 style="margin: 0 0 1rem 0; color: #64748b; font-size: 1rem;">📊 Recent Email Topics</h4>
+                                        <div id="businessTopics" class="loading">Loading business topics...</div>
+                                    </div>
                                 </div>
+                            </div>
+                            
+                            <div class="grid grid-3">
+                                <div class="card">
+                                    <h3>💡 Business Opportunities</h3>
+                                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem; border-left: 4px solid #10b981;">
+                                        <strong>🎯 What we track:</strong> Growth opportunities, partnerships, market openings, competitive advantages, and strategic possibilities identified from your communications.
+                                    </div>
+                                    <div id="businessOpportunities" class="loading">Loading opportunities...</div>
+                                </div>
+                                <div class="card">
+                                    <h3>⚡ Key Decisions Made</h3>
+                                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0f9ff; border-radius: 6px; font-size: 0.875rem; border-left: 4px solid #3b82f6;">
+                                        <strong>🧠 What counts as a decision:</strong> Strategic choices, commitments to action, pivots, approvals, selections, and future plans that impact business direction. Each item shows why Claude classified it as a decision.
+                                    </div>
+                                    <div id="businessDecisions" class="loading">Loading decisions...</div>
+                                </div>
+                                <div class="card">
+                                    <h3>🚨 Challenges & Issues</h3>
+                                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #fef2f2; border-radius: 6px; font-size: 0.875rem; border-left: 4px solid #ef4444;">
+                                        <strong>⚠️ What we identify:</strong> Obstacles, roadblocks, concerns, risks, and problems that need attention or could impact business progress.
+                                    </div>
+                                    <div id="businessChallenges" class="loading">Loading challenges...</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Single Business Intelligence Table -->
+                            <div class="card">
+                                <h3>🧠 Business Intelligence Overview</h3>
+                                <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                                    <strong>📊 Comprehensive View:</strong> All business insights in one table • Filter by type • Sort and search • Preparation for long lists
+                                </div>
+                                
+                                <!-- Filter Controls -->
+                                <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <label style="font-size: 0.875rem; color: #374151; font-weight: 500;">Filter:</label>
+                                        <select id="intelligenceFilter" onchange="filterBusinessIntelligence()" style="padding: 0.375rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem;">
+                                            <option value="all">All Types</option>
+                                            <option value="opportunities">💡 Opportunities</option>
+                                            <option value="decisions">⚡ Decisions</option>
+                                            <option value="challenges">🚨 Challenges</option>
+                                        </select>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <label style="font-size: 0.875rem; color: #374151; font-weight: 500;">Search:</label>
+                                        <input type="text" id="intelligenceSearch" onkeyup="filterBusinessIntelligence()" placeholder="Search content..." 
+                                               style="padding: 0.375rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem; width: 200px;">
+                                    </div>
+                                </div>
+                                
+                                <!-- Business Intelligence Table -->
+                                <div id="businessIntelligenceTable" class="loading">Loading business intelligence...</div>
                             </div>
                         </div>
                         
-                        <!-- Legacy Topics Display (from email analysis) -->
-                        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
-                            <h4 style="margin: 0 0 1rem 0; color: #64748b; font-size: 1rem;">📊 Recent Email Topics</h4>
-                            <div id="businessTopics" class="loading">Loading business topics...</div>
+                        <!-- Enhanced Tasks Tab -->
+                        <div id="tasks" class="tab-content">
+                            <div class="card">
+                                <h3>✅ Actionable Tasks</h3>
+                                <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                                    <strong>🎯 Focus:</strong> Only showing genuine actionable tasks • Quality over quantity • Real business value<br>
+                                    <strong>📋 Organized by Topics:</strong> Tasks grouped by business entities (companies, projects, goals) for better organization
+                                </div>
+                                <div id="enhancedTasks" class="loading">Loading actionable tasks...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- People Network Tab -->
+                        <div id="people" class="tab-content">
+                            <div class="card">
+                                <h3>👥 Business Contacts</h3>
+                                <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
+                                    <strong>🎯 Focus:</strong> Real business contacts only • No newsletters or automated senders • Professional relationships
+                                </div>
+                                <div id="peopleNetwork" class="loading">Loading business contacts...</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="grid grid-3">
-                    <div class="card">
-                        <h3>💡 Business Opportunities</h3>
-                        <div id="businessOpportunities" class="loading">Loading opportunities...</div>
-                    </div>
-                    <div class="card">
-                        <h3>⚡ Key Decisions Made</h3>
-                        <div id="businessDecisions" class="loading">Loading decisions...</div>
-                    </div>
-                    <div class="card">
-                        <h3>🚨 Challenges & Issues</h3>
-                        <div id="businessChallenges" class="loading">Loading challenges...</div>
-                    </div>
-                </div>
-                
-                <!-- Single Business Intelligence Table -->
-                <div class="card">
-                    <h3>🧠 Business Intelligence Overview</h3>
-                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
-                        <strong>📊 Comprehensive View:</strong> All business insights in one table • Filter by type • Sort and search • Preparation for long lists
-                    </div>
-                    
-                    <!-- Filter Controls -->
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500;">Filter:</label>
-                            <select id="intelligenceFilter" onchange="filterBusinessIntelligence()" style="padding: 0.375rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem;">
-                                <option value="all">All Types</option>
-                                <option value="opportunities">💡 Opportunities</option>
-                                <option value="decisions">⚡ Decisions</option>
-                                <option value="challenges">🚨 Challenges</option>
-                            </select>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <label style="font-size: 0.875rem; color: #374151; font-weight: 500;">Search:</label>
-                            <input type="text" id="intelligenceSearch" onkeyup="filterBusinessIntelligence()" placeholder="Search content..." 
-                                   style="padding: 0.375rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.875rem; width: 200px;">
-                        </div>
-                    </div>
-                    
-                    <!-- Business Intelligence Table -->
-                    <div id="businessIntelligenceTable" class="loading">Loading business intelligence...</div>
-                </div>
-            </div>
-            
-            <!-- Enhanced Tasks Tab -->
-            <div id="tasks" class="tab-content">
-                <div class="card">
-                    <h3>✅ Actionable Tasks</h3>
-                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
-                        <strong>🎯 Focus:</strong> Only showing genuine actionable tasks • Quality over quantity • Real business value<br>
-                        <strong>📋 Organized by Topics:</strong> Tasks grouped by business entities (companies, projects, goals) for better organization
-                    </div>
-                    <div id="enhancedTasks" class="loading">Loading actionable tasks...</div>
-                </div>
-            </div>
-            
-            <!-- People Network Tab -->
-            <div id="people" class="tab-content">
-                <div class="card">
-                    <h3>👥 Business Contacts</h3>
-                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f0fdf4; border-radius: 6px; font-size: 0.875rem;">
-                        <strong>🎯 Focus:</strong> Real business contacts only • No newsletters or automated senders • Professional relationships
-                    </div>
-                    <div id="peopleNetwork" class="loading">Loading business contacts...</div>
                 </div>
             </div>
         </div>
@@ -1357,6 +816,14 @@
                     await loadOfficialTopics();
                     await loadDiscoveredTopics();
                     
+                    // Auto-create default topic if none exist (user-friendly initialization)
+                    const topicsResponse = await fetch('/api/topics');
+                    const topicsData = await topicsResponse.json();
+                    if (topicsData.success && topicsData.topics.length === 0) {
+                        console.log('No topics found - will prompt user to create default topic');
+                        // The empty state in loadOfficialTopics will show the option to create a default topic
+                    }
+                    
                     // Enhanced Topics from business knowledge (not flat key_topics)
                     if (knowledge.business_topics && knowledge.business_topics.length > 0) {
                         const topicsHtml = knowledge.business_topics.map((topic, index) => `
@@ -1407,13 +874,48 @@
                             const context = typeof decision === 'object' ? decision.context : null;
                             const sender = typeof decision === 'object' ? decision.sender : 'Email Analysis';
                             
+                            // Add decision indicators to help users understand classification
+                            const decisionIndicators = [];
+                            if (decisionText.toLowerCase().includes('decided') || decisionText.toLowerCase().includes('we decided')) {
+                                decisionIndicators.push('🎯 Explicit decision statement');
+                            }
+                            if (decisionText.toLowerCase().includes('will') || decisionText.toLowerCase().includes('going to')) {
+                                decisionIndicators.push('📋 Future action commitment');
+                            }
+                            if (decisionText.toLowerCase().includes('chosen') || decisionText.toLowerCase().includes('selected')) {
+                                decisionIndicators.push('✅ Selection made');
+                            }
+                            if (decisionText.toLowerCase().includes('approved') || decisionText.toLowerCase().includes('confirmed')) {
+                                decisionIndicators.push('✅ Approval given');
+                            }
+                            if (decisionText.toLowerCase().includes('strategy') || decisionText.toLowerCase().includes('strategic')) {
+                                decisionIndicators.push('🎯 Strategic planning');
+                            }
+                            if (decisionText.toLowerCase().includes('pivot') || decisionText.toLowerCase().includes('change')) {
+                                decisionIndicators.push('🔄 Direction change');
+                            }
+                            
+                            // If no specific indicators, add generic reasoning
+                            if (decisionIndicators.length === 0) {
+                                decisionIndicators.push('🤖 AI identified as strategic choice/commitment');
+                            }
+                            
                             return `
-                                <div class="list-item">
-                                    <h4>⚡ Decision ${index + 1}</h4>
-                                    <p>${decisionText}</p>
-                                    ${context ? `<div class="task-context">${context}</div>` : ''}
+                                <div class="list-item" style="border-left: 4px solid #3b82f6; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+                                    <h4 style="color: #1e40af; font-size: 1rem;">⚡ Decision ${index + 1}</h4>
+                                    <p style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 1rem;">${decisionText}</p>
+                                    
+                                    <div style="background: rgba(59, 130, 246, 0.1); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                                        <div style="font-weight: 600; color: #1e40af; margin-bottom: 0.5rem; font-size: 0.875rem;">🧠 Why this is classified as a decision:</div>
+                                        <div style="font-size: 0.8rem; color: #3730a3;">
+                                            ${decisionIndicators.map(indicator => `<div style="margin-bottom: 0.25rem;">• ${indicator}</div>`).join('')}
+                                        </div>
+                                    </div>
+                                    
+                                    ${context ? `<div class="task-context" style="background: #f1f5f9; border-left: 3px solid #64748b;"><strong>Email Context:</strong> ${context}</div>` : ''}
                                     <div class="meta-info">
-                                        <span>📧 Source: ${sender}</span>
+                                        <span style="color: #3b82f6;">📧 Source: ${sender}</span>
+                                        <span style="color: #64748b;">🤖 AI Classification: Business Decision</span>
                                     </div>
                                 </div>
                             `;
@@ -1840,18 +1342,25 @@
                 if (data.success) {
                     const officialTopics = data.topics.filter(topic => topic.is_official);
                     
+                    // Update count badge
+                    document.getElementById('officialTopicsCount').textContent = officialTopics.length;
+                    
                     if (officialTopics.length > 0) {
                         const html = officialTopics.map(topic => `
-                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.5rem;">
-                                <div style="display: flex; align-items: center; justify-content: between;">
+                            <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; transition: transform 0.2s ease;">
+                                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;">
                                     <div style="flex: 1;">
-                                        <div style="font-weight: 600; color: #166534; margin-bottom: 0.25rem;">⭐ ${topic.name}</div>
-                                        ${topic.description ? `<div style="font-size: 0.875rem; color: #15803d;">${topic.description}</div>` : ''}
-                                        <div style="font-size: 0.75rem; color: #059669; margin-top: 0.25rem;">
-                                            ${topic.email_count || 0} emails • Created ${new Date(topic.created_at).toLocaleDateString()}
+                                        <div style="font-weight: 700; color: #166534; margin-bottom: 0.5rem; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                            ⭐ ${topic.name}
+                                            ${topic.name === 'General Business' ? '<span style="background: #1e40af; color: white; padding: 0.125rem 0.375rem; border-radius: 4px; font-size: 0.6rem; font-weight: 500;">DEFAULT</span>' : ''}
+                                        </div>
+                                        ${topic.description ? `<div style="font-size: 0.875rem; color: #15803d; margin-bottom: 0.5rem; line-height: 1.4;">${topic.description}</div>` : ''}
+                                        <div style="font-size: 0.75rem; color: #059669; display: flex; align-items: center; gap: 1rem;">
+                                            <span>📧 ${topic.email_count || 0} emails</span>
+                                            <span>📅 Created ${new Date(topic.created_at).toLocaleDateString()}</span>
                                         </div>
                                     </div>
-                                    <button onclick="showTopicActions(${topic.id}, '${topic.name}')" class="btn btn-small">
+                                    <button onclick="showTopicActions(${topic.id}, '${topic.name}')" class="btn btn-small" style="padding: 0.375rem 0.75rem; font-size: 0.75rem;">
                                         ⚙️ Manage
                                     </button>
                                 </div>
@@ -1859,19 +1368,27 @@
                         `).join('');
                         document.getElementById('officialTopics').innerHTML = html;
                     } else {
+                        // No official topics - show create default option
                         document.getElementById('officialTopics').innerHTML = `
-                            <div style="text-align: center; padding: 2rem; color: #64748b; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1;">
-                                <h4 style="margin: 0 0 0.5rem 0; color: #64748b;">No official topics yet</h4>
-                                <p style="margin: 0; font-size: 0.875rem;">Create your first topic above to start organizing your content</p>
+                            <div style="text-align: center; padding: 2.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border-radius: 12px; border: 2px dashed #f59e0b;">
+                                <div style="font-size: 2rem; margin-bottom: 1rem;">🎯</div>
+                                <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1.1rem; font-weight: 700;">No official topics yet</h4>
+                                <p style="margin: 0 0 1.5rem 0; font-size: 0.95rem; color: #a16207; line-height: 1.5;">Create your first topic above, or let me create a default "General Business" topic to get started.</p>
+                                <button onclick="createDefaultTopic()" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); margin-right: 0.75rem;">
+                                    🚀 Create Default Topic
+                                </button>
+                                <button onclick="document.getElementById('topicName').focus()" class="btn btn-secondary">
+                                    ✏️ Create Custom Topic
+                                </button>
                             </div>
                         `;
                     }
                 } else {
-                    document.getElementById('officialTopics').innerHTML = '<div class="error">Failed to load official topics</div>';
+                    document.getElementById('officialTopics').innerHTML = '<div class="error" style="color: #dc2626; padding: 1rem; text-align: center;">Failed to load official topics</div>';
                 }
             } catch (error) {
                 console.error('Failed to load official topics:', error);
-                document.getElementById('officialTopics').innerHTML = '<div class="error">Failed to load official topics</div>';
+                document.getElementById('officialTopics').innerHTML = '<div class="error" style="color: #dc2626; padding: 1rem; text-align: center;">Failed to load official topics</div>';
             }
         }
         
@@ -1883,21 +1400,25 @@
                 if (data.success) {
                     const discoveredTopics = data.topics.filter(topic => !topic.is_official);
                     
+                    // Update count badge
+                    document.getElementById('discoveredTopicsCount').textContent = discoveredTopics.length;
+                    
                     if (discoveredTopics.length > 0) {
                         const html = discoveredTopics.map(topic => `
-                            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.5rem;">
-                                <div style="display: flex; align-items: center; justify-content: between; gap: 0.5rem;">
+                            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; transition: transform 0.2s ease;">
+                                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;">
                                     <div style="flex: 1;">
-                                        <div style="font-weight: 600; color: #d97706; margin-bottom: 0.25rem;">🤖 ${topic.name}</div>
-                                        <div style="font-size: 0.75rem; color: #92400e;">
-                                            ${topic.email_count || 0} emails • Discovered ${new Date(topic.created_at).toLocaleDateString()}
+                                        <div style="font-weight: 700; color: #d97706; margin-bottom: 0.5rem; font-size: 1rem;">🤖 ${topic.name}</div>
+                                        <div style="font-size: 0.75rem; color: #92400e; display: flex; align-items: center; gap: 1rem;">
+                                            <span>📧 ${topic.email_count || 0} emails</span>
+                                            <span>🔍 Discovered ${new Date(topic.created_at).toLocaleDateString()}</span>
                                         </div>
                                     </div>
-                                    <div style="display: flex; gap: 0.25rem;">
-                                        <button onclick="markTopicOfficial(${topic.id}, '${topic.name}')" class="btn btn-small" style="font-size: 0.75rem;">
+                                    <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                                        <button onclick="markTopicOfficial(${topic.id}, '${topic.name}')" class="btn btn-small" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">
                                             ⭐ Make Official
                                         </button>
-                                        <button onclick="showMergeDialog(${topic.id}, '${topic.name}')" class="btn btn-small" style="font-size: 0.75rem;">
+                                        <button onclick="showMergeDialog(${topic.id}, '${topic.name}')" class="btn btn-small" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">
                                             🔄 Merge
                                         </button>
                                     </div>
@@ -1907,18 +1428,19 @@
                         document.getElementById('discoveredTopics').innerHTML = html;
                     } else {
                         document.getElementById('discoveredTopics').innerHTML = `
-                            <div style="text-align: center; padding: 2rem; color: #64748b; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1;">
-                                <h4 style="margin: 0 0 0.5rem 0; color: #64748b;">No AI-discovered topics yet</h4>
-                                <p style="margin: 0; font-size: 0.875rem;">Process emails to let AI discover topics automatically</p>
+                            <div style="text-align: center; padding: 2.5rem; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-radius: 12px; border: 2px dashed #9ca3af;">
+                                <div style="font-size: 2rem; margin-bottom: 1rem;">🤖</div>
+                                <h4 style="margin: 0 0 1rem 0; color: #6b7280; font-size: 1.1rem; font-weight: 700;">No AI-discovered topics yet</h4>
+                                <p style="margin: 0; font-size: 0.95rem; color: #6b7280; line-height: 1.5;">Process emails to let AI discover topics automatically from your business communications.</p>
                             </div>
                         `;
                     }
                 } else {
-                    document.getElementById('discoveredTopics').innerHTML = '<div class="error">Failed to load discovered topics</div>';
+                    document.getElementById('discoveredTopics').innerHTML = '<div class="error" style="color: #dc2626; padding: 1rem; text-align: center;">Failed to load discovered topics</div>';
                 }
             } catch (error) {
                 console.error('Failed to load discovered topics:', error);
-                document.getElementById('discoveredTopics').innerHTML = '<div class="error">Failed to load discovered topics</div>';
+                document.getElementById('discoveredTopics').innerHTML = '<div class="error" style="color: #dc2626; padding: 1rem; text-align: center;">Failed to load discovered topics</div>';
             }
         }
         
@@ -3030,6 +2552,37 @@
                 statusText.textContent = 'Topic sync error';
                 alert(`❌ Network error during topic sync: ${error.message}`);
                 console.error('Topic sync error:', error);
+            }
+        }
+        
+        // Create default "General Business" topic
+        async function createDefaultTopic() {
+            try {
+                const response = await fetch('/api/topics', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: 'General Business',
+                        description: 'Catch-all topic for all business communications, decisions, opportunities, and challenges that don\'t fit into specific categories. This ensures no important information is lost.',
+                        is_official: true,
+                        keywords: ['business', 'general', 'communication', 'decision', 'opportunity', 'challenge']
+                    }),
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Default "General Business" topic created successfully! This will now capture all your business communications.');
+                    await loadOfficialTopics();
+                    await loadDiscoveredTopics();
+                } else {
+                    alert('Failed to create default topic: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Failed to create default topic:', error);
+                alert('Network error: ' + error.message);
             }
         }
     </script>

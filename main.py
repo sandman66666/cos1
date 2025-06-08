@@ -91,18 +91,65 @@ def create_app():
     # Routes
     @app.route('/')
     def index():
-        """Main dashboard"""
-        if 'user_email' not in session:
-            return redirect(url_for('login'))
+        user = get_current_user()
+        if not user:
+            return redirect('/auth/google')
         
-        user_email = session['user_email']
+        # Redirect to home page
+        return redirect('/home')
+    
+    @app.route('/home')
+    def home():
+        user = get_current_user()
+        if not user:
+            return redirect('/auth/google')
         
-        # Check Gmail authentication status
-        gmail_status = gmail_auth.get_authentication_status(user_email)
+        return render_template('home.html', 
+                               user_email=user['email'],
+                               user_id=user.get('id'),
+                               session_id=session.get('session_id'),
+                               cache_buster=int(time.time()))
+    
+    @app.route('/tasks')
+    def tasks():
+        user = get_current_user()
+        if not user:
+            return redirect('/auth/google')
         
-        return render_template('dashboard.html', 
-                             user_email=user_email,
-                             gmail_status=gmail_status)
+        return render_template('tasks.html', 
+                               user_email=user['email'],
+                               user_id=user.get('id'),
+                               session_id=session.get('session_id'),
+                               cache_buster=int(time.time()))
+    
+    @app.route('/knowledge')
+    def knowledge():
+        user = get_current_user()
+        if not user:
+            return redirect('/auth/google')
+        
+        return render_template('knowledge.html', 
+                               user_email=user['email'],
+                               user_id=user.get('id'),
+                               session_id=session.get('session_id'),
+                               cache_buster=int(time.time()))
+    
+    @app.route('/people')
+    def people():
+        user = get_current_user()
+        if not user:
+            return redirect('/auth/google')
+        
+        return render_template('people.html', 
+                               user_email=user['email'],
+                               user_id=user.get('id'),
+                               session_id=session.get('session_id'),
+                               cache_buster=int(time.time()))
+    
+    @app.route('/dashboard')
+    def dashboard():
+        """Legacy dashboard route - redirect to home"""
+        return redirect('/home')
     
     @app.route('/login')
     def login():
@@ -1280,39 +1327,49 @@ Always think about the bigger picture and provide strategic, helpful advice base
             logger.error(f"Sync topics API error: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
-    @app.route('/dashboard')
-    def dashboard():
-        """Main dashboard - requires authentication"""
+    @app.route('/api/topics/ensure-default', methods=['POST'])
+    def api_ensure_default_topic():
+        """API endpoint to ensure user has at least one default topic"""
         user = get_current_user()
         if not user:
-            logger.warning("Unauthenticated access attempt to dashboard")
-            return redirect(url_for('login'))
+            return jsonify({'error': 'Not authenticated'}), 401
         
-        user_email = user['email']
-        db_user = get_db_manager().get_user_by_email(user_email)
-        
-        if not db_user:
-            logger.warning(f"User not found in database: {user_email}")
-            return redirect(url_for('login'))
-        
-        logger.info(f"Dashboard access by user: {db_user.email} (ID: {db_user.id})")
-        
-        # Add user context to prevent frontend confusion
-        context = {
-            'user_email': db_user.email,
-            'user_id': db_user.id,
-            'session_id': session.get('session_id', 'unknown'),
-            'cache_buster': int(time.time())  # Force fresh data load
-        }
-        
-        response = make_response(render_template('dashboard.html', **context))
-        
-        # Ensure no caching of dashboard
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        
-        return response
+        try:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Check if user has any topics
+            existing_topics = get_db_manager().get_user_topics(db_user.id)
+            
+            if len(existing_topics) == 0:
+                # Create default "General Business" topic
+                topic_data = {
+                    'name': 'General Business',
+                    'slug': 'general-business',
+                    'description': 'Catch-all topic for all business communications, decisions, opportunities, and challenges that don\'t fit into specific categories. This ensures no important information is lost.',
+                    'is_official': True,
+                    'keywords': ['business', 'general', 'communication', 'decision', 'opportunity', 'challenge']
+                }
+                
+                topic = get_db_manager().create_or_update_topic(db_user.id, topic_data)
+                
+                return jsonify({
+                    'success': True,
+                    'created': True,
+                    'topic': topic.to_dict(),
+                    'message': 'Default "General Business" topic created automatically'
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'created': False,
+                    'message': f'User already has {len(existing_topics)} topics'
+                })
+            
+        except Exception as e:
+            logger.error(f"Ensure default topic API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
     
     # Error handlers
     @app.errorhandler(404)

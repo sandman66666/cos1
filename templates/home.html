@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chief of Staff - Home</title>
+    
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+        rel="stylesheet"
+        as="style"
+        onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Inter%3Awght%40400%3B500%3B700%3B900&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
+    />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+<body>
+<div class="relative flex size-full min-h-screen flex-col bg-[#101a23] dark group/design-root overflow-x-hidden" style='font-family: Inter, "Noto Sans", sans-serif;'>
+    <div class="layout-container flex h-full grow flex-col">
+        <div class="gap-1 px-6 flex flex-1 justify-center py-5">
+            
+            <!-- Left Sidebar -->
+            <div class="layout-content-container flex flex-col w-80">
+                <div class="flex h-full min-h-[700px] flex-col justify-between bg-[#101a23] p-4">
+                    <div class="flex flex-col gap-4">
+                        <!-- Logo/Header -->
+                        <h1 class="text-white text-base font-medium leading-normal">AI Chief of Staff</h1>
+                        
+                        <!-- Navigation Menu -->
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center gap-3 px-3 py-2 rounded-full bg-[#223649]">
+                                <div class="text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                        <path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0,1.14,1.14,0,0,0,.11.11l80,75.48A16,16,0,0,1,224,115.55Z"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-white text-sm font-medium leading-normal">Home</p>
+                            </div>
+                            
+                            <a href="/tasks" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                <div class="text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                        <path d="M56,128a16,16,0,1,1-16-16A16,16,0,0,1,56,128ZM40,48A16,16,0,1,0,56,64,16,16,0,0,0,40,48Zm0,128a16,16,0,1,0,16,16A16,16,0,0,0,40,176Zm176-64H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V120A8,8,0,0,0,216,112Zm0-64H88a8,8,0,0,0-8,8V72a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V56A8,8,0,0,0,216,48Zm0,128H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V184A8,8,0,0,0,216,176Z"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-white text-sm font-medium leading-normal">Tasks</p>
+                            </a>
+                            
+                            <a href="/knowledge" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                <div class="text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                        <path d="M224,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h64a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-white text-sm font-medium leading-normal">Knowledge</p>
+                            </a>
+                            
+                            <a href="/people" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                <div class="text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                        <path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-white text-sm font-medium leading-normal">People</p>
+                            </a>
+                            
+                            <a href="/logout" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                <div class="text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                        <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25a8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25a8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-white text-sm font-medium leading-normal">Settings</p>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <button id="newPromptBtn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#0b80ee] text-white text-sm font-bold leading-normal tracking-[0.015em]">
+                        <span class="truncate">New Chat</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+                <!-- Search Bar -->
+                <div class="px-4 py-3">
+                    <label class="flex flex-col min-w-40 h-12 w-full">
+                        <div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+                            <div class="text-[#90aecb] flex border-none bg-[#223649] items-center justify-center pl-4 rounded-l-xl border-r-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
+                                </svg>
+                            </div>
+                            <input id="searchInput" placeholder="Search tasks, emails, people..." class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#223649] focus:border-none h-full placeholder:text-[#90aecb] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" />
+                        </div>
+                    </label>
+                </div>
+                
+                <!-- AI Insights Section -->
+                <h2 class="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">AI Insights</h2>
+                <div id="insightsContainer" class="space-y-2">
+                    <!-- Loading state -->
+                    <div id="insightsLoading" class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
+                        <div class="text-[#90aecb] flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
+                            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        </div>
+                        <div class="flex flex-col justify-center">
+                            <p class="text-white text-base font-medium leading-normal">Loading insights...</p>
+                            <p class="text-[#90aecb] text-sm font-normal leading-normal">Analyzing your data</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Activity Section -->
+                <h2 class="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Recent Activity</h2>
+                <div id="activityContainer" class="space-y-2">
+                    <!-- Loading state -->
+                    <div id="activityLoading" class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
+                        <div class="text-[#90aecb] flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
+                            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        </div>
+                        <div class="flex flex-col justify-center">
+                            <p class="text-white text-base font-medium leading-normal">Loading activity...</p>
+                            <p class="text-[#90aecb] text-sm font-normal leading-normal">Fetching recent updates</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="px-4 py-4">
+                    <div class="flex gap-3 flex-wrap">
+                        <button id="processEmailsBtn" class="flex items-center gap-2 px-4 py-2 bg-[#0b80ee] text-white rounded-full text-sm font-medium hover:bg-[#0966c7] transition-colors">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+                                <path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"></path>
+                            </svg>
+                            Process Emails
+                        </button>
+                        <button id="refreshDataBtn" class="flex items-center gap-2 px-4 py-2 bg-[#223649] text-white rounded-full text-sm font-medium hover:bg-[#2a3e50] transition-colors">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+                                <path d="M197.67,186.37a8,8,0,0,1,0,11.29C196.58,198.73,170.82,224,128,224c-37.39,0-64.53-22.4-80-39.85V208a8,8,0,0,1-16,0V160a8,8,0,0,1,8-8H88a8,8,0,0,1,0,16H55.44C67.76,183.35,93,208,128,208c36.72,0,58.4-21.15,58.38-21.13A8,8,0,0,1,197.67,186.37ZM216,40a8,8,0,0,0-8,8V71.85C192.53,54.4,165.39,32,128,32,85.18,32,59.42,57.27,58.33,58.34a8,8,0,0,0,11.34,11.32C69.86,69.47,91.54,48.17,128,48c35,0,60.24,24.65,72.56,40H168a8,8,0,0,0,0,16h48a8,8,0,0,0,8-8V48A8,8,0,0,0,216,40Z"></path>
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Chat Input -->
+                <div class="flex items-center px-4 py-3 gap-3 @container">
+                    <label class="flex flex-col min-w-40 h-12 flex-1">
+                        <div class="flex w-full flex-1 items-stretch rounded-xl h-full">
+                            <input id="chatInput" placeholder="Ask me anything about your emails, tasks, or schedule..." class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#223649] focus:border-none h-full placeholder:text-[#90aecb] px-4 rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal" />
+                            <div class="flex border-none bg-[#223649] items-center justify-center pr-4 rounded-r-xl border-l-0 !pr-2">
+                                <div class="flex items-center gap-4 justify-end">
+                                    <button id="sendChatBtn" class="min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 bg-[#0b80ee] text-white text-sm font-medium leading-normal flex">
+                                        <span class="truncate">Send</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+                
+                <!-- Chat Response Area -->
+                <div id="chatResponse" class="hidden px-4 py-4">
+                    <div class="bg-[#223649] rounded-lg p-4">
+                        <div id="chatResponseContent" class="text-white"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global state
+let currentData = {
+    emails: [],
+    tasks: [],
+    people: [],
+    insights: []
+};
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+    loadInitialData();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Process emails button
+    document.getElementById('processEmailsBtn').addEventListener('click', processEmails);
+    
+    // Refresh data button
+    document.getElementById('refreshDataBtn').addEventListener('click', refreshData);
+    
+    // New prompt button
+    document.getElementById('newPromptBtn').addEventListener('click', () => {
+        document.getElementById('chatInput').focus();
+    });
+    
+    // Chat functionality
+    document.getElementById('sendChatBtn').addEventListener('click', sendChat);
+    document.getElementById('chatInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendChat();
+        }
+    });
+    
+    // Search functionality
+    document.getElementById('searchInput').addEventListener('input', performSearch);
+}
+
+async function loadInitialData() {
+    try {
+        // Load insights first
+        await loadInsights();
+        
+        // Load recent activity
+        await loadRecentActivity();
+        
+    } catch (error) {
+        console.error('Error loading initial data:', error);
+        showError('Failed to load data. Please refresh the page.');
+    }
+}
+
+async function loadInsights() {
+    try {
+        const response = await fetch('/api/email-insights');
+        const data = await response.json();
+        
+        if (data.success) {
+            displayInsights(data.email_insights || []);
+        } else {
+            displayInsights([]);
+        }
+    } catch (error) {
+        console.error('Error loading insights:', error);
+        displayInsights([]);
+    }
+}
+
+async function loadRecentActivity() {
+    try {
+        // Load recent tasks and emails
+        const [tasksResponse, emailsResponse] = await Promise.all([
+            fetch('/api/tasks?limit=5'),
+            fetch('/api/emails?limit=5')
+        ]);
+        
+        const [tasksData, emailsData] = await Promise.all([
+            tasksResponse.json(),
+            emailsResponse.json()
+        ]);
+        
+        let activities = [];
+        
+        // Add recent tasks
+        if (tasksData.success && tasksData.tasks) {
+            activities = activities.concat(tasksData.tasks.map(task => ({
+                type: 'task',
+                title: task.description || 'New Task',
+                subtitle: `Priority: ${task.priority || 'Medium'} • ${task.status || 'Open'}`,
+                icon: 'task',
+                data: task
+            })));
+        }
+        
+        // Add recent emails
+        if (emailsData.success && emailsData.emails) {
+            activities = activities.concat(emailsData.emails.slice(0, 3).map(email => ({
+                type: 'email',
+                title: email.subject || 'No Subject',
+                subtitle: `From: ${email.sender || 'Unknown'} • ${formatDate(email.received_date)}`,
+                icon: 'email',
+                data: email
+            })));
+        }
+        
+        // Sort by date/relevance and limit
+        activities = activities.slice(0, 6);
+        
+        displayRecentActivity(activities);
+        
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
+        displayRecentActivity([]);
+    }
+}
+
+function displayInsights(insights) {
+    const container = document.getElementById('insightsContainer');
+    const loading = document.getElementById('insightsLoading');
+    
+    if (loading) loading.remove();
+    
+    if (!insights || insights.length === 0) {
+        container.innerHTML = `
+            <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
+                <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                        <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM116,136V112a12,12,0,0,1,24,0v24a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,176Z"></path>
+                    </svg>
+                </div>
+                <div class="flex flex-col justify-center">
+                    <p class="text-white text-base font-medium leading-normal">No insights yet</p>
+                    <p class="text-[#90aecb] text-sm font-normal leading-normal">Process your emails to generate AI insights</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = insights.map(insight => `
+        <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2 cursor-pointer hover:bg-[#223649] transition-colors">
+            <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"></path>
+                </svg>
+            </div>
+            <div class="flex flex-col justify-center">
+                <p class="text-white text-base font-medium leading-normal line-clamp-1">${insight.subject || 'Email Insight'}</p>
+                <p class="text-[#90aecb] text-sm font-normal leading-normal line-clamp-2">${insight.ai_summary || 'AI analysis available'}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+function displayRecentActivity(activities) {
+    const container = document.getElementById('activityContainer');
+    const loading = document.getElementById('activityLoading');
+    
+    if (loading) loading.remove();
+    
+    if (!activities || activities.length === 0) {
+        container.innerHTML = `
+            <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
+                <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                        <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM116,136V112a12,12,0,0,1,24,0v24a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,176Z"></path>
+                    </svg>
+                </div>
+                <div class="flex flex-col justify-center">
+                    <p class="text-white text-base font-medium leading-normal">No recent activity</p>
+                    <p class="text-[#90aecb] text-sm font-normal leading-normal">Your tasks and emails will appear here</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = activities.map(activity => `
+        <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2 cursor-pointer hover:bg-[#223649] transition-colors">
+            <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
+                ${getActivityIcon(activity.type)}
+            </div>
+            <div class="flex flex-col justify-center">
+                <p class="text-white text-base font-medium leading-normal line-clamp-1">${activity.title}</p>
+                <p class="text-[#90aecb] text-sm font-normal leading-normal line-clamp-2">${activity.subtitle}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getActivityIcon(type) {
+    const icons = {
+        task: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z"></path></svg>',
+        email: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"></path></svg>',
+        person: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM74.08,197.5a64,64,0,0,1,107.84,0,87.83,87.83,0,0,1-107.84,0ZM96,120a32,32,0,1,1,32,32A32,32,0,0,1,96,120Z"></path></svg>'
+    };
+    return icons[type] || icons.task;
+}
+
+async function processEmails() {
+    const btn = document.getElementById('processEmailsBtn');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Processing...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/process-emails', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                max_emails: 20,
+                days_back: 7,
+                force_refresh: false
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(`Processed ${data.summary.emails_fetched} emails and created ${data.summary.tasks_created} tasks`);
+            // Reload data
+            await loadInitialData();
+        } else {
+            showError(data.error || 'Failed to process emails');
+        }
+        
+    } catch (error) {
+        console.error('Error processing emails:', error);
+        showError('Failed to process emails. Please try again.');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function refreshData() {
+    const btn = document.getElementById('refreshDataBtn');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Refreshing...';
+    btn.disabled = true;
+    
+    try {
+        await loadInitialData();
+        showSuccess('Data refreshed successfully');
+    } catch (error) {
+        console.error('Error refreshing data:', error);
+        showError('Failed to refresh data');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message) return;
+    
+    const responseDiv = document.getElementById('chatResponse');
+    const contentDiv = document.getElementById('chatResponseContent');
+    
+    // Show loading state
+    responseDiv.classList.remove('hidden');
+    contentDiv.innerHTML = '<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div> Thinking...';
+    
+    try {
+        const response = await fetch('/api/chat-with-knowledge', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: message,
+                include_context: true
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            contentDiv.innerHTML = `<div class="whitespace-pre-wrap">${data.response}</div>`;
+            input.value = '';
+        } else {
+            contentDiv.innerHTML = `<div class="text-red-400">Error: ${data.error}</div>`;
+        }
+        
+    } catch (error) {
+        console.error('Error sending chat:', error);
+        contentDiv.innerHTML = '<div class="text-red-400">Failed to send message. Please try again.</div>';
+    }
+}
+
+function performSearch() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    // TODO: Implement search functionality
+    console.log('Searching for:', query);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown date';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    } catch (error) {
+        return 'Invalid date';
+    }
+}
+
+function showSuccess(message) {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        document.body.removeChild(toast);
+    }, 3000);
+}
+
+function showError(message) {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        document.body.removeChild(toast);
+    }, 5000);
+}
+</script>
+</body>
+</html> 
