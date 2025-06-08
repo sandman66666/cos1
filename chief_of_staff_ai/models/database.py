@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Boolean, Float, ForeignKey, Index, text
 from sqlalchemy.ext.declarative import declarative_base
@@ -297,6 +297,11 @@ class Person(Base):
     last_updated_by_ai = Column(DateTime)
     ai_version = Column(String(50))
     
+    # NEW: Smart Contact Strategy fields
+    is_trusted_contact = Column(Boolean, default=False, index=True)
+    engagement_score = Column(Float, default=0.0)
+    bidirectional_topics = Column(JSONType)  # Topics with back-and-forth discussion
+    
     # Relationships
     user = relationship("User", back_populates="people")
     
@@ -338,7 +343,10 @@ class Person(Base):
             'total_emails': self.total_emails,
             'knowledge_confidence': self.knowledge_confidence,
             'last_updated_by_ai': self.last_updated_by_ai.isoformat() if self.last_updated_by_ai else None,
-            'ai_version': self.ai_version
+            'ai_version': self.ai_version,
+            'is_trusted_contact': self.is_trusted_contact,
+            'engagement_score': self.engagement_score,
+            'bidirectional_topics': self.bidirectional_topics
         }
 
 class Project(Base):
@@ -494,6 +502,240 @@ class Topic(Base):
             'ai_version': self.ai_version,
             'parent_topic_id': self.parent_topic_id,
             'last_used': self.last_used.isoformat() if self.last_used else None
+        }
+
+class TrustedContact(Base):
+    """Trusted Contact model for engagement-based contact database"""
+    __tablename__ = 'trusted_contacts'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Contact identification
+    email_address = Column(String(255), nullable=False, index=True)
+    name = Column(String(255))
+    
+    # Engagement metrics
+    engagement_score = Column(Float, default=0.0, index=True)
+    first_sent_date = Column(DateTime)
+    last_sent_date = Column(DateTime, index=True)
+    total_sent_emails = Column(Integer, default=0)
+    total_received_emails = Column(Integer, default=0)
+    bidirectional_threads = Column(Integer, default=0)
+    
+    # Topic analysis
+    topics_discussed = Column(JSONType)  # List of topics from sent/received emails
+    bidirectional_topics = Column(JSONType)  # Topics with back-and-forth discussion
+    
+    # Relationship assessment
+    relationship_strength = Column(String(20), default='low', index=True)  # high, medium, low
+    communication_frequency = Column(String(20))  # daily, weekly, monthly, occasional
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_analyzed = Column(DateTime)
+    
+    # Relationships
+    user = relationship("User", backref="trusted_contacts")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_trusted_contact_user_email', 'user_id', 'email_address'),
+        Index('idx_trusted_contact_engagement', 'user_id', 'engagement_score'),
+        Index('idx_trusted_contact_strength', 'user_id', 'relationship_strength'),
+    )
+    
+    def __repr__(self):
+        return f"<TrustedContact(email='{self.email_address}', strength='{self.relationship_strength}')>"
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'email_address': self.email_address,
+            'name': self.name,
+            'engagement_score': self.engagement_score,
+            'first_sent_date': self.first_sent_date.isoformat() if self.first_sent_date else None,
+            'last_sent_date': self.last_sent_date.isoformat() if self.last_sent_date else None,
+            'total_sent_emails': self.total_sent_emails,
+            'total_received_emails': self.total_received_emails,
+            'bidirectional_threads': self.bidirectional_threads,
+            'topics_discussed': self.topics_discussed,
+            'bidirectional_topics': self.bidirectional_topics,
+            'relationship_strength': self.relationship_strength,
+            'communication_frequency': self.communication_frequency,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'last_analyzed': self.last_analyzed.isoformat() if self.last_analyzed else None
+        }
+
+class ContactContext(Base):
+    """Rich context information for contacts"""
+    __tablename__ = 'contact_contexts'
+    
+    id = Column(Integer, primary_key=True)
+    person_id = Column(Integer, ForeignKey('people.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Context details
+    context_type = Column(String(50), nullable=False, index=True)  # communication_pattern, project_involvement, topic_expertise, relationship_notes
+    title = Column(String(255), nullable=False)
+    description = Column(Text)
+    confidence_score = Column(Float, default=0.5)
+    
+    # Supporting evidence
+    source_emails = Column(JSONType)  # List of email IDs that contributed to this context
+    supporting_quotes = Column(JSONType)  # Relevant excerpts from emails
+    tags = Column(JSONType)  # Flexible tagging system
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    person = relationship("Person", backref="contexts")
+    user = relationship("User", backref="contact_contexts")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_contact_context_person', 'person_id', 'context_type'),
+        Index('idx_contact_context_user', 'user_id', 'context_type'),
+    )
+    
+    def __repr__(self):
+        return f"<ContactContext(type='{self.context_type}', title='{self.title}')>"
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'person_id': self.person_id,
+            'user_id': self.user_id,
+            'context_type': self.context_type,
+            'title': self.title,
+            'description': self.description,
+            'confidence_score': self.confidence_score,
+            'source_emails': self.source_emails,
+            'supporting_quotes': self.supporting_quotes,
+            'tags': self.tags,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class TaskContext(Base):
+    """Rich context information for tasks"""
+    __tablename__ = 'task_contexts'
+    
+    id = Column(Integer, primary_key=True)
+    task_id = Column(Integer, ForeignKey('tasks.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Context details
+    context_type = Column(String(50), nullable=False, index=True)  # background, stakeholders, timeline, business_impact
+    title = Column(String(255), nullable=False)
+    description = Column(Text)
+    
+    # Related entities
+    related_people = Column(JSONType)  # List of person IDs
+    related_projects = Column(JSONType)  # List of project IDs
+    related_topics = Column(JSONType)  # List of relevant topics
+    
+    # Source information
+    source_email_id = Column(Integer, ForeignKey('emails.id'))
+    source_thread_id = Column(String(255))
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    task = relationship("Task", backref="contexts")
+    user = relationship("User", backref="task_contexts")
+    source_email = relationship("Email")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_task_context_task', 'task_id', 'context_type'),
+        Index('idx_task_context_user', 'user_id', 'context_type'),
+    )
+    
+    def __repr__(self):
+        return f"<TaskContext(type='{self.context_type}', title='{self.title}')>"
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'user_id': self.user_id,
+            'context_type': self.context_type,
+            'title': self.title,
+            'description': self.description,
+            'related_people': self.related_people,
+            'related_projects': self.related_projects,
+            'related_topics': self.related_topics,
+            'source_email_id': self.source_email_id,
+            'source_thread_id': self.source_thread_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class TopicKnowledgeBase(Base):
+    """Comprehensive knowledge base for topics"""
+    __tablename__ = 'topic_knowledge_base'
+    
+    id = Column(Integer, primary_key=True)
+    topic_id = Column(Integer, ForeignKey('topics.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Knowledge details
+    knowledge_type = Column(String(50), nullable=False, index=True)  # methodology, key_people, challenges, success_patterns, tools, decisions
+    title = Column(String(255), nullable=False)
+    content = Column(Text)
+    confidence_score = Column(Float, default=0.5)
+    
+    # Supporting evidence
+    supporting_evidence = Column(JSONType)  # Email excerpts, patterns observed
+    source_emails = Column(JSONType)  # List of email IDs that contributed
+    patterns = Column(JSONType)  # Observed patterns and trends
+    
+    # Knowledge metadata
+    relevance_score = Column(Float, default=0.5)  # How relevant this knowledge is
+    engagement_weight = Column(Float, default=0.5)  # Weight based on user engagement
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    topic = relationship("Topic", backref="knowledge_base")
+    user = relationship("User", backref="topic_knowledge")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_topic_knowledge_topic', 'topic_id', 'knowledge_type'),
+        Index('idx_topic_knowledge_user', 'user_id', 'knowledge_type'),
+        Index('idx_topic_knowledge_relevance', 'user_id', 'relevance_score'),
+    )
+    
+    def __repr__(self):
+        return f"<TopicKnowledgeBase(type='{self.knowledge_type}', title='{self.title}')>"
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'topic_id': self.topic_id,
+            'user_id': self.user_id,
+            'knowledge_type': self.knowledge_type,
+            'title': self.title,
+            'content': self.content,
+            'confidence_score': self.confidence_score,
+            'supporting_evidence': self.supporting_evidence,
+            'source_emails': self.source_emails,
+            'patterns': self.patterns,
+            'relevance_score': self.relevance_score,
+            'engagement_weight': self.engagement_weight,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_updated': self.last_updated.isoformat() if self.last_updated else None
         }
 
 class DatabaseManager:
@@ -926,6 +1168,180 @@ class DatabaseManager:
                 session.rollback()
                 logger.error(f"Failed to merge topics: {str(e)}")
                 return False
+
+    # ===== SMART CONTACT STRATEGY METHODS =====
+    
+    def create_or_update_trusted_contact(self, user_id: int, contact_data: Dict) -> TrustedContact:
+        """Create or update a trusted contact record"""
+        with self.get_session() as session:
+            contact = session.query(TrustedContact).filter(
+                TrustedContact.user_id == user_id,
+                TrustedContact.email_address == contact_data['email_address']
+            ).first()
+            
+            if contact:
+                # Update existing contact
+                for key, value in contact_data.items():
+                    if hasattr(contact, key) and value is not None:
+                        setattr(contact, key, value)
+                contact.updated_at = datetime.utcnow()
+            else:
+                # Create new trusted contact
+                contact = TrustedContact(
+                    user_id=user_id,
+                    **contact_data,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
+                )
+                session.add(contact)
+            
+            session.commit()
+            session.refresh(contact)
+            return contact
+    
+    def get_trusted_contacts(self, user_id: int, limit: int = 500) -> List[TrustedContact]:
+        """Get trusted contacts for a user"""
+        with self.get_session() as session:
+            return session.query(TrustedContact).filter(
+                TrustedContact.user_id == user_id
+            ).order_by(TrustedContact.engagement_score.desc()).limit(limit).all()
+    
+    def find_trusted_contact_by_email(self, user_id: int, email_address: str) -> Optional[TrustedContact]:
+        """Find trusted contact by email address"""
+        with self.get_session() as session:
+            return session.query(TrustedContact).filter(
+                TrustedContact.user_id == user_id,
+                TrustedContact.email_address == email_address
+            ).first()
+    
+    def create_contact_context(self, user_id: int, person_id: int, context_data: Dict) -> ContactContext:
+        """Create a new contact context record"""
+        with self.get_session() as session:
+            context = ContactContext(
+                user_id=user_id,
+                person_id=person_id,
+                **context_data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(context)
+            session.commit()
+            session.refresh(context)
+            return context
+    
+    def get_contact_contexts(self, user_id: int, person_id: int = None, context_type: str = None) -> List[ContactContext]:
+        """Get contact contexts for a user, optionally filtered by person or type"""
+        with self.get_session() as session:
+            query = session.query(ContactContext).filter(ContactContext.user_id == user_id)
+            
+            if person_id:
+                query = query.filter(ContactContext.person_id == person_id)
+            
+            if context_type:
+                query = query.filter(ContactContext.context_type == context_type)
+            
+            return query.order_by(ContactContext.created_at.desc()).all()
+    
+    def create_task_context(self, user_id: int, task_id: int, context_data: Dict) -> TaskContext:
+        """Create a new task context record"""
+        with self.get_session() as session:
+            context = TaskContext(
+                user_id=user_id,
+                task_id=task_id,
+                **context_data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(context)
+            session.commit()
+            session.refresh(context)
+            return context
+    
+    def get_task_contexts(self, user_id: int, task_id: int = None, context_type: str = None) -> List[TaskContext]:
+        """Get task contexts for a user, optionally filtered by task or type"""
+        with self.get_session() as session:
+            query = session.query(TaskContext).filter(TaskContext.user_id == user_id)
+            
+            if task_id:
+                query = query.filter(TaskContext.task_id == task_id)
+            
+            if context_type:
+                query = query.filter(TaskContext.context_type == context_type)
+            
+            return query.order_by(TaskContext.created_at.desc()).all()
+    
+    def create_topic_knowledge(self, user_id: int, topic_id: int, knowledge_data: Dict) -> TopicKnowledgeBase:
+        """Create a new topic knowledge record"""
+        with self.get_session() as session:
+            knowledge = TopicKnowledgeBase(
+                user_id=user_id,
+                topic_id=topic_id,
+                **knowledge_data,
+                created_at=datetime.utcnow(),
+                last_updated=datetime.utcnow()
+            )
+            session.add(knowledge)
+            session.commit()
+            session.refresh(knowledge)
+            return knowledge
+    
+    def get_topic_knowledge(self, user_id: int, topic_id: int = None, knowledge_type: str = None) -> List[TopicKnowledgeBase]:
+        """Get topic knowledge for a user, optionally filtered by topic or type"""
+        with self.get_session() as session:
+            query = session.query(TopicKnowledgeBase).filter(TopicKnowledgeBase.user_id == user_id)
+            
+            if topic_id:
+                query = query.filter(TopicKnowledgeBase.topic_id == topic_id)
+            
+            if knowledge_type:
+                query = query.filter(TopicKnowledgeBase.knowledge_type == knowledge_type)
+            
+            return query.order_by(TopicKnowledgeBase.relevance_score.desc()).all()
+    
+    def update_people_engagement_data(self, user_id: int, person_id: int, engagement_data: Dict) -> bool:
+        """Update people table with engagement-based data"""
+        with self.get_session() as session:
+            person = session.query(Person).filter(
+                Person.user_id == user_id,
+                Person.id == person_id
+            ).first()
+            
+            if not person:
+                return False
+            
+            # Add engagement fields to person if they don't exist
+            if 'is_trusted_contact' in engagement_data:
+                person.is_trusted_contact = engagement_data['is_trusted_contact']
+            
+            if 'engagement_score' in engagement_data:
+                person.engagement_score = engagement_data['engagement_score']
+            
+            if 'bidirectional_topics' in engagement_data:
+                person.bidirectional_topics = engagement_data['bidirectional_topics']
+            
+            session.commit()
+            return True
+    
+    def get_engagement_analytics(self, user_id: int) -> Dict:
+        """Get engagement analytics for Smart Contact Strategy reporting"""
+        with self.get_session() as session:
+            total_contacts = session.query(TrustedContact).filter(TrustedContact.user_id == user_id).count()
+            high_engagement = session.query(TrustedContact).filter(
+                TrustedContact.user_id == user_id,
+                TrustedContact.relationship_strength == 'high'
+            ).count()
+            
+            recent_contacts = session.query(TrustedContact).filter(
+                TrustedContact.user_id == user_id,
+                TrustedContact.last_sent_date >= datetime.utcnow() - timedelta(days=30)
+            ).count()
+            
+            return {
+                'total_trusted_contacts': total_contacts,
+                'high_engagement_contacts': high_engagement,
+                'recent_active_contacts': recent_contacts,
+                'engagement_rate': (high_engagement / total_contacts * 100) if total_contacts > 0 else 0
+            }
 
 # Global database manager instance - Initialize lazily
 _db_manager = None

@@ -983,7 +983,7 @@ Remember: This knowledge base represents their actual business communications an
     
     @app.route('/api/flush-database', methods=['POST'])
     def api_flush_database():
-        """API endpoint to flush all user data for a clean start"""
+        """API endpoint to flush all user data and recreate database schema"""
         if 'user_email' not in session:
             return jsonify({'error': 'Not authenticated'}), 401
         
@@ -994,31 +994,74 @@ Remember: This knowledge base represents their actual business communications an
             if not user:
                 return jsonify({'error': 'User not found'}), 404
             
-            # Delete all user data but keep the user record
-            with get_db_manager().get_session() as db_session:
-                # Delete tasks
+            logger.info(f"Starting complete database flush for user: {user_email}")
+            
+            # CRITICAL FIX: For SQLite, we need to recreate the schema to add new columns
+            # Get the current database manager
+            db_manager = get_db_manager()
+            
+            # Step 1: Delete all user data INCLUDING Smart Contact Strategy tables
+            with db_manager.get_session() as db_session:
+                # Import the new Smart Contact Strategy models
+                from models.database import TrustedContact, ContactContext, TaskContext, TopicKnowledgeBase
+                
+                # Delete Smart Contact Strategy data first (due to foreign keys)
+                db_session.query(ContactContext).filter(ContactContext.user_id == user.id).delete()
+                db_session.query(TaskContext).filter(TaskContext.user_id == user.id).delete()
+                db_session.query(TopicKnowledgeBase).filter(TopicKnowledgeBase.user_id == user.id).delete()
+                db_session.query(TrustedContact).filter(TrustedContact.user_id == user.id).delete()
+                
+                # Delete regular tables
                 db_session.query(Task).filter(Task.user_id == user.id).delete()
-                
-                # Delete emails
                 db_session.query(Email).filter(Email.user_id == user.id).delete()
-                
-                # Delete people
                 db_session.query(Person).filter(Person.user_id == user.id).delete()
-                
-                # Delete projects
                 db_session.query(Project).filter(Project.user_id == user.id).delete()
-                
-                # CRITICAL FIX: Also delete topics to ensure a complete flush
                 db_session.query(Topic).filter(Topic.user_id == user.id).delete()
                 
                 db_session.commit()
+                logger.info(f"Deleted all data for user: {user_email}")
             
-            logger.info(f"Flushed all data for user: {user_email}")
+            # Step 2: For SQLite, recreate all tables to ensure new schema
+            # This will add any missing columns like is_trusted_contact, engagement_score, etc.
+            try:
+                from models.database import Base
+                logger.info("Recreating database schema with new Smart Contact Strategy columns...")
+                
+                # Drop all tables and recreate them (this ensures new columns are added)
+                Base.metadata.drop_all(bind=db_manager.engine)
+                Base.metadata.create_all(bind=db_manager.engine)
+                
+                logger.info("Database schema recreated successfully")
+                
+                # Step 3: Recreate the user since we dropped all tables
+                user_info = {
+                    'email': user.email,
+                    'id': user.google_id,
+                    'name': user.name
+                }
+                credentials = {
+                    'access_token': user.access_token,
+                    'refresh_token': user.refresh_token,
+                    'expires_at': user.token_expires_at,
+                    'scopes': user.scopes or []
+                }
+                
+                # Recreate user with existing credentials
+                db_manager.create_or_update_user(user_info, credentials)
+                logger.info(f"Recreated user: {user_email}")
+                
+            except Exception as schema_error:
+                logger.error(f"Schema recreation error: {str(schema_error)}")
+                # Fallback: just ensure tables exist
+                Base.metadata.create_all(bind=db_manager.engine)
+            
+            logger.info(f"Complete database flush successful for user: {user_email}")
             
             return jsonify({
                 'success': True,
-                'message': 'All data cleared successfully. You can start fresh!',
-                'user_email': user_email
+                'message': 'Database completely flushed and schema updated! New Smart Contact Strategy features are now available.',
+                'user_email': user_email,
+                'schema_updated': True
             })
             
         except Exception as e:
@@ -1911,6 +1954,192 @@ Remember: This knowledge base represents their actual business communications an
             response.headers['X-Content-Type-Options'] = 'nosniff'
         return response
     
+    # Add these new API endpoints after the existing API routes, around line 1800
+
+    @app.route('/api/build-trusted-contacts', methods=['POST'])
+    def api_build_trusted_contacts():
+        """Build trusted contact database from sent emails"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+            
+            # Get parameters
+            data = request.get_json() or {}
+            days_back = data.get('days_back', 365)
+            
+            # Build trusted contact database
+            result = smart_contact_strategy.build_trusted_contact_database(
+                user_email=user['email'],
+                days_back=days_back
+            )
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            logger.error(f"Error building trusted contacts: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/classify-email', methods=['POST'])
+    def api_classify_email():
+        """Classify an email using Smart Contact Strategy"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+            
+            # Get email data
+            email_data = request.get_json()
+            if not email_data:
+                return jsonify({'error': 'No email data provided'}), 400
+            
+            # Classify email
+            decision = smart_contact_strategy.classify_incoming_email(
+                user_email=user['email'],
+                email_data=email_data
+            )
+            
+            return jsonify({
+                'action': decision.action,
+                'confidence': decision.confidence,
+                'reason': decision.reason,
+                'priority': decision.priority,
+                'estimated_tokens': decision.estimated_tokens
+            })
+            
+        except Exception as e:
+            logger.error(f"Error classifying email: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/engagement-metrics', methods=['GET'])
+    def api_engagement_metrics():
+        """Get user engagement pattern analysis"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+            
+            # Get engagement insights
+            insights = smart_contact_strategy.get_engagement_insights(user['email'])
+            
+            return jsonify(insights)
+            
+        except Exception as e:
+            logger.error(f"Error getting engagement metrics: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/processing-efficiency', methods=['POST'])
+    def api_processing_efficiency():
+        """Calculate processing efficiency for a set of emails"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+            
+            # Get emails data
+            data = request.get_json()
+            emails = data.get('emails', [])
+            
+            if not emails:
+                return jsonify({'error': 'No emails provided'}), 400
+            
+            # Calculate efficiency
+            efficiency = smart_contact_strategy.calculate_processing_efficiency(
+                user_email=user['email'],
+                emails=emails
+            )
+            
+            return jsonify(efficiency)
+            
+        except Exception as e:
+            logger.error(f"Error calculating processing efficiency: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/trusted-contacts', methods=['GET'])
+    def api_get_trusted_contacts():
+        """Get trusted contacts for a user"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            # Get trusted contacts from database
+            trusted_contacts = get_db_manager().get_trusted_contacts(user['id'])
+            
+            return jsonify({
+                'success': True,
+                'trusted_contacts': [contact.to_dict() for contact in trusted_contacts],
+                'count': len(trusted_contacts)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting trusted contacts: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/contact-contexts', methods=['GET'])
+    def api_get_contact_contexts():
+        """Get contact contexts for rich display"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            person_id = request.args.get('person_id', type=int)
+            context_type = request.args.get('context_type')
+            
+            # Get contact contexts from database
+            contexts = get_db_manager().get_contact_contexts(
+                user_id=user['id'],
+                person_id=person_id,
+                context_type=context_type
+            )
+            
+            return jsonify({
+                'success': True,
+                'contexts': [context.to_dict() for context in contexts],
+                'count': len(contexts)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting contact contexts: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/task-contexts', methods=['GET'])
+    def api_get_task_contexts():
+        """Get task contexts for rich display"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            task_id = request.args.get('task_id', type=int)
+            context_type = request.args.get('context_type')
+            
+            # Get task contexts from database
+            contexts = get_db_manager().get_task_contexts(
+                user_id=user['id'],
+                task_id=task_id,
+                context_type=context_type
+            )
+            
+            return jsonify({
+                'success': True,
+                'contexts': [context.to_dict() for context in contexts],
+                'count': len(contexts)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting task contexts: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
     return app
 
 # Create the Flask application

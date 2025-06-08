@@ -148,6 +148,86 @@ class GmailFetcher:
             logger.error(f"Failed to fetch business-focused emails for {user_email}: {str(e)}")
             return self._error_response(str(e))
     
+    def fetch_sent_emails(
+        self, 
+        user_email: str, 
+        days_back: int = 365, 
+        max_emails: int = 1000
+    ) -> Dict:
+        """
+        Fetch sent emails for Smart Contact Strategy analysis
+        
+        This method fetches emails from the SENT folder to analyze user engagement patterns
+        and build the Trusted Contact Database.
+        
+        Args:
+            user_email: Gmail address of the user
+            days_back: Number of days back to fetch sent emails
+            max_emails: Maximum number of sent emails to fetch
+            
+        Returns:
+            Dictionary containing sent emails and metadata
+        """
+        try:
+            # Get user from database
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return self._error_response(f"User {user_email} not found in database")
+            
+            # Get valid credentials
+            credentials = gmail_auth.get_valid_credentials(user_email)
+            if not credentials:
+                return self._error_response(f"No valid credentials for {user_email}")
+            
+            # Build Gmail service
+            service = build('gmail', 'v1', credentials=credentials)
+            
+            # Calculate date range
+            since_date = datetime.utcnow() - timedelta(days=days_back)
+            
+            # Query for sent emails
+            sent_query = (
+                f"after:{since_date.strftime('%Y/%m/%d')} "
+                f"in:sent"
+            )
+            
+            logger.info(f"Fetching sent emails for {user_email} with query: {sent_query}")
+            
+            # Fetch email list
+            email_list = self._fetch_email_list(service, sent_query, max_emails)
+            if not email_list:
+                return {
+                    'success': True,
+                    'user_email': user_email,
+                    'emails': [],
+                    'count': 0,
+                    'source': 'gmail_api_sent',
+                    'fetched_at': datetime.utcnow().isoformat(),
+                    'message': 'No sent emails found in the specified time range',
+                    'query_used': sent_query
+                }
+            
+            # Fetch full email content for sent emails (lighter processing)
+            emails = self._fetch_sent_emails_batch(service, email_list)
+            
+            logger.info(f"Successfully fetched {len(emails)} sent emails for {user_email}")
+            
+            return {
+                'success': True,
+                'user_email': user_email,
+                'emails': emails,
+                'count': len(emails),
+                'source': 'gmail_api_sent',
+                'fetched_at': datetime.utcnow().isoformat(),
+                'query_used': sent_query,
+                'days_back': days_back,
+                'purpose': 'smart_contact_strategy_analysis'
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch sent emails for {user_email}: {str(e)}")
+            return self._error_response(str(e))
+    
     def _fetch_email_list(self, service, query: str, limit: int = None) -> List[Dict]:
         """
         Fetch list of email IDs matching the query
@@ -268,6 +348,61 @@ class GmailFetcher:
             logger.error(f"Failed to fetch emails in batch: {str(e)}")
             raise
     
+    def _fetch_sent_emails_batch(self, service, email_list: List[Dict]) -> List[Dict]:
+        """
+        Fetch sent emails with lighter processing for engagement analysis
+        
+        Args:
+            service: Gmail service object
+            email_list: List of email metadata from list API
+            
+        Returns:
+            List of processed sent email dictionaries
+        """
+        emails = []
+        processed_count = 0
+        
+        try:
+            # Process emails in batches
+            for i in range(0, len(email_list), self.batch_size):
+                batch = email_list[i:i + self.batch_size]
+                batch_emails = []
+                
+                for email_meta in batch:
+                    email_id = email_meta['id']
+                    
+                    try:
+                        # Fetch email with minimal format for efficiency
+                        full_email = service.users().messages().get(
+                            userId='me',
+                            id=email_id,
+                            format='metadata',
+                            metadataHeaders=['From', 'To', 'Cc', 'Bcc', 'Subject', 'Date']
+                        ).execute()
+                        
+                        # Process the sent email (lighter processing)
+                        processed_email = self._process_sent_gmail_message(full_email)
+                        batch_emails.append(processed_email)
+                        
+                        processed_count += 1
+                        
+                    except Exception as e:
+                        logger.error(f"Failed to process sent email {email_id}: {str(e)}")
+                        continue
+                
+                emails.extend(batch_emails)
+                
+                # Log progress for large batches
+                if len(email_list) > self.batch_size:
+                    logger.info(f"Processed sent email batch {i//self.batch_size + 1}/{(len(email_list)-1)//self.batch_size + 1}")
+            
+            logger.info(f"Successfully processed {processed_count} sent emails")
+            return emails
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch sent emails in batch: {str(e)}")
+            raise
+    
     def _process_gmail_message(self, gmail_message: Dict) -> Dict:
         """
         Process a Gmail message into our standard format with enhanced business intelligence
@@ -363,6 +498,89 @@ class GmailFetcher:
                 'timestamp': datetime.utcnow(),
                 'business_priority_score': 0
             }
+    
+    def _process_sent_gmail_message(self, gmail_message: Dict) -> Dict:
+        """
+        Process a sent Gmail message for engagement analysis (lighter processing)
+        
+        Args:
+            gmail_message: Raw Gmail message from API
+            
+        Returns:
+            Processed sent email dictionary with engagement data
+        """
+        try:
+            headers = {h['name'].lower(): h['value'] for h in gmail_message['payload'].get('headers', [])}
+            
+            # Extract basic email info for engagement analysis
+            email_data = {
+                'id': gmail_message['id'],
+                'thread_id': gmail_message.get('threadId'),
+                'snippet': gmail_message.get('snippet', ''),
+                
+                # Headers for recipient analysis
+                'sender': headers.get('from', ''),
+                'recipients': self._parse_recipients(headers.get('to', '')),
+                'cc': self._parse_recipients(headers.get('cc', '')),
+                'bcc': self._parse_recipients(headers.get('bcc', '')),
+                'subject': headers.get('subject', ''),
+                'date': headers.get('date', ''),
+                
+                # Processing metadata
+                'processing_metadata': {
+                    'fetcher_version': '2.0_sent_analysis',
+                    'processed_at': datetime.utcnow().isoformat(),
+                    'purpose': 'engagement_analysis'
+                }
+            }
+            
+            # Parse timestamp
+            if email_data['date']:
+                try:
+                    email_data['timestamp'] = parsedate_to_datetime(email_data['date'])
+                except:
+                    email_data['timestamp'] = datetime.utcnow()
+            else:
+                email_data['timestamp'] = datetime.utcnow()
+            
+            return email_data
+            
+        except Exception as e:
+            logger.error(f"Failed to process sent Gmail message {gmail_message.get('id', 'unknown')}: {str(e)}")
+            return {
+                'id': gmail_message.get('id', 'unknown'),
+                'error': True,
+                'error_message': str(e),
+                'timestamp': datetime.utcnow()
+            }
+    
+    def _parse_recipients(self, recipients_string: str) -> List[str]:
+        """
+        Parse recipients string into list of email addresses
+        
+        Args:
+            recipients_string: Comma-separated recipients string
+            
+        Returns:
+            List of email addresses
+        """
+        if not recipients_string:
+            return []
+        
+        recipients = []
+        for recipient in recipients_string.split(','):
+            recipient = recipient.strip()
+            if '<' in recipient and '>' in recipient:
+                # Extract email from "Name <email@domain.com>" format
+                email = recipient.split('<')[1].split('>')[0].strip()
+            else:
+                # Plain email address
+                email = recipient.strip()
+            
+            if email and '@' in email:
+                recipients.append(email)
+        
+        return recipients
     
     def _calculate_business_priority(self, label_ids: List[str], headers: Dict) -> float:
         """

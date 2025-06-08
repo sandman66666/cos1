@@ -191,6 +191,65 @@
                             </div>
                         </div>
                         
+                        <!-- Database Management -->
+                        <div class="bg-[#182734] rounded-lg border border-red-600 p-6">
+                            <h3 class="text-white text-xl font-bold mb-4">🗄️ Database Management</h3>
+                            <div class="bg-red-900/20 border border-red-600 rounded-lg p-4 mb-4">
+                                <div class="flex items-start gap-3">
+                                    <div class="text-red-400 text-xl">⚠️</div>
+                                    <div>
+                                        <h4 class="text-red-400 font-semibold mb-2">Danger Zone</h4>
+                                        <p class="text-red-300 text-sm mb-3">
+                                            These actions permanently delete your data and cannot be undone. 
+                                            Use with extreme caution.
+                                        </p>
+                                        <ul class="text-red-300 text-sm space-y-1">
+                                            <li>• All processed emails will be removed</li>
+                                            <li>• All extracted tasks will be deleted</li>
+                                            <li>• All identified people and contacts will be lost</li>
+                                            <li>• All project data will be erased</li>
+                                            <li>• All topics and business intelligence will be deleted</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <h4 class="text-white font-semibold mb-2">🧹 Flush All Data</h4>
+                                    <p class="text-[#90aecb] text-sm mb-4">
+                                        Completely clear your database to start fresh. This will remove all emails, tasks, 
+                                        people, projects, and business intelligence data but keep your account.
+                                    </p>
+                                    
+                                    <button 
+                                        id="flushDatabaseBtn"
+                                        onclick="confirmFlushDatabase()"
+                                        class="bg-red-600 text-white px-6 py-3 rounded font-medium hover:bg-red-700 transition-colors flex items-center gap-2"
+                                    >
+                                        🗑️ Flush All Database Data
+                                    </button>
+                                </div>
+                                
+                                <!-- Flush Progress -->
+                                <div id="flushProgress" class="hidden p-4 bg-[#223649] rounded border border-[#314d68]">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+                                        <span class="text-white font-medium">Flushing database...</span>
+                                    </div>
+                                    <div class="text-[#90aecb] text-sm">This may take a few moments...</div>
+                                </div>
+                                
+                                <!-- Flush Results -->
+                                <div id="flushResults" class="hidden p-4 bg-green-900/20 border border-green-600 rounded">
+                                    <h5 class="text-green-400 font-medium mb-2">✅ Database Flushed Successfully</h5>
+                                    <div class="text-green-300 text-sm">
+                                        All your data has been cleared. You can now start fresh by processing new emails.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Action Buttons -->
                         <div class="flex gap-4 pt-6">
                             <button 
@@ -383,6 +442,95 @@
             }
         }
 
+        // Database flush functionality
+        function confirmFlushDatabase() {
+            // First confirmation - general warning
+            const firstConfirm = confirm(
+                "⚠️ WARNING: This will permanently delete ALL your AI Chief of Staff data!\n\n" +
+                "This includes:\n" +
+                "• All processed emails\n" +
+                "• All extracted tasks\n" +
+                "• All identified people and contacts\n" +
+                "• All project data\n" +
+                "• All topics and business intelligence\n\n" +
+                "Are you absolutely sure you want to continue?"
+            );
+            
+            if (!firstConfirm) return;
+            
+            // Second confirmation - type confirmation
+            const typeConfirm = prompt(
+                "🚨 FINAL WARNING 🚨\n\n" +
+                "This action is IRREVERSIBLE and will delete ALL your data!\n\n" +
+                "To confirm, type exactly: DELETE ALL MY DATA"
+            );
+            
+            if (typeConfirm !== "DELETE ALL MY DATA") {
+                alert("❌ Confirmation text did not match. Database flush cancelled.");
+                return;
+            }
+            
+            // Third confirmation - are you really sure
+            const finalConfirm = confirm(
+                "🔥 LAST CHANCE 🔥\n\n" +
+                "You are about to permanently delete ALL your AI Chief of Staff data.\n" +
+                "This cannot be undone.\n\n" +
+                "Click OK to proceed with complete data deletion.\n" +
+                "Click Cancel to abort this operation."
+            );
+            
+            if (!finalConfirm) {
+                alert("✅ Database flush cancelled. Your data is safe.");
+                return;
+            }
+            
+            // All confirmations passed - proceed with flush
+            flushDatabase();
+        }
+
+        async function flushDatabase() {
+            const btn = document.getElementById('flushDatabaseBtn');
+            const progressDiv = document.getElementById('flushProgress');
+            const resultsDiv = document.getElementById('flushResults');
+            
+            const originalText = btn.innerHTML;
+            
+            // UI updates
+            btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>Flushing...';
+            btn.disabled = true;
+            progressDiv.classList.remove('hidden');
+            resultsDiv.classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/flush-database', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                progressDiv.classList.add('hidden');
+                
+                if (data.success) {
+                    // Show success results
+                    resultsDiv.classList.remove('hidden');
+                    showSuccess('🎉 Database flushed successfully! All data has been cleared. You can now start fresh.');
+                } else {
+                    showError('Database flush failed: ' + data.error);
+                }
+                
+            } catch (error) {
+                console.error('Error flushing database:', error);
+                progressDiv.classList.add('hidden');
+                showError('Failed to flush database: ' + error.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
         function formatDate(dateString) {
             if (!dateString) return 'Never';
             try {
@@ -399,12 +547,10 @@
         }
 
         function showSuccess(message) {
-            // Simple alert for now - could be enhanced with toast notifications
             alert(message);
         }
 
         function showError(message) {
-            // Simple alert for now - could be enhanced with toast notifications
             alert('❌ ' + message);
         }
     </script>
