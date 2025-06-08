@@ -19,9 +19,9 @@ class EmailIntelligenceProcessor:
     def __init__(self):
         self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
         self.model = "claude-3-5-sonnet-20241022"
-        self.version = "2.1"  # Enhanced version with quality improvements
+        self.version = "2.2"  # Debug version with relaxed filters
         
-        # Quality filtering patterns (RELAXED)
+        # Quality filtering patterns (RELAXED FOR DEBUGGING)
         self.non_human_patterns = [
             'noreply', 'no-reply', 'donotreply', 'automated', 'newsletter',
             'unsubscribe', 'notification', 'system', 'support', 'help',
@@ -30,54 +30,49 @@ class EmailIntelligenceProcessor:
         ]
         
         # RELAXED quality thresholds to capture more content
-        self.min_insight_length = 15  # Reduced from 20
-        self.min_confidence_score = 0.6  # Reduced from 0.7 - be more inclusive
+        self.min_insight_length = 10  # Reduced from 15
+        self.min_confidence_score = 0.4  # Reduced from 0.6 - be more inclusive
         
     def process_user_emails_intelligently(self, user_email: str, limit: int = None, force_refresh: bool = False) -> Dict:
         """
-        Intelligently process emails with enhanced quality-focused Claude analysis
-        
-        Args:
-            user_email: Email of the user
-            limit: Maximum number of emails to process
-            force_refresh: Whether to re-process already analyzed emails
-            
-        Returns:
-            Dictionary with comprehensive processing results
+        Process user emails with Claude 4 Sonnet for high-quality business intelligence
+        Enhanced with quality filtering and strategic insights
         """
         try:
+            logger.info(f"Starting quality-focused email processing for {user_email}")
+            
+            # Get user and validate
             user = get_db_manager().get_user_by_email(user_email)
             if not user:
                 return {'success': False, 'error': 'User not found'}
-            
-            # Enforce a reasonable limit to prevent stack overflow
-            max_limit = min(limit or 20, 50)  # Never process more than 50 emails at once
-            
-            # Get emails that need intelligent processing (only unreplied emails)
-            emails = self._get_emails_needing_processing(user.id, max_limit, force_refresh)
-            
-            if not emails:
-                return {
-                    'success': True,
-                    'user_email': user_email,
-                    'processed_emails': 0,
-                    'message': 'No unreplied emails need processing'
-                }
-            
-            # Enhanced filtering for quality-focused processing
-            quality_emails = self._filter_quality_emails(emails, user.email)
-            emails_to_process = quality_emails[:10]
-
-            if not emails_to_process:
-                return {
-                    'success': True,
-                    'user_email': user_email,
-                    'processed_emails': 0,
-                    'message': 'No high-quality emails to process in this batch'
-                }
-            
-            # Get user business context for enhanced analysis
+                
+            # Get business context for enhanced AI analysis
             user_context = self._get_user_business_context(user.id)
+            
+            # Get emails needing processing with quality pre-filtering
+            emails_to_process = self._get_emails_needing_processing(user.id, limit or 100, force_refresh)
+            
+            # RELAXED: Filter for quality emails but be more inclusive
+            quality_filtered_emails = self._filter_quality_emails_debug(emails_to_process, user_email)
+            
+            logger.info(f"Found {len(emails_to_process)} emails to process, {len(quality_filtered_emails)} passed quality filters")
+            
+            if not quality_filtered_emails:
+                logger.warning(f"No emails passed quality filters for {user_email}")
+                return {
+                    'success': True,
+                    'user_email': user_email,
+                    'processed_emails': 0,
+                    'high_quality_insights': 0,
+                    'human_contacts_identified': 0,
+                    'meaningful_projects': 0,
+                    'actionable_tasks': 0,
+                    'processor_version': self.version,
+                    'debug_info': f"No emails passed filters out of {len(emails_to_process)} total emails"
+                }
+            
+            # Limit to top quality emails for processing
+            emails_to_process = quality_filtered_emails[:limit or 50]
             
             processed_count = 0
             insights_extracted = 0
@@ -88,6 +83,7 @@ class EmailIntelligenceProcessor:
             for idx, email in enumerate(emails_to_process):
                 try:
                     logger.info(f"Processing email {idx + 1}/{len(emails_to_process)} for {user_email}")
+                    logger.debug(f"Email from: {email.sender}, subject: {email.subject}")
                     
                     # Skip if email has issues
                     if not email.body_clean and not email.snippet:
@@ -97,30 +93,39 @@ class EmailIntelligenceProcessor:
                     # Get comprehensive email analysis from Claude with enhanced prompts
                     analysis = self._get_quality_focused_email_analysis(email, user, user_context)
                     
-                    if analysis and self._validate_analysis_quality(analysis):
-                        # Update email with insights
-                        self._update_email_with_insights(email, analysis)
+                    if analysis:
+                        logger.debug(f"AI Analysis received for email {email.gmail_id}")
+                        logger.debug(f"Strategic value score: {analysis.get('strategic_value_score', 'N/A')}")
+                        logger.debug(f"Sender analysis: {analysis.get('sender_analysis', {})}")
+                        logger.debug(f"People found: {len(analysis.get('people', []))}")
                         
-                        # Extract and update people information (with human filtering)
-                        if analysis.get('people'):
-                            people_count = self._process_human_contacts_only(user.id, analysis, email)
-                            people_identified += people_count
-                        
-                        # Extract and update project information
-                        if analysis.get('project') and self._validate_project_quality(analysis['project']):
-                            project = self._process_project_insights(user.id, analysis['project'], email)
-                            if project:
-                                projects_identified += 1
-                                email.project_id = project.id
-                        
-                        # Extract high-confidence tasks only
-                        if analysis.get('tasks'):
-                            tasks_count = self._process_high_quality_tasks(user.id, email.id, analysis['tasks'])
-                            tasks_created += tasks_count
-                        
-                        insights_extracted += 1
+                        if self._validate_analysis_quality_debug(analysis):
+                            # Update email with insights
+                            self._update_email_with_insights(email, analysis)
+                            
+                            # Extract and update people information (with human filtering)
+                            if analysis.get('people') or analysis.get('sender_analysis'):
+                                people_count = self._process_human_contacts_only_debug(user.id, analysis, email)
+                                people_identified += people_count
+                                logger.info(f"Extracted {people_count} people from email {email.gmail_id}")
+                            
+                            # Extract and update project information
+                            if analysis.get('project') and self._validate_project_quality(analysis['project']):
+                                project = self._process_project_insights(user.id, analysis['project'], email)
+                                if project:
+                                    projects_identified += 1
+                                    email.project_id = project.id
+                            
+                            # Extract high-confidence tasks only
+                            if analysis.get('tasks'):
+                                tasks_count = self._process_high_quality_tasks(user.id, email.id, analysis['tasks'])
+                                tasks_created += tasks_count
+                            
+                            insights_extracted += 1
+                        else:
+                            logger.info(f"Analysis for email {email.gmail_id} didn't meet quality thresholds")
                     else:
-                        logger.info(f"Analysis for email {email.gmail_id} didn't meet quality thresholds")
+                        logger.warning(f"No analysis returned for email {email.gmail_id}")
                     
                     processed_count += 1
                     
@@ -131,7 +136,7 @@ class EmailIntelligenceProcessor:
                     logger.error(f"Failed to intelligently process email {email.gmail_id}: {str(e)}")
                     continue
             
-            logger.info(f"Quality-focused processing: {processed_count} emails for {user_email}")
+            logger.info(f"Quality-focused processing: {processed_count} emails, {people_identified} people identified for {user_email}")
             
             return {
                 'success': True,
@@ -141,7 +146,8 @@ class EmailIntelligenceProcessor:
                 'human_contacts_identified': people_identified,
                 'meaningful_projects': projects_identified,
                 'actionable_tasks': tasks_created,
-                'processor_version': self.version
+                'processor_version': self.version,
+                'debug_info': f"Processed {processed_count} emails, passed quality filters: {len(quality_filtered_emails)}"
             }
             
         except Exception as e:
@@ -235,101 +241,101 @@ class EmailIntelligenceProcessor:
             # Enhanced system prompt with business context and quality requirements
             business_context_str = self._format_business_context(user_context)
             
-            system_prompt = f"""You are an expert AI Chief of Staff that provides HIGH-QUALITY email analysis for business intelligence and productivity. 
+            system_prompt = f"""You are an expert AI Chief of Staff that provides comprehensive email analysis for business intelligence and productivity. Be INCLUSIVE and extract valuable insights from business communications.
 
-**QUALITY STANDARDS:**
-- Only extract insights that are specific, actionable, and meaningful
-- Reject vague, generic, or trivial information
-- Focus on strategic business value, not administrative details
-- Each insight must have clear context and relevance
+**YOUR MISSION:**
+- Extract ALL valuable business intelligence, contacts, tasks, and insights
+- Be inclusive rather than restrictive - capture business value wherever it exists
+- Focus on building comprehensive knowledge about professional relationships and work
 
 **BUSINESS CONTEXT FOR {user.email}:**
 {business_context_str}
 
 **ANALYSIS REQUIREMENTS:**
 
-1. **EMAIL SUMMARY**: One clear sentence about the email's business purpose (not just "sender sent an email")
-2. **STRATEGIC INSIGHTS**: Only extract business intelligence with real strategic value
-3. **ACTION ITEMS**: Only tasks that are clearly actionable and assigned to the recipient
-4. **PEOPLE ANALYSIS**: Only for human contacts with professional relevance (no system emails)
-5. **PROJECT CLASSIFICATION**: Only if clearly related to substantial business initiatives
+1. **EMAIL SUMMARY**: Clear description of the email's business purpose and content
+2. **PEOPLE EXTRACTION**: Extract ALL human contacts with professional relevance (be generous!)
+3. **TASK IDENTIFICATION**: Find ANY actionable items or commitments mentioned
+4. **BUSINESS INSIGHTS**: Extract any strategic value, opportunities, or challenges
+5. **PROJECT CONTEXT**: Identify any work initiatives or business activities
 
-**QUALITY FILTERS:**
-- Skip trivial acknowledgments, simple thank-yous, or "got it" responses
-- Skip automated notifications, alerts, or system messages
-- Only process emails with substantial business content
-- Each extracted insight must be at least 15 words and provide specific value
+**INCLUSIVE EXTRACTION GUIDELINES:**
+- Extract people even if limited info is available (name + context is enough)
+- Include tasks with clear actionable language, even if informal
+- Capture business insights at any level (strategic, operational, or tactical)
+- Process emails from colleagues, clients, partners, vendors - anyone professional
+- Include follow-ups, scheduling, decisions, updates, and work discussions
 
-Return a JSON object with this structure (only include sections with HIGH-QUALITY content):
+Return a JSON object with this structure:
 {{
-    "summary": "Specific business purpose of this email in one clear sentence",
-    "strategic_value_score": 0.8,  // 0.0-1.0, only emails >0.6 should be processed
+    "summary": "Clear description of the email's business purpose and key content",
+    "strategic_value_score": 0.7,  // Be generous - most business emails have value
     "sender_analysis": {{
-        "name": "Actual person's name (not email address)",
-        "role": "Specific role/title if mentioned",
-        "company": "Actual company name if mentioned",
+        "name": "Sender's actual name (extract from signature or display name)",
+        "role": "Their role/title if mentioned",
+        "company": "Their company if identifiable",
         "relationship": "Professional relationship context",
-        "is_human_contact": true,  // Must be true for processing
-        "business_relevance": "Why this person matters professionally"
+        "is_human_contact": true,  // Default to true for most senders
+        "business_relevance": "Why this person is professionally relevant"
     }},
     "people": [
         {{
-            "name": "Full name of person mentioned",
+            "name": "Full name of any person mentioned",
             "email": "their_email@example.com",
-            "role": "Specific role with context",
-            "company": "Company name",
-            "relationship": "Professional relationship",
-            "business_relevance": "Why this person is professionally significant",
-            "mentioned_context": "Specific context of how they were mentioned"
+            "role": "Their role if mentioned",
+            "company": "Company if mentioned", 
+            "relationship": "Professional context",
+            "business_relevance": "Why they're mentioned/relevant",
+            "mentioned_context": "How they were mentioned in the email"
         }}
     ],
     "project": {{
-        "name": "Specific project/initiative name",
-        "description": "Detailed description with business context",
-        "category": "business/client_work/internal/strategic",
+        "name": "Project or initiative name",
+        "description": "Description of the work or project",
+        "category": "business/client_work/internal/operational",
         "priority": "high/medium/low",
-        "status": "active/planning/completed",
-        "business_impact": "Specific business impact or value",
+        "status": "active/planning/discussed",
+        "business_impact": "Potential impact or value",
         "key_stakeholders": ["person1", "person2"]
     }},
     "business_insights": {{
-        "key_decisions": ["Specific decisions with context and impact"],
-        "strategic_opportunities": ["Concrete opportunities with business value"],
-        "business_challenges": ["Specific challenges with context"],
-        "actionable_metrics": ["Numbers/data with business significance"],
-        "competitive_intelligence": ["Market/competitor insights"],
-        "partnership_opportunities": ["Collaboration or partnership insights"]
+        "key_decisions": ["Any decisions mentioned or needed"],
+        "strategic_opportunities": ["Opportunities or potential business value"],
+        "business_challenges": ["Challenges or issues discussed"],
+        "actionable_metrics": ["Any numbers or metrics mentioned"],
+        "competitive_intelligence": ["Market or competitor information"],
+        "partnership_opportunities": ["Collaboration potential"]
     }},
     "tasks": [
         {{
-            "description": "Specific, actionable task clearly assigned to the recipient",
+            "description": "Clear description of the actionable item",
             "assignee": "{user.email}",
-            "due_date": "2025-06-15",
-            "due_date_text": "specific deadline mentioned",
+            "due_date": "2025-02-15",
+            "due_date_text": "deadline mentioned in email",
             "priority": "high/medium/low",
-            "category": "strategic/operational/follow-up",
-            "confidence": 0.9,  // Must be >0.7 for inclusion
-            "business_context": "Why this task is important",
-            "success_criteria": "How to know the task is completed"
+            "category": "action_item/follow_up/meeting/review",
+            "confidence": 0.8,  // Be generous with confidence scores
+            "business_context": "Why this task matters",
+            "success_criteria": "What completion looks like"
         }}
     ],
-    "topics": ["specific business topic 1", "relevant industry topic 2"],
-    "ai_category": "strategic_communication/client_management/project_coordination/business_development"
+    "topics": ["business topic 1", "work area 2"],
+    "ai_category": "business_communication/client_work/project_coordination/operational"
 }}
 
-**CRITICAL**: Only return analysis if this email contains substantial business content. If it's just a simple acknowledgment, automated message, or lacks strategic value, return null."""
+**IMPORTANT**: Extract value from most business emails. Only skip obvious spam or completely irrelevant content. Be generous with people extraction and task identification."""
 
-            user_prompt = f"""Analyze this email for HIGH-QUALITY business insights only. Reject if trivial or low-value:
+            user_prompt = f"""Analyze this email comprehensively for business intelligence. Extract ALL valuable people, tasks, and insights:
 
 {email_context}
 
-IMPORTANT: Only extract insights that provide real business intelligence value. Skip simple acknowledgments, automated messages, or administrative minutiae."""
+Focus on building comprehensive business knowledge. Extract people and tasks generously - capture business value wherever it exists."""
 
             # Add timeout and retry protection
             max_retries = 2
             for attempt in range(max_retries):
                 try:
-                    logger.info(f"Calling Claude API for quality analysis of email {email.gmail_id}, attempt {attempt + 1}")
+                    logger.info(f"Calling Claude API for comprehensive analysis of email {email.gmail_id}, attempt {attempt + 1}")
                     
                     message = self.client.messages.create(
                         model=self.model,
@@ -526,27 +532,22 @@ IMPORTANT: Only extract insights that provide real business intelligence value. 
         return people_count
     
     def _process_high_quality_tasks(self, user_id: int, email_id: int, tasks_data: List[Dict]) -> int:
-        """Process and save only high-quality, actionable tasks - RELAXED VERSION"""
+        """Process and save actionable tasks - VERY INCLUSIVE VERSION"""
         tasks_count = 0
         
         for task_info in tasks_data:
-            # Validate task quality
+            # Validate task quality - very permissive
             if not task_info.get('description'):
                 continue
             
-            # RELAXED: Check confidence threshold - lowered from 0.7 to 0.6
-            confidence = task_info.get('confidence', 0)
-            if confidence < 0.6:  # More inclusive threshold
+            # VERY INCLUSIVE: Check confidence threshold - very low threshold
+            confidence = task_info.get('confidence', 0.8)  # Default to 0.8 if missing
+            if confidence < 0.3:  # Very low threshold
                 continue
             
-            # RELAXED: Check description length and specificity - reduced minimum
+            # VERY INCLUSIVE: Check description length - very permissive
             description = task_info['description']
-            if len(description) < 12:  # Reduced from min_insight_length (15)
-                continue
-            
-            # RELAXED: More permissive vague task detection
-            vague_patterns = ['follow up', 'check in', 'touch base']  # Removed 'get back to'
-            if any(pattern in description.lower() for pattern in vague_patterns) and len(description) < 25:  # Reduced from 40
+            if len(description) < 5:  # Very short minimum
                 continue
             
             task_data = {
@@ -566,6 +567,7 @@ IMPORTANT: Only extract insights that provide real business intelligence value. 
             
             get_db_manager().save_task(user_id, email_id, task_data)
             tasks_count += 1
+            logger.info(f"Created task: {description[:50]}...")
         
         return tasks_count
     
@@ -962,6 +964,218 @@ Additional Context:
             logger.error(f"Failed to get user business context: {str(e)}")
             return {'existing_projects': [], 'key_contacts': [], 'official_topics': []}
     
+    def _filter_quality_emails_debug(self, emails: List[Email], user_email: str) -> List[Email]:
+        """Enhanced filtering for quality-focused email processing - DEBUG VERSION WITH RELAXED FILTERS"""
+        quality_emails = []
+        
+        for email in emails:
+            logger.debug(f"Evaluating email from {email.sender} with subject: {email.subject}")
+            
+            # Skip emails from the user themselves - check both email and name
+            if email.sender and user_email.lower() in email.sender.lower():
+                logger.debug(f"Skipping email from user themselves: {email.sender}")
+                continue
+            
+            # Also check sender name to catch cases where user's name appears as sender
+            user_name_parts = user_email.split('@')[0].lower()  # Get username part
+            sender_name = (email.sender_name or '').lower()
+            if (sender_name and len(user_name_parts) > 3 and 
+                user_name_parts in sender_name.replace('.', '').replace('_', '')):
+                logger.debug(f"Skipping email from user by name: {sender_name}")
+                continue
+
+            # RELAXED: Only skip the most obvious non-human senders
+            if self._is_obviously_non_human_contact(email.sender or ''):
+                logger.debug(f"Skipping obviously non-human sender: {email.sender}")
+                continue
+                
+            # RELAXED: Skip only obvious newsletters and promotional content
+            if self._is_obvious_newsletter_or_promotional(email):
+                logger.debug(f"Skipping obvious newsletter/promotional content")
+                continue
+                
+            # RELAXED: Very permissive content length - just need some content
+            content = email.body_clean or email.snippet or ''
+            if len(content.strip()) < 10:  # Very permissive
+                logger.debug(f"Skipping email with minimal content: {len(content)} chars")
+                continue
+                
+            # RELAXED: Only skip very obvious automated emails
+            subject_lower = (email.subject or '').lower()
+            automated_subjects = ['automated', 'automatic reply', 'out of office']
+            if any(pattern in subject_lower for pattern in automated_subjects) and len(content) < 50:
+                logger.debug(f"Skipping automated email with subject: {email.subject}")
+                continue
+                
+            logger.debug(f"Email passed quality filters: {email.sender}")
+            quality_emails.append(email)
+        
+        logger.info(f"Quality filtering: {len(quality_emails)} emails passed out of {len(emails)} total")
+        return quality_emails
+
+    def _is_obviously_non_human_contact(self, email_address: str) -> bool:
+        """RELAXED: Only filter obviously non-human contacts - for debugging"""
+        if not email_address:
+            return True
+            
+        email_lower = email_address.lower()
+        
+        # Only the most obvious non-human patterns
+        obvious_non_human_patterns = [
+            'noreply', 'no-reply', 'donotreply', 'mailer-daemon',
+            'postmaster@', 'daemon@', 'bounce@', 'automated@',
+            'robot@', 'bot@'
+        ]
+        
+        # Check against obvious non-human patterns only
+        for pattern in obvious_non_human_patterns:
+            if pattern in email_lower:
+                logger.debug(f"Obvious non-human pattern detected: {pattern} in {email_address}")
+                return True
+                
+        return False
+
+    def _is_obvious_newsletter_or_promotional(self, email: Email) -> bool:
+        """RELAXED: Only filter obvious newsletters - for debugging"""
+        if not email:
+            return True
+            
+        sender = (email.sender or '').lower()
+        subject = (email.subject or '').lower()
+        content = (email.body_clean or email.snippet or '').lower()
+        
+        # Only check for very obvious newsletter patterns
+        obvious_newsletter_patterns = [
+            'substack.com', 'mailchimp.com', 'beehiiv.com',
+            'unsubscribe', 'view in browser', 'manage preferences'
+        ]
+        
+        # Check domain patterns
+        for pattern in obvious_newsletter_patterns:
+            if pattern in sender or pattern in content:
+                logger.debug(f"Obvious newsletter pattern detected: {pattern}")
+                return True
+                
+        return False
+
+    def _validate_analysis_quality_debug(self, analysis: Dict) -> bool:
+        """Validate that the analysis meets quality standards - VERY INCLUSIVE VERSION"""
+        try:
+            # VERY INCLUSIVE: Check strategic value score - very low threshold
+            strategic_value = analysis.get('strategic_value_score', 0.7)  # Default to 0.7 if missing
+            if strategic_value < 0.2:  # Only reject very low value
+                logger.debug(f"Analysis rejected - very low strategic value: {strategic_value}")
+                return False
+            
+            # VERY INCLUSIVE: Check summary quality - very reduced minimum length
+            summary = analysis.get('summary', '')
+            if len(summary) < 3:  # Almost any summary is acceptable
+                logger.debug(f"Analysis rejected - summary too short: {len(summary)} chars")
+                return False
+            
+            logger.debug(f"Analysis passed quality validation - strategic value: {strategic_value}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error validating analysis quality: {str(e)}")
+            return True  # Default to accepting if validation fails
+
+    def _process_human_contacts_only_debug(self, user_id: int, analysis: Dict, email: Email) -> int:
+        """Process people information with RELAXED human contact filtering - DEBUG VERSION"""
+        people_count = 0
+        
+        logger.debug(f"Processing contacts for email from {email.sender}")
+        logger.debug(f"Analysis contains sender_analysis: {'sender_analysis' in analysis}")
+        logger.debug(f"Analysis contains people: {'people' in analysis}")
+        
+        # Process sender first (with relaxed human validation)
+        sender_analysis = analysis.get('sender_analysis')
+        if sender_analysis and email.sender:
+            logger.debug(f"Sender analysis: {sender_analysis}")
+            
+            # RELAXED: Don't require is_human_contact flag, infer from context
+            is_human = (sender_analysis.get('is_human_contact', True) and  # Default to True
+                       not self._is_obviously_non_human_contact(email.sender))
+            
+            if is_human:
+                logger.debug(f"Processing sender as human contact: {email.sender}")
+                
+                # Get existing person to accumulate knowledge
+                existing_person = get_db_manager().find_person_by_email(user_id, email.sender)
+                
+                # Accumulate notes and context over time
+                existing_notes = existing_person.notes if existing_person else ""
+                new_relevance = sender_analysis.get('business_relevance', '')
+                
+                # Combine old and new notes intelligently
+                accumulated_notes = existing_notes
+                if new_relevance and new_relevance not in accumulated_notes:
+                    if accumulated_notes:
+                        accumulated_notes += f"\n\nRecent Context: {new_relevance}"
+                    else:
+                        accumulated_notes = new_relevance
+                
+                person_data = {
+                    'email_address': email.sender,
+                    'name': sender_analysis.get('name', email.sender_name or email.sender),
+                    'role': sender_analysis.get('role') or (existing_person.role if existing_person else None),
+                    'company': sender_analysis.get('company') or (existing_person.company if existing_person else None),
+                    'relationship_type': sender_analysis.get('relationship') or (existing_person.relationship_type if existing_person else None),
+                    'notes': accumulated_notes,  # Accumulated knowledge
+                    'importance_level': max(0.8, existing_person.importance_level if existing_person else 0.8),  # Increment importance
+                    'ai_version': self.version,
+                    'total_emails': (existing_person.total_emails if existing_person else 0) + 1  # Increment email count
+                }
+                get_db_manager().create_or_update_person(user_id, person_data)
+                people_count += 1
+                logger.info(f"Created/updated person: {person_data['name']} ({person_data['email_address']})")
+            else:
+                logger.debug(f"Sender not processed as human contact: {email.sender}")
+        
+        # Process mentioned people (with relaxed validation)
+        people_data = analysis.get('people', [])
+        if isinstance(people_data, list):
+            logger.debug(f"Processing {len(people_data)} mentioned people")
+            for person_info in people_data:
+                if person_info.get('email') or person_info.get('name'):
+                    # RELAXED: Additional human validation but more permissive
+                    email_addr = person_info.get('email', '')
+                    if email_addr and self._is_obviously_non_human_contact(email_addr):
+                        logger.debug(f"Skipping obviously non-human mentioned person: {email_addr}")
+                        continue
+                    
+                    # Get existing person to accumulate knowledge
+                    existing_person = None
+                    if email_addr:
+                        existing_person = get_db_manager().find_person_by_email(user_id, email_addr)
+                    
+                    # Accumulate knowledge
+                    existing_notes = existing_person.notes if existing_person else ""
+                    new_relevance = person_info.get('business_relevance', '')
+                    
+                    accumulated_notes = existing_notes
+                    if new_relevance and new_relevance not in accumulated_notes:
+                        if accumulated_notes:
+                            accumulated_notes += f"\n\nMentioned Context: {new_relevance}"
+                        else:
+                            accumulated_notes = new_relevance
+                    
+                    person_data = {
+                        'email_address': person_info.get('email'),
+                        'name': person_info['name'],
+                        'role': person_info.get('role') or (existing_person.role if existing_person else None),
+                        'company': person_info.get('company') or (existing_person.company if existing_person else None),
+                        'relationship_type': person_info.get('relationship') or (existing_person.relationship_type if existing_person else None),
+                        'notes': accumulated_notes,  # Accumulated knowledge
+                        'ai_version': self.version
+                    }
+                    get_db_manager().create_or_update_person(user_id, person_data)
+                    people_count += 1
+                    logger.info(f"Created/updated mentioned person: {person_data['name']}")
+        
+        logger.info(f"Total people processed for this email: {people_count}")
+        return people_count
+
     def _filter_quality_emails(self, emails: List[Email], user_email: str) -> List[Email]:
         """Enhanced filtering for quality-focused email processing - BUSINESS FOCUSED"""
         quality_emails = []
@@ -997,7 +1211,7 @@ Additional Context:
             # Only skip if BOTH automated subject AND very short content
             if any(pattern in subject_lower for pattern in automated_subjects) and len(content) < 100:  # More lenient
                 continue
-            
+                
             # EXPANDED: More business indicators to catch valuable emails
             business_indicators = [
                 'meeting', 'project', 'proposal', 'contract', 'agreement',
@@ -1073,7 +1287,7 @@ Additional Context:
         for pattern in newsletter_subjects:
             if pattern in subject:
                 return True
-        
+            
         # Check content patterns
         for pattern in newsletter_content:
             if pattern in content:

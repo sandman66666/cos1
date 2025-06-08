@@ -18,6 +18,7 @@ from flask_session import Session
 import tempfile
 import time
 import uuid
+from typing import List, Dict
 
 # Add the chief_of_staff_ai directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'chief_of_staff_ai'))
@@ -40,6 +41,189 @@ except ImportError as e:
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def get_strategic_business_insights(user_email: str) -> List[Dict]:
+    """Generate strategic business insights from user's data patterns"""
+    try:
+        db_user = get_db_manager().get_user_by_email(user_email)
+        if not db_user:
+            return []
+        
+        insights = []
+        
+        # Get recent data
+        emails = get_db_manager().get_user_emails(db_user.id, limit=100)
+        people = get_db_manager().get_user_people(db_user.id, limit=50)
+        tasks = get_db_manager().get_user_tasks(db_user.id, limit=50)
+        projects = get_db_manager().get_user_projects(db_user.id, limit=20)
+        
+        # Filter quality data
+        analyzed_emails = [e for e in emails if e.ai_summary and len(e.ai_summary or '') > 10]
+        human_contacts = [p for p in people if p.name and not any(pattern in (p.email_address or '').lower() 
+                                                                for pattern in ['noreply', 'no-reply', 'automated'])]
+        active_projects = [p for p in projects if p.status == 'active']
+        pending_tasks = [t for t in tasks if t.status in ['pending', 'open']]
+        
+        # 1. RELATIONSHIP INTELLIGENCE
+        if human_contacts:
+            insights.append({
+                'type': 'relationship_intelligence',
+                'title': f'Professional Network Growth',
+                'description': f'You\'ve built connections with {len(human_contacts)} professional contacts across {len(set(p.company for p in human_contacts if p.company))} organizations.',
+                'details': f'Key relationships include contacts from {", ".join(list(set(p.company for p in human_contacts if p.company))[:3])}.',
+                'action': 'Consider reaching out to maintain these valuable professional relationships.',
+                'priority': 'medium',
+                'icon': '👥'
+            })
+        
+        # 2. COMMUNICATION PATTERNS
+        if analyzed_emails:
+            recent_senders = {}
+            for email in analyzed_emails[-30:]:  # Last 30 emails
+                sender = email.sender_name or email.sender
+                recent_senders[sender] = recent_senders.get(sender, 0) + 1
+            
+            top_correspondents = sorted(recent_senders.items(), key=lambda x: x[1], reverse=True)[:3]
+            if top_correspondents:
+                insights.append({
+                    'type': 'communication_pattern',
+                    'title': 'Active Communication Threads',
+                    'description': f'Most active correspondence with {top_correspondents[0][0]} ({top_correspondents[0][1]} emails).',
+                    'details': f'Top correspondents: {", ".join([f"{name} ({count})" for name, count in top_correspondents])}',
+                    'action': 'These frequent exchanges suggest important ongoing work or relationships.',
+                    'priority': 'high',
+                    'icon': '💬'
+                })
+        
+        # 3. PROJECT INTELLIGENCE
+        if active_projects:
+            insights.append({
+                'type': 'project_intelligence',
+                'title': 'Active Project Portfolio',
+                'description': f'Currently managing {len(active_projects)} active projects.',
+                'details': f'Projects: {", ".join([p.name for p in active_projects[:3]])}.',
+                'action': 'Review project priorities and resource allocation.',
+                'priority': 'high',
+                'icon': '📋'
+            })
+        
+        # 4. TASK INTELLIGENCE
+        if pending_tasks:
+            high_priority_tasks = [t for t in pending_tasks if t.priority == 'high']
+            overdue_tasks = [t for t in pending_tasks if t.due_date and t.due_date < datetime.now()]
+            
+            if high_priority_tasks or overdue_tasks:
+                insights.append({
+                    'type': 'task_intelligence',
+                    'title': 'Task Priority Analysis',
+                    'description': f'{len(high_priority_tasks)} high-priority tasks and {len(overdue_tasks)} overdue items need attention.',
+                    'details': f'Total pending: {len(pending_tasks)} tasks. Focus on urgent items first.',
+                    'action': 'Prioritize high-impact tasks and address overdue items.',
+                    'priority': 'high' if overdue_tasks else 'medium',
+                    'icon': '⚡'
+                })
+        
+        # 5. BUSINESS INTELLIGENCE FROM EMAIL CONTENT
+        business_decisions = []
+        opportunities = []
+        challenges = []
+        
+        for email in analyzed_emails:
+            if email.key_insights and isinstance(email.key_insights, dict):
+                insights_data = email.key_insights
+                business_decisions.extend(insights_data.get('key_decisions', []))
+                opportunities.extend(insights_data.get('strategic_opportunities', []))
+                challenges.extend(insights_data.get('business_challenges', []))
+        
+        if business_decisions:
+            insights.append({
+                'type': 'strategic_intelligence',
+                'title': 'Strategic Decisions Tracked',
+                'description': f'Identified {len(business_decisions)} strategic decisions across recent communications.',
+                'details': f'Recent decision: "{business_decisions[0][:100]}..."' if business_decisions else '',
+                'action': 'Review decision outcomes and track implementation progress.',
+                'priority': 'high',
+                'icon': '🎯'
+            })
+        
+        if opportunities:
+            insights.append({
+                'type': 'opportunity_intelligence', 
+                'title': 'Business Opportunities Identified',
+                'description': f'Discovered {len(opportunities)} potential business opportunities.',
+                'details': f'Top opportunity: "{opportunities[0][:100]}..."' if opportunities else '',
+                'action': 'Evaluate and prioritize these opportunities for potential action.',
+                'priority': 'medium',
+                'icon': '💡'
+            })
+        
+        if challenges:
+            insights.append({
+                'type': 'challenge_intelligence',
+                'title': 'Business Challenges Detected',
+                'description': f'Identified {len(challenges)} business challenges requiring attention.',
+                'details': f'Key challenge: "{challenges[0][:100]}..."' if challenges else '',
+                'action': 'Develop strategies to address these challenges.',
+                'priority': 'medium',
+                'icon': '⚠️'
+            })
+        
+        # 6. ENGAGEMENT INSIGHTS
+        if analyzed_emails and human_contacts:
+            recent_new_contacts = [p for p in human_contacts if p.total_emails and p.total_emails <= 2]
+            if recent_new_contacts:
+                insights.append({
+                    'type': 'engagement_intelligence',
+                    'title': 'New Professional Connections',
+                    'description': f'Connected with {len(recent_new_contacts)} new professional contacts recently.',
+                    'details': f'New contacts from: {", ".join(set(p.company for p in recent_new_contacts if p.company)[:3])}',
+                    'action': 'Follow up to strengthen these new professional relationships.',
+                    'priority': 'medium',
+                    'icon': '🤝'
+                })
+        
+        # 7. PRODUCTIVITY INSIGHTS
+        total_processed = len(analyzed_emails)
+        if total_processed > 0:
+            insights.append({
+                'type': 'productivity_intelligence',
+                'title': 'Communication Intelligence',
+                'description': f'AI has analyzed {total_processed} business communications to extract actionable insights.',
+                'details': f'Extracted {len(pending_tasks)} actionable tasks and identified {len(human_contacts)} business contacts.',
+                'action': 'Your AI Chief of Staff is building comprehensive business knowledge to help you stay on top of opportunities.',
+                'priority': 'low',
+                'icon': '🧠'
+            })
+        
+        # If no insights generated, provide helpful guidance
+        if not insights:
+            insights.append({
+                'type': 'guidance',
+                'title': 'Building Your Business Intelligence',
+                'description': 'Process more emails to unlock strategic insights about your business.',
+                'details': 'Your AI Chief of Staff will analyze communication patterns, extract tasks, and identify opportunities as you sync more data.',
+                'action': 'Use the "Process Emails" button to start building your comprehensive business knowledge base.',
+                'priority': 'medium',
+                'icon': '🚀'
+            })
+        
+        # Sort by priority (high, medium, low)
+        priority_order = {'high': 0, 'medium': 1, 'low': 2}
+        insights.sort(key=lambda x: priority_order.get(x['priority'], 2))
+        
+        return insights[:6]  # Return top 6 insights
+        
+    except Exception as e:
+        logger.error(f"Error generating strategic insights: {str(e)}")
+        return [{
+            'type': 'error',
+            'title': 'Insights Processing',
+            'description': 'Unable to generate strategic insights at this time.',
+            'details': 'Please try processing some emails first.',
+            'action': 'Process your emails to build business intelligence.',
+            'priority': 'medium',
+            'icon': '⚠️'
+        }]
 
 def create_app():
     """Create and configure the Flask application"""
@@ -122,29 +306,29 @@ def create_app():
                                session_id=session.get('session_id'),
                                cache_buster=int(time.time()))
     
-    @app.route('/knowledge')
-    def knowledge():
-        user = get_current_user()
-        if not user:
-            return redirect('/auth/google')
-        
-        return render_template('knowledge.html', 
-                               user_email=user['email'],
-                               user_id=user.get('id'),
-                               session_id=session.get('session_id'),
-                               cache_buster=int(time.time()))
-    
     @app.route('/people')
-    def people():
+    def people_page():
+        """People management page"""
         user = get_current_user()
         if not user:
-            return redirect('/auth/google')
-        
-        return render_template('people.html', 
-                               user_email=user['email'],
-                               user_id=user.get('id'),
-                               session_id=session.get('session_id'),
-                               cache_buster=int(time.time()))
+            return redirect('/login')
+        return render_template('people.html')
+    
+    @app.route('/knowledge')
+    def knowledge_page():
+        """Knowledge management page"""
+        user = get_current_user()
+        if not user:
+            return redirect('/login')
+        return render_template('knowledge.html')
+    
+    @app.route('/settings')
+    def settings_page():
+        """Settings page for configuring email sync and other preferences"""
+        user = get_current_user()
+        if not user:
+            return redirect('/login')
+        return render_template('settings.html')
     
     @app.route('/dashboard')
     def dashboard():
@@ -436,8 +620,125 @@ def create_app():
     
     @app.route('/api/chat', methods=['POST'])
     def api_chat():
-        """API endpoint for Claude chat functionality"""
+        """API endpoint for Claude chat functionality with comprehensive knowledge context"""
         if 'user_email' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        if not claude_client:
+            return jsonify({'error': 'Claude integration not configured'}), 500
+        
+        try:
+            data = request.get_json()
+            message = data.get('message')
+            include_context = data.get('include_context', True)
+            
+            if not message:
+                return jsonify({'error': 'No message provided'}), 400
+            
+            user_email = session['user_email']
+            
+            # Get comprehensive knowledge context if requested
+            context_parts = []
+            if include_context:
+                try:
+                    # Get comprehensive business knowledge
+                    knowledge_response = email_intelligence.get_chat_knowledge_summary(user_email)
+                    if knowledge_response.get('success'):
+                        knowledge = knowledge_response['knowledge_base']
+                        
+                        # Add business intelligence context
+                        if knowledge.get('business_intelligence'):
+                            bi = knowledge['business_intelligence']
+                            
+                            if bi.get('recent_decisions'):
+                                context_parts.append("RECENT BUSINESS DECISIONS:\n" + "\n".join([f"- {decision}" for decision in bi['recent_decisions'][:5]]))
+                            
+                            if bi.get('top_opportunities'):
+                                context_parts.append("BUSINESS OPPORTUNITIES:\n" + "\n".join([f"- {opp}" for opp in bi['top_opportunities'][:5]]))
+                            
+                            if bi.get('current_challenges'):
+                                context_parts.append("CURRENT CHALLENGES:\n" + "\n".join([f"- {challenge}" for challenge in bi['current_challenges'][:5]]))
+                        
+                        # Add people context
+                        if knowledge.get('rich_contacts'):
+                            contacts_summary = []
+                            for contact in knowledge['rich_contacts'][:10]:  # Top 10 contacts
+                                contact_info = f"{contact['name']}"
+                                if contact.get('title') and contact.get('company'):
+                                    contact_info += f" ({contact['title']} at {contact['company']})"
+                                if contact.get('relationship'):
+                                    contact_info += f" - {contact['relationship']}"
+                                contacts_summary.append(contact_info)
+                            
+                            if contacts_summary:
+                                context_parts.append("KEY BUSINESS CONTACTS:\n" + "\n".join([f"- {contact}" for contact in contacts_summary]))
+                        
+                        # Add recent tasks context
+                        db_user = get_db_manager().get_user_by_email(user_email)
+                        if db_user:
+                            tasks = get_db_manager().get_user_tasks(db_user.id, limit=10)
+                            if tasks:
+                                recent_tasks = [f"{task.description} (Priority: {task.priority}, Status: {task.status})" for task in tasks[:10]]
+                                context_parts.append("CURRENT TASKS:\n" + "\n".join([f"- {task}" for task in recent_tasks]))
+                            
+                            # Add topics context
+                            topics = get_db_manager().get_user_topics(db_user.id)
+                            if topics:
+                                official_topics = [t.name for t in topics if t.is_official][:5]
+                                if official_topics:
+                                    context_parts.append("OFFICIAL TOPICS:\n" + "\n".join([f"- {topic}" for topic in official_topics]))
+                
+                except Exception as context_error:
+                    logger.warning(f"Failed to load context for chat: {context_error}")
+            
+            # Create enhanced system prompt with comprehensive business context
+            business_context = "\n\n".join(context_parts) if context_parts else "No specific business context available."
+            
+            system_prompt = f"""You are an AI Chief of Staff assistant for {user_email}. You have access to their comprehensive business knowledge and should provide intelligent, context-aware responses.
+
+BUSINESS CONTEXT:
+{business_context}
+
+INSTRUCTIONS:
+- Use the business context above to provide informed, specific responses
+- Reference specific people, decisions, opportunities, or challenges when relevant
+- Provide actionable insights and recommendations based on the available data
+- If asked about people, reference their roles, relationships, and relevant context
+- For task or project questions, consider current priorities and deadlines
+- Be professional but conversational
+- If you don't have enough context for a specific question, say so and suggest what information would help
+
+Always think about the bigger picture and provide strategic, helpful advice based on the user's business situation."""
+            
+            # Send message to Claude with enhanced context
+            response = claude_client.messages.create(
+                model=settings.CLAUDE_MODEL,
+                max_tokens=3000,
+                system=system_prompt,
+                messages=[{
+                    "role": "user",
+                    "content": message
+                }]
+            )
+            
+            assistant_response = response.content[0].text
+            
+            return jsonify({
+                'response': assistant_response,
+                'model': settings.CLAUDE_MODEL,
+                'context_included': include_context and len(context_parts) > 0,
+                'context_summary': f"Included {len(context_parts)} context sections" if context_parts else "No context included"
+            })
+            
+        except Exception as e:
+            logger.error(f"Chat API error: {str(e)}")
+            return jsonify({'error': f'Chat error: {str(e)}'}), 500
+
+    @app.route('/api/chat-with-knowledge', methods=['POST'])
+    def api_chat_with_knowledge():
+        """API endpoint for enhanced Claude chat with full business knowledge context"""
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
         if not claude_client:
@@ -450,27 +751,119 @@ def create_app():
             if not message:
                 return jsonify({'error': 'No message provided'}), 400
             
-            user_email = session['user_email']
+            user_email = user['email']
             
-            # Create system prompt with context
-            system_prompt = f"""You are an AI Chief of Staff assistant for {user_email}. 
-
-You have access to their Gmail and can help with:
-- Summarizing emails
-- Extracting action items and tasks
-- Scheduling and calendar management
-- Strategic planning and prioritization
-- General productivity assistance
-
-Be helpful, professional, and actionable in your responses."""
+            # This endpoint ALWAYS includes comprehensive knowledge context
+            # Get comprehensive business knowledge
+            knowledge_response = email_intelligence.get_chat_knowledge_summary(user_email)
+            business_knowledge = knowledge_response.get('knowledge_base', {}) if knowledge_response.get('success') else {}
             
-            # Send message to Claude
+            # Build comprehensive context
+            context_parts = []
+            
+            # Business intelligence
+            if business_knowledge.get('business_intelligence'):
+                bi = business_knowledge['business_intelligence']
+                
+                if bi.get('recent_decisions'):
+                    context_parts.append("STRATEGIC BUSINESS DECISIONS:\n" + "\n".join([
+                        f"- {decision if isinstance(decision, str) else decision.get('decision', 'Unknown decision')}" 
+                        for decision in bi['recent_decisions'][:8]
+                    ]))
+                
+                if bi.get('top_opportunities'):
+                    context_parts.append("BUSINESS OPPORTUNITIES:\n" + "\n".join([
+                        f"- {opp if isinstance(opp, str) else opp.get('opportunity', 'Unknown opportunity')}" 
+                        for opp in bi['top_opportunities'][:8]
+                    ]))
+                
+                if bi.get('current_challenges'):
+                    context_parts.append("CURRENT CHALLENGES:\n" + "\n".join([
+                        f"- {challenge if isinstance(challenge, str) else challenge.get('challenge', 'Unknown challenge')}" 
+                        for challenge in bi['current_challenges'][:8]
+                    ]))
+            
+            # Rich contacts
+            if business_knowledge.get('rich_contacts'):
+                contacts_summary = []
+                for contact in business_knowledge['rich_contacts'][:15]:
+                    contact_info = f"{contact['name']}"
+                    if contact.get('title') and contact.get('company'):
+                        contact_info += f" ({contact['title']} at {contact['company']})"
+                    elif contact.get('company'):
+                        contact_info += f" (at {contact['company']})"
+                    elif contact.get('title'):
+                        contact_info += f" ({contact['title']})"
+                    if contact.get('relationship'):
+                        contact_info += f" - {contact['relationship']}"
+                    contacts_summary.append(contact_info)
+                
+                if contacts_summary:
+                    context_parts.append("KEY PROFESSIONAL CONTACTS:\n" + "\n".join([f"- {contact}" for contact in contacts_summary]))
+            
+            # Current data from database
+            db_user = get_db_manager().get_user_by_email(user_email)
+            if db_user:
+                # Recent tasks
+                tasks = get_db_manager().get_user_tasks(db_user.id, limit=15)
+                if tasks:
+                    task_summaries = []
+                    for task in tasks:
+                        task_info = task.description
+                        if task.priority and task.priority != 'medium':
+                            task_info += f" (Priority: {task.priority})"
+                        if task.status != 'pending':
+                            task_info += f" (Status: {task.status})"
+                        if task.due_date:
+                            task_info += f" (Due: {task.due_date.strftime('%Y-%m-%d')})"
+                        task_summaries.append(task_info)
+                    
+                    context_parts.append("CURRENT TASKS:\n" + "\n".join([f"- {task}" for task in task_summaries]))
+                
+                # Active projects
+                projects = get_db_manager().get_user_projects(db_user.id, status='active', limit=10)
+                if projects:
+                    project_summaries = [f"{p.name} - {p.description[:100] if p.description else 'No description'}" for p in projects]
+                    context_parts.append("ACTIVE PROJECTS:\n" + "\n".join([f"- {proj}" for proj in project_summaries]))
+                
+                # Official topics for context
+                topics = get_db_manager().get_user_topics(db_user.id)
+                official_topics = [t.name for t in topics if t.is_official][:8]
+                if official_topics:
+                    context_parts.append("OFFICIAL BUSINESS TOPICS:\n" + "\n".join([f"- {topic}" for topic in official_topics]))
+            
+            # Create comprehensive system prompt
+            business_context = "\n\n".join(context_parts) if context_parts else "Limited business context available."
+            
+            enhanced_system_prompt = f"""You are an expert AI Chief of Staff for {user_email}. You have comprehensive access to their business knowledge, communications, contacts, and ongoing work. Your role is to provide strategic, informed assistance.
+
+COMPREHENSIVE BUSINESS KNOWLEDGE:
+{business_context}
+
+YOUR CAPABILITIES:
+- Strategic business advisory based on actual data
+- Relationship management insights from real contacts
+- Task and project coordination with current context
+- Decision support using historical business intelligence
+- Personalized recommendations based on communication patterns
+
+RESPONSE GUIDELINES:
+- Always leverage the specific business context provided above
+- Reference actual people, projects, and decisions when relevant
+- Provide actionable, strategic advice tailored to their business situation
+- Be direct and practical while maintaining professionalism
+- When you lack specific information, explicitly state what additional context would help
+- Prioritize insights that connect to their ongoing work and relationships
+
+Remember: This knowledge base represents their actual business communications and relationships. Use it to provide highly personalized, contextually aware assistance."""
+            
+            # Send to Claude with comprehensive context
             response = claude_client.messages.create(
                 model=settings.CLAUDE_MODEL,
-                max_tokens=2000,
-                system=system_prompt,
+                max_tokens=4000,
+                system=enhanced_system_prompt,
                 messages=[{
-                    "role": "user",
+                    "role": "user", 
                     "content": message
                 }]
             )
@@ -478,13 +871,16 @@ Be helpful, professional, and actionable in your responses."""
             assistant_response = response.content[0].text
             
             return jsonify({
+                'success': True,
                 'response': assistant_response,
-                'model': settings.CLAUDE_MODEL
+                'model': settings.CLAUDE_MODEL,
+                'context_sections_included': len(context_parts),
+                'knowledge_source': 'comprehensive_business_intelligence'
             })
             
         except Exception as e:
-            logger.error(f"Chat API error: {str(e)}")
-            return jsonify({'error': f'Chat error: {str(e)}'}), 500
+            logger.error(f"Enhanced chat API error: {str(e)}")
+            return jsonify({'success': False, 'error': f'Enhanced chat error: {str(e)}'}), 500
     
     @app.route('/api/status')
     def api_status():
@@ -645,10 +1041,20 @@ Be helpful, professional, and actionable in your responses."""
             limit = int(request.args.get('limit', 50))
             people = get_db_manager().get_user_people(user.id, limit)
             
+            # Convert to frontend-expected format
+            people_data = []
+            for person in people:
+                person_dict = person.to_dict()
+                # Map database field to expected frontend field
+                person_dict['email'] = person_dict.get('email_address')
+                person_dict['relationship'] = person_dict.get('relationship_type')
+                person_dict['last_contact'] = person_dict.get('last_interaction')
+                people_data.append(person_dict)
+            
             return jsonify({
                 'success': True,
-                'people': [person.to_dict() for person in people],
-                'count': len(people)
+                'people': people_data,
+                'count': len(people_data)
             })
             
         except Exception as e:
@@ -717,7 +1123,7 @@ Be helpful, professional, and actionable in your responses."""
     
     @app.route('/api/email-insights', methods=['GET'])
     def api_get_email_insights():
-        """API endpoint to get email insights with AI analysis"""
+        """API endpoint to get strategic business insights with AI analysis"""
         user = get_current_user()
         if not user:
             return jsonify({'error': 'Not authenticated'}), 401
@@ -727,26 +1133,270 @@ Be helpful, professional, and actionable in your responses."""
             if not db_user:
                 return jsonify({'error': 'User not found'}), 404
             
-            limit = int(request.args.get('limit', 20))
-            emails = get_db_manager().get_user_emails(db_user.id, limit)
-            
-            # Filter to only emails with AI insights
-            analyzed_emails = []
-            for email in emails:
-                if email.ai_summary:
-                    email_data = email.to_dict()
-                    # Add sender name for display
-                    email_data['from_name'] = email.sender_name or email.sender
-                    analyzed_emails.append(email_data)
+            # Get comprehensive business intelligence
+            strategic_insights = get_strategic_business_insights(user['email'])
             
             return jsonify({
                 'success': True,
-                'email_insights': analyzed_emails,
-                'count': len(analyzed_emails)
+                'strategic_insights': strategic_insights,
+                'count': len(strategic_insights)
             })
             
         except Exception as e:
-            logger.error(f"Get email insights API error: {str(e)}")
+            logger.error(f"Get strategic insights API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/download-knowledge', methods=['GET'])
+    def api_download_knowledge():
+        """API endpoint to download comprehensive knowledge base as text file"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+
+        try:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
+                return jsonify({'error': 'User not found'}), 404
+
+            # Get comprehensive knowledge data
+            emails = get_db_manager().get_user_emails(db_user.id, limit=1000)
+            people = get_db_manager().get_user_people(db_user.id, limit=500)
+            tasks = get_db_manager().get_user_tasks(db_user.id, limit=1000)
+            projects = get_db_manager().get_user_projects(db_user.id, limit=200)
+            topics = get_db_manager().get_user_topics(db_user.id, limit=1000)
+
+            # Get business knowledge summary
+            try:
+                knowledge_response = email_intelligence.get_chat_knowledge_summary(user['email'])
+                business_knowledge = knowledge_response.get('knowledge_base', {}) if knowledge_response.get('success') else {}
+            except:
+                business_knowledge = {}
+
+            # Generate comprehensive text content
+            content_lines = []
+            content_lines.append("=" * 80)
+            content_lines.append("AI CHIEF OF STAFF - COMPREHENSIVE KNOWLEDGE BASE")
+            content_lines.append("=" * 80)
+            content_lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            content_lines.append(f"User: {user['email']}")
+            content_lines.append("")
+
+            # === EXECUTIVE SUMMARY ===
+            content_lines.append("📊 EXECUTIVE SUMMARY")
+            content_lines.append("-" * 40)
+            
+            analyzed_emails = [e for e in emails if e.ai_summary]
+            human_contacts = [p for p in people if p.name and not any(pattern in (p.email_address or '').lower() 
+                                                                    for pattern in ['noreply', 'no-reply', 'automated', 'system'])]
+            active_projects = [p for p in projects if p.status == 'active']
+            pending_tasks = [t for t in tasks if t.status == 'pending']
+            
+            content_lines.append(f"• {len(emails)} total emails processed")
+            content_lines.append(f"• {len(analyzed_emails)} emails with AI insights ({len(analyzed_emails)/max(len(emails),1)*100:.1f}%)")
+            content_lines.append(f"• {len(human_contacts)} human contacts identified")
+            content_lines.append(f"• {len(active_projects)} active projects")
+            content_lines.append(f"• {len(pending_tasks)} pending tasks")
+            content_lines.append(f"• {len([t for t in topics if t.is_official])} official topics defined")
+            content_lines.append("")
+
+            # === BUSINESS INTELLIGENCE ===
+            if business_knowledge.get('business_intelligence'):
+                bi = business_knowledge['business_intelligence']
+                
+                if bi.get('recent_decisions'):
+                    content_lines.append("🎯 STRATEGIC BUSINESS DECISIONS")
+                    content_lines.append("-" * 40)
+                    for i, decision in enumerate(bi['recent_decisions'][:10], 1):
+                        if isinstance(decision, dict):
+                            content_lines.append(f"{i}. {decision.get('decision', 'Unknown decision')}")
+                            if decision.get('context'):
+                                content_lines.append(f"   Context: {decision['context']}")
+                            if decision.get('date'):
+                                content_lines.append(f"   Date: {decision['date']}")
+                        else:
+                            content_lines.append(f"{i}. {decision}")
+                        content_lines.append("")
+
+                if bi.get('top_opportunities'):
+                    content_lines.append("💡 BUSINESS OPPORTUNITIES")
+                    content_lines.append("-" * 40)
+                    for i, opportunity in enumerate(bi['top_opportunities'][:10], 1):
+                        if isinstance(opportunity, dict):
+                            content_lines.append(f"{i}. {opportunity.get('opportunity', 'Unknown opportunity')}")
+                            if opportunity.get('context'):
+                                content_lines.append(f"   Context: {opportunity['context']}")
+                        else:
+                            content_lines.append(f"{i}. {opportunity}")
+                        content_lines.append("")
+
+                if bi.get('current_challenges'):
+                    content_lines.append("⚠️ CURRENT CHALLENGES")
+                    content_lines.append("-" * 40)
+                    for i, challenge in enumerate(bi['current_challenges'][:10], 1):
+                        if isinstance(challenge, dict):
+                            content_lines.append(f"{i}. {challenge.get('challenge', 'Unknown challenge')}")
+                            if challenge.get('context'):
+                                content_lines.append(f"   Context: {challenge['context']}")
+                        else:
+                            content_lines.append(f"{i}. {challenge}")
+                        content_lines.append("")
+
+            # === KEY CONTACTS ===
+            if human_contacts:
+                content_lines.append("👥 KEY PROFESSIONAL CONTACTS")
+                content_lines.append("-" * 40)
+                
+                # Sort by importance and interaction frequency
+                sorted_contacts = sorted(human_contacts, 
+                                       key=lambda p: (p.importance_level or 0, p.total_emails or 0), 
+                                       reverse=True)[:20]
+                
+                for i, person in enumerate(sorted_contacts, 1):
+                    content_lines.append(f"{i}. {person.name}")
+                    if person.email_address:
+                        content_lines.append(f"   📧 {person.email_address}")
+                    if person.title or person.company:
+                        title_company = []
+                        if person.title:
+                            title_company.append(person.title)
+                        if person.company:
+                            title_company.append(f"at {person.company}")
+                        content_lines.append(f"   💼 {' '.join(title_company)}")
+                    if person.relationship_type:
+                        content_lines.append(f"   🤝 Relationship: {person.relationship_type}")
+                    if person.total_emails:
+                        content_lines.append(f"   📊 {person.total_emails} email interactions")
+                    if person.notes:
+                        content_lines.append(f"   📝 Notes: {person.notes[:200]}{'...' if len(person.notes) > 200 else ''}")
+                    content_lines.append("")
+                content_lines.append("")
+
+            # === ACTIVE PROJECTS ===
+            if projects:
+                content_lines.append("📋 PROJECTS")
+                content_lines.append("-" * 40)
+                for project in projects[:15]:  # Top 15 projects
+                    content_lines.append(f"• {project.name} ({project.status.upper()})")
+                    if project.description:
+                        content_lines.append(f"  Description: {project.description}")
+                    if project.priority:
+                        content_lines.append(f"  Priority: {project.priority}")
+                    if project.key_topics:
+                        content_lines.append(f"  Topics: {', '.join(project.key_topics[:5])}")
+                    if project.total_emails:
+                        content_lines.append(f"  Email activity: {project.total_emails} emails")
+                    content_lines.append("")
+                content_lines.append("")
+
+            # === TASK MANAGEMENT ===
+            if tasks:
+                content_lines.append("✅ TASK MANAGEMENT")
+                content_lines.append("-" * 40)
+                
+                # Group tasks by status
+                task_groups = {}
+                for task in tasks[:50]:  # Top 50 recent tasks
+                    status = task.status or 'pending'
+                    if status not in task_groups:
+                        task_groups[status] = []
+                    task_groups[status].append(task)
+                
+                for status, task_list in task_groups.items():
+                    content_lines.append(f"{status.upper()} TASKS ({len(task_list)}):")
+                    for task in task_list[:10]:  # Top 10 per status
+                        content_lines.append(f"  • {task.description}")
+                        if task.due_date:
+                            content_lines.append(f"    📅 Due: {task.due_date.strftime('%Y-%m-%d')}")
+                        if task.priority:
+                            content_lines.append(f"    🔥 Priority: {task.priority}")
+                        if task.assignee:
+                            content_lines.append(f"    👤 Assigned to: {task.assignee}")
+                    content_lines.append("")
+                content_lines.append("")
+
+            # === TOPICS & THEMES ===
+            if topics:
+                content_lines.append("🏷️ TOPICS & THEMES")
+                content_lines.append("-" * 40)
+                
+                official_topics = [t for t in topics if t.is_official]
+                ai_topics = [t for t in topics if not t.is_official]
+                
+                if official_topics:
+                    content_lines.append("OFFICIAL TOPICS:")
+                    for topic in official_topics:
+                        content_lines.append(f"  • {topic.name}")
+                        if topic.description:
+                            content_lines.append(f"    {topic.description}")
+                        if topic.email_count:
+                            content_lines.append(f"    📊 {topic.email_count} emails categorized")
+                        content_lines.append("")
+                
+                if ai_topics:
+                    content_lines.append("AI-DISCOVERED TOPICS:")
+                    # Sort by email count and confidence
+                    sorted_ai_topics = sorted(ai_topics, 
+                                            key=lambda t: (t.email_count or 0, t.confidence_score or 0), 
+                                            reverse=True)[:15]
+                    for topic in sorted_ai_topics:
+                        content_lines.append(f"  • {topic.name} ({topic.email_count or 0} emails)")
+                        if topic.confidence_score:
+                            content_lines.append(f"    Confidence: {topic.confidence_score:.1%}")
+                content_lines.append("")
+
+            # === EMAIL INSIGHTS ===
+            if analyzed_emails:
+                content_lines.append("📧 KEY EMAIL INSIGHTS")
+                content_lines.append("-" * 40)
+                
+                # Get the most important emails with insights
+                important_emails = sorted(analyzed_emails, 
+                                        key=lambda e: (e.priority_score or 0, len(e.ai_summary or '')), 
+                                        reverse=True)[:20]
+                
+                for i, email in enumerate(important_emails, 1):
+                    content_lines.append(f"{i}. {email.subject or 'No Subject'}")
+                    content_lines.append(f"   From: {email.sender_name or email.sender}")
+                    if email.email_date:
+                        content_lines.append(f"   Date: {email.email_date[:10]}")  # Just the date part
+                    if email.ai_summary:
+                        summary = email.ai_summary[:300] + ('...' if len(email.ai_summary) > 300 else '')
+                        content_lines.append(f"   AI Summary: {summary}")
+                    if email.topics:
+                        content_lines.append(f"   Topics: {', '.join(email.topics[:3])}")
+                    content_lines.append("")
+                content_lines.append("")
+
+            # === APPENDIX ===
+            content_lines.append("📎 APPENDIX - DATA EXPORT")
+            content_lines.append("-" * 40)
+            content_lines.append(f"Total Records Exported:")
+            content_lines.append(f"• {len(emails)} emails")
+            content_lines.append(f"• {len(people)} people")
+            content_lines.append(f"• {len(tasks)} tasks")
+            content_lines.append(f"• {len(projects)} projects") 
+            content_lines.append(f"• {len(topics)} topics")
+            content_lines.append("")
+            content_lines.append("This knowledge base is used as context in every Claude conversation")
+            content_lines.append("to provide personalized, informed assistance based on your actual")
+            content_lines.append("business communications, relationships, and ongoing projects.")
+            content_lines.append("")
+            content_lines.append("=" * 80)
+            content_lines.append("END OF KNOWLEDGE BASE")
+            content_lines.append("=" * 80)
+
+            # Create text content
+            text_content = "\n".join(content_lines)
+            
+            # Create response with file download
+            response = make_response(text_content)
+            response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+            response.headers['Content-Disposition'] = f'attachment; filename="AI_Chief_of_Staff_Knowledge_Base_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.txt"'
+            
+            return response
+
+        except Exception as e:
+            logger.error(f"Knowledge download error: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/topics', methods=['GET'])
@@ -868,6 +1518,45 @@ Be helpful, professional, and actionable in your responses."""
             logger.error(f"Merge topic API error: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
+    @app.route('/api/topics/<int:topic_id>', methods=['PUT'])
+    def api_update_topic(topic_id):
+        """API endpoint to update a topic"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+            
+            # Update topic data
+            topic_data = {}
+            if 'description' in data:
+                topic_data['description'] = data['description']
+            if 'keywords' in data:
+                topic_data['keywords'] = data['keywords']
+            if 'name' in data:
+                topic_data['name'] = data['name']
+            
+            success = get_db_manager().update_topic(db_user.id, topic_id, topic_data)
+            
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Topic updated successfully'
+                })
+            else:
+                return jsonify({'error': 'Topic not found or not authorized'}), 404
+            
+        except Exception as e:
+            logger.error(f"Update topic API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
     @app.route('/api/topics/resync', methods=['POST'])
     def api_resync_topics():
         """API endpoint to resync all content with updated topics using Claude"""
@@ -889,386 +1578,6 @@ Be helpful, professional, and actionable in your responses."""
             logger.error(f"Resync topics API error: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
-    @app.route('/api/chat-with-knowledge', methods=['POST'])
-    def api_chat_with_knowledge():
-        """API endpoint for enhanced Claude chat with full business knowledge context"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        if not claude_client:
-            return jsonify({'error': 'Claude integration not configured'}), 500
-        
-        try:
-            data = request.get_json()
-            message = data.get('message')
-            include_context = data.get('include_context', True)
-            
-            if not message:
-                return jsonify({'error': 'No message provided'}), 400
-            
-            user_email = user['email']
-            
-            # Get comprehensive knowledge context
-            context_parts = []
-            
-            if include_context:
-                try:
-                    # Get business knowledge
-                    knowledge_response = email_intelligence.get_chat_knowledge_summary(user_email)
-                    if knowledge_response.get('success'):
-                        knowledge = knowledge_response['knowledge_base']
-                        
-                        # Add business intelligence context
-                        if knowledge.get('business_intelligence'):
-                            bi = knowledge['business_intelligence']
-                            
-                            if bi.get('recent_decisions'):
-                                context_parts.append("RECENT BUSINESS DECISIONS:\n" + "\n".join([f"- {decision}" for decision in bi['recent_decisions'][:5]]))
-                            
-                            if bi.get('top_opportunities'):
-                                context_parts.append("BUSINESS OPPORTUNITIES:\n" + "\n".join([f"- {opp}" for opp in bi['top_opportunities'][:5]]))
-                            
-                            if bi.get('current_challenges'):
-                                context_parts.append("CURRENT CHALLENGES:\n" + "\n".join([f"- {challenge}" for challenge in bi['current_challenges'][:5]]))
-                        
-                        # Add people context
-                        if knowledge.get('rich_contacts'):
-                            contacts_summary = []
-                            for contact in knowledge['rich_contacts'][:10]:  # Top 10 contacts
-                                contact_info = f"{contact['name']}"
-                                if contact.get('title') and contact.get('company'):
-                                    contact_info += f" ({contact['title']} at {contact['company']})"
-                                if contact.get('relationship'):
-                                    contact_info += f" - {contact['relationship']}"
-                                contacts_summary.append(contact_info)
-                            
-                            if contacts_summary:
-                                context_parts.append("KEY BUSINESS CONTACTS:\n" + "\n".join([f"- {contact}" for contact in contacts_summary]))
-                        
-                        # Add recent tasks
-                        db_user = get_db_manager().get_user_by_email(user_email)
-                        if db_user:
-                            tasks = get_db_manager().get_user_tasks(db_user.id)
-                            if tasks:
-                                recent_tasks = [f"{task.description}" for task in tasks[:10]]
-                                context_parts.append("CURRENT TASKS:\n" + "\n".join([f"- {task}" for task in recent_tasks]))
-                
-                except Exception as context_error:
-                    logger.warning(f"Failed to load context for chat: {context_error}")
-            
-            # Create enhanced system prompt with business context
-            business_context = "\n\n".join(context_parts) if context_parts else "No specific business context available."
-            
-            system_prompt = f"""You are an AI Chief of Staff assistant for {user_email}. You have access to their comprehensive business knowledge and should provide intelligent, context-aware responses.
-
-BUSINESS CONTEXT:
-{business_context}
-
-INSTRUCTIONS:
-- Use the business context above to provide informed, specific responses
-- Reference specific people, decisions, opportunities, or challenges when relevant
-- Provide actionable insights and recommendations based on the available data
-- If asked about people, reference their roles, relationships, and relevant context
-- For task or project questions, consider current priorities and deadlines
-- Be professional but conversational
-- If you don't have enough context for a specific question, say so and suggest what information would help
-
-Always think about the bigger picture and provide strategic, helpful advice based on the user's business situation."""
-            
-            # Send message to Claude with enhanced context
-            response = claude_client.messages.create(
-                model=settings.CLAUDE_MODEL,
-                max_tokens=3000,
-                system=system_prompt,
-                messages=[{
-                    "role": "user",
-                    "content": message
-                }]
-            )
-            
-            assistant_response = response.content[0].text
-            
-            return jsonify({
-                'success': True,
-                'response': assistant_response,
-                'model': settings.CLAUDE_MODEL,
-                'context_included': include_context and len(context_parts) > 0
-            })
-            
-        except Exception as e:
-            logger.error(f"Enhanced chat API error: {str(e)}")
-            return jsonify({'success': False, 'error': f'Enhanced chat error: {str(e)}'}), 500
-    
-    @app.route('/api/download-knowledge', methods=['GET'])
-    def api_download_knowledge():
-        """API endpoint to download comprehensive knowledge base as text file"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-
-        try:
-            user_email = user['email']
-            knowledge_response = email_intelligence.get_chat_knowledge_summary(user_email)
-            
-            if not knowledge_response.get('success'):
-                return jsonify({'error': 'Failed to get knowledge base'}), 500
-
-            knowledge = knowledge_response['knowledge_base']
-            
-            # Generate comprehensive text content
-            content_lines = []
-            content_lines.append("AI CHIEF OF STAFF - COMPREHENSIVE KNOWLEDGE BASE")
-            content_lines.append("=" * 60)
-            content_lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            content_lines.append(f"User: {user_email}")
-            content_lines.append("")
-
-            # Summary Statistics
-            if knowledge.get('summary_stats'):
-                stats = knowledge['summary_stats']
-                content_lines.append("SUMMARY STATISTICS")
-                content_lines.append("-" * 30)
-                content_lines.append(f"Quality Emails Analyzed: {stats.get('total_emails_analyzed', 0)}")
-                content_lines.append(f"Human Contacts: {stats.get('rich_contacts', 0)}")
-                content_lines.append(f"Business Decisions: {stats.get('business_decisions', 0)}")
-                content_lines.append(f"Opportunities: {stats.get('opportunities_identified', 0)}")
-                content_lines.append(f"Active Projects: {stats.get('active_projects', 0)}")
-                content_lines.append("")
-
-            # Strategic Business Intelligence
-            if knowledge.get('business_intelligence'):
-                bi = knowledge['business_intelligence']
-                
-                if bi.get('recent_decisions'):
-                    content_lines.append("STRATEGIC BUSINESS DECISIONS")
-                    content_lines.append("-" * 40)
-                    for i, decision in enumerate(bi['recent_decisions'], 1):
-                        if isinstance(decision, dict):
-                            content_lines.append(f"{i}. {decision.get('decision', 'Unknown decision')}")
-                            if decision.get('context'):
-                                content_lines.append(f"   Context: {decision['context']}")
-                            if decision.get('sender'):
-                                content_lines.append(f"   Source: {decision['sender']}")
-                            if decision.get('date'):
-                                content_lines.append(f"   Date: {decision['date']}")
-                        else:
-                            content_lines.append(f"{i}. {decision}")
-                        content_lines.append("")
-                    content_lines.append("")
-
-                if bi.get('top_opportunities'):
-                    content_lines.append("BUSINESS OPPORTUNITIES")
-                    content_lines.append("-" * 40)
-                    for i, opportunity in enumerate(bi['top_opportunities'], 1):
-                        if isinstance(opportunity, dict):
-                            content_lines.append(f"{i}. {opportunity.get('opportunity', 'Unknown opportunity')}")
-                            if opportunity.get('context'):
-                                content_lines.append(f"   Context: {opportunity['context']}")
-                            if opportunity.get('source'):
-                                content_lines.append(f"   Source: {opportunity['source']}")
-                        else:
-                            content_lines.append(f"{i}. {opportunity}")
-                        content_lines.append("")
-                    content_lines.append("")
-
-                if bi.get('current_challenges'):
-                    content_lines.append("CURRENT CHALLENGES")
-                    content_lines.append("-" * 40)
-                    for i, challenge in enumerate(bi['current_challenges'], 1):
-                        if isinstance(challenge, dict):
-                            content_lines.append(f"{i}. {challenge.get('challenge', 'Unknown challenge')}")
-                            if challenge.get('context'):
-                                content_lines.append(f"   Context: {challenge['context']}")
-                            if challenge.get('source'):
-                                content_lines.append(f"   Source: {challenge['source']}")
-                        else:
-                            content_lines.append(f"{i}. {challenge}")
-                        content_lines.append("")
-                    content_lines.append("")
-
-            # Professional Contact Intelligence
-            if knowledge.get('rich_contacts'):
-                content_lines.append("PROFESSIONAL CONTACT INTELLIGENCE")
-                content_lines.append("-" * 40)
-                for i, contact in enumerate(knowledge['rich_contacts'], 1):
-                    content_lines.append(f"{i}. {contact.get('name', 'Unknown')}")
-                    if contact.get('title'):
-                        content_lines.append(f"   Title: {contact['title']}")
-                    if contact.get('company'):
-                        content_lines.append(f"   Company: {contact['company']}")
-                    if contact.get('relationship'):
-                        content_lines.append(f"   Relationship: {contact['relationship']}")
-                    if contact.get('story'):
-                        content_lines.append(f"   Professional Story:")
-                        content_lines.append(f"   {contact['story']}")
-                    if contact.get('total_emails'):
-                        content_lines.append(f"   Email Interactions: {contact['total_emails']}")
-                    content_lines.append("")
-                content_lines.append("")
-
-            # Business Topics & Knowledge
-            if knowledge.get('topic_knowledge') and knowledge['topic_knowledge'].get('all_topics'):
-                content_lines.append("BUSINESS TOPICS & KNOWLEDGE")
-                content_lines.append("-" * 40)
-                for topic in knowledge['topic_knowledge']['all_topics']:
-                    content_lines.append(f"TOPIC: {topic}")
-                    contexts = knowledge['topic_knowledge'].get('topic_contexts', {}).get(topic, [])
-                    if contexts:
-                        content_lines.append("Related Communications:")
-                        for context in contexts:
-                            if context.get('email_subject'):
-                                content_lines.append(f"  - {context['email_subject']} ({context.get('date', 'Unknown date')})")
-                            if context.get('summary'):
-                                content_lines.append(f"    {context['summary']}")
-                            if context.get('sender'):
-                                content_lines.append(f"    From: {context['sender']}")
-                    content_lines.append("")
-                content_lines.append("")
-
-            # Active Projects
-            if knowledge.get('projects_summary'):
-                content_lines.append("ACTIVE BUSINESS PROJECTS")
-                content_lines.append("-" * 40)
-                for i, project in enumerate(knowledge['projects_summary'], 1):
-                    content_lines.append(f"{i}. {project.get('name', 'Unknown Project')}")
-                    if project.get('description'):
-                        content_lines.append(f"   Description: {project['description']}")
-                    content_lines.append(f"   Status: {project.get('status', 'Unknown')}")
-                    content_lines.append(f"   Priority: {project.get('priority', 'Unknown')}")
-                    if project.get('stakeholders'):
-                        content_lines.append(f"   Stakeholders: {', '.join(project['stakeholders'])}")
-                    if project.get('key_topics'):
-                        content_lines.append(f"   Key Topics: {', '.join(project['key_topics'])}")
-                    content_lines.append("")
-
-            # Create response
-            text_content = "\n".join(content_lines)
-            
-            response = make_response(text_content)
-            response.headers['Content-Type'] = 'text/plain; charset=utf-8'
-            response.headers['Content-Disposition'] = f'attachment; filename=AI_Chief_of_Staff_Knowledge_Base_{datetime.now().strftime("%Y-%m-%d")}.txt'
-            
-            return response
-
-        except Exception as e:
-            logger.error(f"Knowledge download error: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/email-diagnostics', methods=['GET'])
-    def api_email_diagnostics():
-        """API endpoint to diagnose email processing and filtering"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        try:
-            db_user = get_db_manager().get_user_by_email(user['email'])
-            if not db_user:
-                return jsonify({'error': 'User not found'}), 404
-            
-            # Get all user emails
-            all_emails = get_db_manager().get_user_emails(db_user.id, limit=100)
-            
-            # Analyze filtering results
-            newsletter_count = 0
-            automated_count = 0
-            business_count = 0
-            quality_emails = []
-            
-            diagnostics = {
-                'total_emails': len(all_emails),
-                'filtered_breakdown': {},
-                'sample_emails': {
-                    'newsletters': [],
-                    'automated': [],
-                    'business': [],
-                    'quality': []
-                }
-            }
-            
-            for email in all_emails:
-                # Check if email would be filtered out
-                if email_intelligence._is_newsletter_or_promotional(email):
-                    newsletter_count += 1
-                    if len(diagnostics['sample_emails']['newsletters']) < 3:
-                        diagnostics['sample_emails']['newsletters'].append({
-                            'subject': email.subject,
-                            'sender': email.sender,
-                            'sender_name': email.sender_name,
-                            'date': email.email_date.isoformat() if email.email_date else None,
-                            'reason': 'Newsletter/Promotional content detected'
-                        })
-                elif email_intelligence._is_non_human_contact(email.sender or ''):
-                    automated_count += 1
-                    if len(diagnostics['sample_emails']['automated']) < 3:
-                        diagnostics['sample_emails']['automated'].append({
-                            'subject': email.subject,
-                            'sender': email.sender,
-                            'sender_name': email.sender_name,
-                            'date': email.email_date.isoformat() if email.email_date else None,
-                            'reason': 'Non-human sender detected'
-                        })
-                else:
-                    business_count += 1
-                    if len(diagnostics['sample_emails']['business']) < 3:
-                        diagnostics['sample_emails']['business'].append({
-                            'subject': email.subject,
-                            'sender': email.sender,
-                            'sender_name': email.sender_name,
-                            'date': email.email_date.isoformat() if email.email_date else None,
-                            'has_ai_summary': bool(email.ai_summary),
-                            'ai_summary_length': len(email.ai_summary) if email.ai_summary else 0
-                        })
-                    
-                    # Check if it's a quality email with AI insights
-                    if email.ai_summary and len(email.ai_summary) > 15:
-                        quality_emails.append(email)
-                        if len(diagnostics['sample_emails']['quality']) < 5:
-                            diagnostics['sample_emails']['quality'].append({
-                                'subject': email.subject,
-                                'sender': email.sender,
-                                'sender_name': email.sender_name,
-                                'date': email.email_date.isoformat() if email.email_date else None,
-                                'ai_summary': email.ai_summary[:200] + '...' if len(email.ai_summary) > 200 else email.ai_summary,
-                                'key_insights': bool(email.key_insights),
-                                'topics': email.topics[:3] if email.topics else []
-                            })
-            
-            diagnostics['filtered_breakdown'] = {
-                'newsletters_filtered': newsletter_count,
-                'automated_filtered': automated_count, 
-                'business_emails': business_count,
-                'quality_emails_with_ai': len(quality_emails)
-            }
-            
-            # Get recent knowledge base content for comparison
-            knowledge_response = email_intelligence.get_business_knowledge_summary(user['email'])
-            if knowledge_response.get('success'):
-                knowledge = knowledge_response['business_knowledge']
-                diagnostics['current_knowledge'] = {
-                    'summary_stats': knowledge.get('summary_stats', {}),
-                    'decision_sources': [],
-                    'opportunity_sources': []
-                }
-                
-                # Sample the sources of business intelligence
-                strategic = knowledge.get('strategic_intelligence', {})
-                if strategic.get('key_decisions'):
-                    diagnostics['current_knowledge']['decision_sources'] = strategic['key_decisions'][:3]
-                if strategic.get('business_opportunities'):
-                    diagnostics['current_knowledge']['opportunity_sources'] = strategic['business_opportunities'][:3]
-            
-            return jsonify({
-                'success': True,
-                'user_email': user['email'],
-                'diagnostics': diagnostics
-            })
-            
-        except Exception as e:
-            logger.error(f"Email diagnostics error: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    
     @app.route('/api/sync-topics', methods=['POST'])
     def api_sync_topics():
         """API endpoint to sync email topics to the topics table"""
@@ -1283,35 +1592,88 @@ Always think about the bigger picture and provide strategic, helpful advice base
             
             # Get all emails with topics
             emails = get_db_manager().get_user_emails(db_user.id, limit=1000)
-            topic_counts = {}
+            topic_analysis = {}
             
-            # Count topic usage across emails
+            # Analyze topic usage and collect content for AI description generation
             for email in emails:
                 if email.topics and isinstance(email.topics, list):
                     for topic in email.topics:
                         if topic and len(topic.strip()) > 2:  # Valid topic
                             topic_name = topic.strip()
-                            if topic_name not in topic_counts:
-                                topic_counts[topic_name] = 0
-                            topic_counts[topic_name] += 1
+                            if topic_name not in topic_analysis:
+                                topic_analysis[topic_name] = {
+                                    'count': 0,
+                                    'email_examples': [],
+                                    'key_content': []
+                                }
+                            topic_analysis[topic_name]['count'] += 1
+                            
+                            # Collect examples for AI description generation
+                            if len(topic_analysis[topic_name]['email_examples']) < 5:
+                                topic_analysis[topic_name]['email_examples'].append({
+                                    'subject': email.subject,
+                                    'summary': email.ai_summary,
+                                    'sender': email.sender_name or email.sender
+                                })
+                            
+                            # Collect key content for description
+                            if email.ai_summary and len(email.ai_summary) > 20:
+                                topic_analysis[topic_name]['key_content'].append(email.ai_summary[:200])
             
             # Create Topic records for topics with 2+ usages
             topics_created = 0
-            for topic_name, count in topic_counts.items():
-                if count >= 2:  # Only create topics used in multiple emails
+            for topic_name, analysis in topic_analysis.items():
+                if analysis['count'] >= 2:  # Only create topics used in multiple emails
                     # Check if topic already exists
                     existing_topics = get_db_manager().get_user_topics(db_user.id)
                     topic_exists = any(t.name.lower() == topic_name.lower() for t in existing_topics)
                     
                     if not topic_exists:
+                        # Generate meaningful description based on content
+                        description = f"Business topic involving {topic_name.lower()}. "
+                        
+                        # Add context from email content
+                        if analysis['key_content']:
+                            common_themes = []
+                            content_sample = ' '.join(analysis['key_content'][:3])
+                            
+                            # Simple keyword extraction for description
+                            if 'meeting' in content_sample.lower():
+                                common_themes.append('meetings and collaboration')
+                            if 'project' in content_sample.lower():
+                                common_themes.append('project management')
+                            if 'decision' in content_sample.lower():
+                                common_themes.append('strategic decisions')
+                            if 'client' in content_sample.lower() or 'customer' in content_sample.lower():
+                                common_themes.append('client relationships')
+                            if 'team' in content_sample.lower():
+                                common_themes.append('team coordination')
+                            if 'opportunity' in content_sample.lower():
+                                common_themes.append('business opportunities')
+                            if 'challenge' in content_sample.lower() or 'issue' in content_sample.lower():
+                                common_themes.append('problem solving')
+                            
+                            if common_themes:
+                                description += f"Includes discussions about {', '.join(common_themes)}. "
+                        
+                        # Add usage statistics
+                        description += f"Identified from {analysis['count']} email conversations"
+                        if analysis['email_examples']:
+                            senders = list(set([ex['sender'] for ex in analysis['email_examples'] if ex['sender']]))
+                            if senders:
+                                description += f" involving {', '.join(senders[:3])}"
+                                if len(senders) > 3:
+                                    description += f" and {len(senders)-3} others"
+                        description += "."
+                        
                         topic_data = {
                             'name': topic_name,
-                            'slug': topic_name.lower().replace(' ', '-'),
-                            'description': f'Auto-discovered topic from {count} emails',
+                            'slug': topic_name.lower().replace(' ', '-').replace('_', '-'),
+                            'description': description,
                             'is_official': False,  # Mark as AI-discovered
-                            'email_count': count,
-                            'confidence_score': min(0.9, count / 10.0),  # Higher confidence for more usage
-                            'keywords': [topic_name.lower()]
+                            'email_count': analysis['count'],
+                            'confidence_score': min(0.9, analysis['count'] / 10.0),  # Higher confidence for more usage
+                            'keywords': [topic_name.lower()] + [word.lower() for word in topic_name.split() if len(word) > 2]
                         }
                         get_db_manager().create_or_update_topic(db_user.id, topic_data)
                         topics_created += 1
@@ -1319,8 +1681,8 @@ Always think about the bigger picture and provide strategic, helpful advice base
             return jsonify({
                 'success': True,
                 'topics_created': topics_created,
-                'total_topic_usage': len(topic_counts),
-                'message': f'Synced {topics_created} topics from email analysis'
+                'total_topic_usage': len(topic_analysis),
+                'message': f'Synced {topics_created} topics with AI-generated descriptions from email analysis'
             })
             
         except Exception as e:
@@ -1371,6 +1733,157 @@ Always think about the bigger picture and provide strategic, helpful advice base
             logger.error(f"Ensure default topic API error: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
+    @app.route('/api/settings', methods=['GET'])
+    def api_get_settings():
+        """API endpoint to get user settings"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            settings_data = {
+                'email_fetch_limit': db_user.email_fetch_limit,
+                'email_days_back': db_user.email_days_back,
+                'auto_process_emails': db_user.auto_process_emails,
+                'last_login': db_user.last_login.isoformat() if db_user.last_login else None,
+                'created_at': db_user.created_at.isoformat() if db_user.created_at else None,
+                'name': db_user.name,
+                'email': db_user.email
+            }
+            
+            return jsonify({
+                'success': True,
+                'settings': settings_data
+            })
+            
+        except Exception as e:
+            logger.error(f"Get settings API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/settings', methods=['PUT'])
+    def api_update_settings():
+        """API endpoint to update user settings"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
+            
+            # Update user settings directly on the object
+            if 'email_fetch_limit' in data:
+                db_user.email_fetch_limit = int(data['email_fetch_limit'])
+            if 'email_days_back' in data:
+                db_user.email_days_back = int(data['email_days_back'])
+            if 'auto_process_emails' in data:
+                db_user.auto_process_emails = bool(data['auto_process_emails'])
+            
+            # Save changes using the database manager's session
+            with get_db_manager().get_session() as db_session:
+                db_session.merge(db_user)
+                db_session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Settings updated successfully'
+            })
+            
+        except Exception as e:
+            logger.error(f"Update settings API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/trigger-email-sync', methods=['POST'])
+    def api_trigger_email_sync():
+        """API endpoint to trigger email sync with custom parameters"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            data = request.get_json() or {}
+            max_emails = data.get('max_emails', 20)
+            days_back = data.get('days_back', 7)
+            force_refresh = data.get('force_refresh', False)
+            
+            user_email = user['email']
+            
+            # Validate parameters
+            if max_emails < 1 or max_emails > 500:
+                return jsonify({'error': 'max_emails must be between 1 and 500'}), 400
+            if days_back < 1 or days_back > 365:
+                return jsonify({'error': 'days_back must be between 1 and 365'}), 400
+            
+            # First fetch emails
+            fetch_result = gmail_fetcher.fetch_recent_emails(
+                user_email=user_email,
+                limit=max_emails,
+                days_back=days_back,
+                force_refresh=force_refresh
+            )
+            
+            if not fetch_result.get('success'):
+                return jsonify({
+                    'success': False,
+                    'error': fetch_result.get('error', 'Email fetch failed'),
+                    'stage': 'fetch'
+                }), 400
+            
+            # Normalize emails
+            normalize_result = email_normalizer.normalize_user_emails(user_email, limit=max_emails)
+            
+            # Process with AI intelligence
+            intelligence_result = email_intelligence.process_user_emails_intelligently(
+                user_email=user_email,
+                limit=max_emails,
+                force_refresh=force_refresh
+            )
+            
+            # Get updated counts
+            db_user = get_db_manager().get_user_by_email(user_email)
+            all_emails = get_db_manager().get_user_emails(db_user.id) if db_user else []
+            all_tasks = get_db_manager().get_user_tasks(db_user.id) if db_user else []
+            all_people = get_db_manager().get_user_people(db_user.id) if db_user else []
+            
+            return jsonify({
+                'success': True,
+                'message': f'Successfully synced {fetch_result.get("count", 0)} emails',
+                'results': {
+                    'fetch': fetch_result,
+                    'normalize': normalize_result,
+                    'intelligence': intelligence_result
+                },
+                'summary': {
+                    'emails_fetched': fetch_result.get('count', 0),
+                    'emails_normalized': normalize_result.get('processed', 0),
+                    'emails_analyzed': intelligence_result.get('processed_emails', 0),
+                    'insights_extracted': intelligence_result.get('insights_extracted', 0),
+                    'people_identified': intelligence_result.get('people_identified', 0),
+                    'projects_identified': intelligence_result.get('projects_identified', 0),
+                    'tasks_created': intelligence_result.get('tasks_created', 0),
+                    'total_emails': len(all_emails),
+                    'total_tasks': len(all_tasks),
+                    'total_people': len(all_people)
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Trigger email sync API error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'stage': 'processing'
+            }), 500
+
     # Error handlers
     @app.errorhandler(404)
     def not_found_error(error):

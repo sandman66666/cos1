@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chief of Staff - Settings</title>
+    
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+        rel="stylesheet"
+        as="style"
+        onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Inter%3Awght%40400%3B500%3B700%3B900&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
+    />
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body style="margin: 0; line-height: inherit;">
+    <div class="relative flex min-h-screen flex-col bg-[#111a22] group/design-root overflow-x-hidden" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        
+        <!-- Navigation -->
+        <div class="layout-container flex h-full grow flex-col">
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#314d68] px-10 py-3">
+                <div class="flex items-center gap-4 text-white">
+                    <div class="size-4">
+                        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_6_319)"><path fill-rule="evenodd" clip-rule="evenodd" d="M24 0L48 24L24 48L0 24L24 0Z" fill="currentColor"></path></g><defs><clipPath id="clip0_6_319"><rect width="48" height="48" fill="white"></rect></clipPath></defs></svg>
+                    </div>
+                    <h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">AI Chief of Staff</h2>
+                </div>
+                
+                <div class="flex flex-1 justify-end gap-8">
+                    <div class="flex items-center gap-9">
+                        <a class="text-[#90aecb] text-sm font-medium leading-normal" href="/home">Home</a>
+                        <a class="text-[#90aecb] text-sm font-medium leading-normal" href="/tasks">Tasks</a>
+                        <a class="text-[#90aecb] text-sm font-medium leading-normal" href="/people">People</a>
+                        <a class="text-[#90aecb] text-sm font-medium leading-normal" href="/knowledge">Knowledge</a>
+                        <a class="text-white text-sm font-medium leading-normal border-b-2 border-[#0b80ee]" href="/settings">Settings</a>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#223649] text-white text-sm font-bold leading-normal tracking-[0.015em]" onclick="window.location.href='/logout'">
+                            <span class="truncate">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <div class="px-40 flex flex-1 justify-center py-5">
+                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+                    
+                    <!-- Page Header -->
+                    <div class="flex flex-wrap justify-between gap-3 p-4">
+                        <div class="flex min-w-72 flex-col gap-3">
+                            <p class="text-white tracking-light text-[32px] font-bold leading-tight">⚙️ Settings</p>
+                            <p class="text-[#90aecb] text-sm font-normal leading-normal">Configure your AI Chief of Staff preferences and email sync settings</p>
+                        </div>
+                    </div>
+
+                    <!-- Settings Sections -->
+                    <div class="space-y-6">
+                        
+                        <!-- Email Sync Settings -->
+                        <div class="bg-[#182734] rounded-lg border border-[#314d68] p-6">
+                            <h3 class="text-white text-xl font-bold mb-4">📧 Email Sync Settings</h3>
+                            <p class="text-[#90aecb] text-sm mb-6">Configure how many emails to process and trigger manual sync</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <!-- Email Fetch Limit -->
+                                <div>
+                                    <label class="block text-[#90aecb] text-sm font-medium mb-2">
+                                        📊 Max Emails to Fetch
+                                    </label>
+                                    <input 
+                                        id="emailFetchLimit" 
+                                        type="number" 
+                                        min="1" 
+                                        max="500" 
+                                        value="50"
+                                        class="w-full p-3 bg-[#223649] text-white rounded border border-[#314d68] focus:outline-none focus:border-[#0b80ee]"
+                                        placeholder="e.g., 50"
+                                    >
+                                    <p class="text-[#90aecb] text-xs mt-1">Number of emails to fetch in each sync (1-500)</p>
+                                </div>
+                                
+                                <!-- Days Back -->
+                                <div>
+                                    <label class="block text-[#90aecb] text-sm font-medium mb-2">
+                                        📅 Days Back to Fetch
+                                    </label>
+                                    <input 
+                                        id="emailDaysBack" 
+                                        type="number" 
+                                        min="1" 
+                                        max="365" 
+                                        value="30"
+                                        class="w-full p-3 bg-[#223649] text-white rounded border border-[#314d68] focus:outline-none focus:border-[#0b80ee]"
+                                        placeholder="e.g., 30"
+                                    >
+                                    <p class="text-[#90aecb] text-xs mt-1">How many days back to search for emails (1-365)</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Auto Process Toggle -->
+                            <div class="mb-6">
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input 
+                                        id="autoProcessEmails" 
+                                        type="checkbox" 
+                                        class="w-5 h-5 text-[#0b80ee] bg-[#223649] border-[#314d68] rounded focus:ring-[#0b80ee] focus:ring-2"
+                                    >
+                                    <div>
+                                        <span class="text-white font-medium">🤖 Auto-process emails with AI</span>
+                                        <p class="text-[#90aecb] text-sm">Automatically analyze emails for insights, tasks, and people when syncing</p>
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <!-- Manual Sync Section -->
+                            <div class="border-t border-[#314d68] pt-6">
+                                <h4 class="text-white font-semibold mb-4">🔄 Manual Email Sync</h4>
+                                <p class="text-[#90aecb] text-sm mb-4">Trigger an immediate email sync with custom parameters</p>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-[#90aecb] text-sm mb-2">Max Emails</label>
+                                        <input 
+                                            id="syncMaxEmails" 
+                                            type="number" 
+                                            min="1" 
+                                            max="500" 
+                                            value="20"
+                                            class="w-full p-2 bg-[#223649] text-white rounded border border-[#314d68] focus:outline-none focus:border-[#0b80ee]"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-[#90aecb] text-sm mb-2">Days Back</label>
+                                        <input 
+                                            id="syncDaysBack" 
+                                            type="number" 
+                                            min="1" 
+                                            max="365" 
+                                            value="7"
+                                            class="w-full p-2 bg-[#223649] text-white rounded border border-[#314d68] focus:outline-none focus:border-[#0b80ee]"
+                                        >
+                                    </div>
+                                    <div class="flex items-end">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input 
+                                                id="forceRefresh" 
+                                                type="checkbox" 
+                                                class="w-4 h-4 text-[#0b80ee] bg-[#223649] border-[#314d68] rounded focus:ring-[#0b80ee]"
+                                            >
+                                            <span class="text-[#90aecb] text-sm">Force refresh</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    id="triggerSyncBtn"
+                                    onclick="triggerEmailSync()"
+                                    class="bg-[#0b80ee] text-white px-6 py-3 rounded font-medium hover:bg-blue-600 transition-colors"
+                                >
+                                    🚀 Start Email Sync
+                                </button>
+                                
+                                <!-- Sync Progress -->
+                                <div id="syncProgress" class="hidden mt-4 p-4 bg-[#223649] rounded border border-[#314d68]">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-[#0b80ee]"></div>
+                                        <span class="text-white font-medium">Syncing emails...</span>
+                                    </div>
+                                    <div id="syncStatus" class="text-[#90aecb] text-sm"></div>
+                                </div>
+                                
+                                <!-- Sync Results -->
+                                <div id="syncResults" class="hidden mt-4 p-4 bg-[#223649] rounded border border-[#314d68]">
+                                    <h5 class="text-white font-medium mb-2">✅ Sync Complete</h5>
+                                    <div id="syncSummary" class="text-[#90aecb] text-sm"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Account Information -->
+                        <div class="bg-[#182734] rounded-lg border border-[#314d68] p-6">
+                            <h3 class="text-white text-xl font-bold mb-4">👤 Account Information</h3>
+                            <div id="accountInfo" class="space-y-3">
+                                <div class="text-[#90aecb] text-sm">Loading account information...</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="flex gap-4 pt-6">
+                            <button 
+                                id="saveSettingsBtn"
+                                onclick="saveSettings()"
+                                class="bg-green-500 text-white px-6 py-3 rounded font-medium hover:bg-green-600 transition-colors"
+                            >
+                                💾 Save Settings
+                            </button>
+                            
+                            <button 
+                                onclick="loadSettings()"
+                                class="bg-[#223649] text-[#90aecb] px-6 py-3 rounded font-medium hover:bg-[#314d68] transition-colors"
+                            >
+                                🔄 Reload
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Settings management
+        let currentSettings = {};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+        });
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentSettings = data.settings;
+                    populateSettings(data.settings);
+                    updateAccountInfo(data.settings);
+                } else {
+                    showError('Failed to load settings: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+                showError('Failed to load settings');
+            }
+        }
+
+        function populateSettings(settings) {
+            document.getElementById('emailFetchLimit').value = settings.email_fetch_limit || 50;
+            document.getElementById('emailDaysBack').value = settings.email_days_back || 30;
+            document.getElementById('autoProcessEmails').checked = settings.auto_process_emails !== false;
+            
+            // Set sync defaults to current settings
+            document.getElementById('syncMaxEmails').value = settings.email_fetch_limit || 20;
+            document.getElementById('syncDaysBack').value = Math.min(settings.email_days_back || 7, 30);
+        }
+
+        function updateAccountInfo(settings) {
+            const accountInfoHtml = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-white font-medium">📧 Email</div>
+                        <div class="text-[#90aecb] text-sm">${settings.email}</div>
+                    </div>
+                    <div>
+                        <div class="text-white font-medium">👤 Name</div>
+                        <div class="text-[#90aecb] text-sm">${settings.name}</div>
+                    </div>
+                    <div>
+                        <div class="text-white font-medium">📅 Member Since</div>
+                        <div class="text-[#90aecb] text-sm">${formatDate(settings.created_at)}</div>
+                    </div>
+                    <div>
+                        <div class="text-white font-medium">🕐 Last Login</div>
+                        <div class="text-[#90aecb] text-sm">${formatDate(settings.last_login)}</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('accountInfo').innerHTML = accountInfoHtml;
+        }
+
+        async function saveSettings() {
+            const btn = document.getElementById('saveSettingsBtn');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>Saving...';
+            btn.disabled = true;
+            
+            try {
+                const settings = {
+                    email_fetch_limit: parseInt(document.getElementById('emailFetchLimit').value),
+                    email_days_back: parseInt(document.getElementById('emailDaysBack').value),
+                    auto_process_emails: document.getElementById('autoProcessEmails').checked
+                };
+                
+                const response = await fetch('/api/settings', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('✅ Settings saved successfully!');
+                    currentSettings = { ...currentSettings, ...settings };
+                } else {
+                    showError('Failed to save settings: ' + data.error);
+                }
+                
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showError('Failed to save settings');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function triggerEmailSync() {
+            const btn = document.getElementById('triggerSyncBtn');
+            const progressDiv = document.getElementById('syncProgress');
+            const resultsDiv = document.getElementById('syncResults');
+            const statusDiv = document.getElementById('syncStatus');
+            
+            const originalText = btn.innerHTML;
+            
+            // UI updates
+            btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>Syncing...';
+            btn.disabled = true;
+            progressDiv.classList.remove('hidden');
+            resultsDiv.classList.add('hidden');
+            statusDiv.textContent = 'Initializing email sync...';
+            
+            try {
+                const syncParams = {
+                    max_emails: parseInt(document.getElementById('syncMaxEmails').value),
+                    days_back: parseInt(document.getElementById('syncDaysBack').value),
+                    force_refresh: document.getElementById('forceRefresh').checked
+                };
+                
+                statusDiv.textContent = `Fetching ${syncParams.max_emails} emails from last ${syncParams.days_back} days...`;
+                
+                const response = await fetch('/api/trigger-email-sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(syncParams)
+                });
+                
+                const data = await response.json();
+                
+                progressDiv.classList.add('hidden');
+                
+                if (data.success) {
+                    // Show success results
+                    const summary = data.summary;
+                    const summaryHtml = `
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>📧 Emails fetched: <span class="text-white font-medium">${summary.emails_fetched}</span></div>
+                            <div>🔍 Emails analyzed: <span class="text-white font-medium">${summary.emails_analyzed}</span></div>
+                            <div>💡 Insights extracted: <span class="text-white font-medium">${summary.insights_extracted}</span></div>
+                            <div>👥 People identified: <span class="text-white font-medium">${summary.people_identified}</span></div>
+                            <div>📋 Projects identified: <span class="text-white font-medium">${summary.projects_identified}</span></div>
+                            <div>✅ Tasks created: <span class="text-white font-medium">${summary.tasks_created}</span></div>
+                            <div>📊 Total emails: <span class="text-white font-medium">${summary.total_emails}</span></div>
+                            <div>🎯 Total tasks: <span class="text-white font-medium">${summary.total_tasks}</span></div>
+                        </div>
+                    `;
+                    document.getElementById('syncSummary').innerHTML = summaryHtml;
+                    resultsDiv.classList.remove('hidden');
+                    
+                    showSuccess(`🎉 Successfully synced ${summary.emails_fetched} emails!`);
+                } else {
+                    showError('Sync failed: ' + data.error);
+                }
+                
+            } catch (error) {
+                console.error('Error triggering sync:', error);
+                progressDiv.classList.add('hidden');
+                showError('Failed to trigger email sync');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Never';
+            try {
+                return new Date(dateString).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch {
+                return 'Invalid date';
+            }
+        }
+
+        function showSuccess(message) {
+            // Simple alert for now - could be enhanced with toast notifications
+            alert(message);
+        }
+
+        function showError(message) {
+            // Simple alert for now - could be enhanced with toast notifications
+            alert('❌ ' + message);
+        }
+    </script>
+</body>
+</html> 
