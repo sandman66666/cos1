@@ -48,9 +48,9 @@ class ClaudeResponseParser:
         try:
             insights = []
             
-            # Look for insights in structured format
-            insight_pattern = r'(?:INSIGHT|Insight)\s*(\d+)?[:\-]?\s*([^\n]+)\n([^]*?)(?=(?:INSIGHT|Insight)\s*\d+|$)'
-            matches = re.findall(insight_pattern, response_text, re.IGNORECASE | re.MULTILINE)
+            # FIXED: Properly escape the hyphen in character class
+            insight_pattern = r'(?:INSIGHT|Insight)\s*(\d+)?[:\\\-]?\s*([^\n]+)\n(.*?)(?=(?:INSIGHT|Insight)\s*\d+|$)'
+            matches = re.findall(insight_pattern, response_text, re.IGNORECASE | re.MULTILINE | re.DOTALL)
             
             for match in matches:
                 number, title, content = match
@@ -78,9 +78,9 @@ class ClaudeResponseParser:
         try:
             recommendations = []
             
-            # Look for recommendations in structured format
-            rec_pattern = r'(?:RECOMMENDATION|Recommendation)\s*(\d+)?[:\-]?\s*([^\n]+)\n([^]*?)(?=(?:RECOMMENDATION|Recommendation)\s*\d+|$)'
-            matches = re.findall(rec_pattern, response_text, re.IGNORECASE | re.MULTILINE)
+            # FIXED: Properly escape the hyphen in character class
+            rec_pattern = r'(?:RECOMMENDATION|Recommendation)\s*(\d+)?[:\\\-]?\s*([^\n]+)\n(.*?)(?=(?:RECOMMENDATION|Recommendation)\s*\d+|$)'
+            matches = re.findall(rec_pattern, response_text, re.IGNORECASE | re.MULTILINE | re.DOTALL)
             
             for match in matches:
                 number, title, content = match
@@ -111,9 +111,9 @@ class ClaudeResponseParser:
         """Parse business contexts from natural language text"""
         contexts = []
         
-        # Look for context blocks
-        context_pattern = r'(?:CONTEXT|Context)\s*(\d+)?[:\-]?\s*([^\n]+)\n([^]*?)(?=(?:CONTEXT|Context)\s*\d+|$)'
-        matches = re.findall(context_pattern, text, re.IGNORECASE | re.MULTILINE)
+        # FIXED: Properly escape the hyphen in character class
+        context_pattern = r'(?:CONTEXT|Context)\s*(\d+)?[:\\\-]?\s*([^\n]+)\n(.*?)(?=(?:CONTEXT|Context)\s*\d+|$)'
+        matches = re.findall(context_pattern, text, re.IGNORECASE | re.MULTILINE | re.DOTALL)
         
         for match in matches:
             number, name, content = match

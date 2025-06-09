@@ -974,17 +974,16 @@ function closeTopicDetail() {
 
 async function downloadKnowledgeBase() {
     try {
-        showSuccess('🔄 Generating comprehensive knowledge base file...');
-        
-        const response = await fetch('/api/download-knowledge');
+        // This is instant export of existing chat-ready data, no generation needed
+        const response = await fetch('/api/download-knowledge-base');
         
         if (!response.ok) {
-            throw new Error(`Download failed: ${response.status}`);
+            throw new Error(`Download failed: ${response.status} ${response.statusText}`);
         }
         
         // Get the filename from headers or create a default one
         const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = 'AI_Chief_of_Staff_Knowledge_Base.txt';
+        let filename = 'AI_Chief_of_Staff_Knowledge_Base.json';
         
         if (contentDisposition) {
             const filenameMatch = contentDisposition.match(/filename="(.+)"/);
@@ -1008,7 +1007,7 @@ async function downloadKnowledgeBase() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        showSuccess('✅ Knowledge base downloaded successfully!');
+        showSuccess('✅ Knowledge base downloaded! Complete export of your emails, tasks, people, topics, and AI insights.');
         
     } catch (error) {
         console.error('Failed to download knowledge base:', error);

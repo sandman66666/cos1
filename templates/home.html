@@ -242,8 +242,8 @@ async function loadInsights() {
         const response = await fetch('/api/email-insights');
         const data = await response.json();
         
-        if (data.success) {
-            displayInsights(data.email_insights || []);
+        if (data.success && data.strategic_insights && data.strategic_insights.length > 0) {
+            displayStrategicInsights(data.strategic_insights);
         } else {
             displayInsights([]);
         }
@@ -255,42 +255,58 @@ async function loadInsights() {
 
 async function loadRecentActivity() {
     try {
-        // Load recent tasks and emails
-        const [tasksResponse, emailsResponse] = await Promise.all([
-            fetch('/api/tasks?limit=5'),
-            fetch('/api/emails?limit=5')
+        // Load business-level activity instead of individual emails
+        const [tasksResponse, peopleResponse, insightsResponse] = await Promise.all([
+            fetch('/api/tasks?limit=3'),
+            fetch('/api/people?limit=3'),
+            fetch('/api/email-insights')
         ]);
         
-        const [tasksData, emailsData] = await Promise.all([
+        const [tasksData, peopleData, insightsData] = await Promise.all([
             tasksResponse.json(),
-            emailsResponse.json()
+            peopleResponse.json(),
+            insightsResponse.json()
         ]);
         
         let activities = [];
         
-        // Add recent tasks
+        // Add high-priority tasks
         if (tasksData.success && tasksData.tasks) {
-            activities = activities.concat(tasksData.tasks.map(task => ({
+            const highPriorityTasks = tasksData.tasks.filter(task => task.priority === 'high').slice(0, 2);
+            activities = activities.concat(highPriorityTasks.map(task => ({
                 type: 'task',
-                title: task.description || 'New Task',
-                subtitle: `Priority: ${task.priority || 'Medium'} • ${task.status || 'Open'}`,
+                title: `High Priority: ${task.description || 'Task'}`,
+                subtitle: `Status: ${task.status || 'Open'} • Assigned to you`,
                 icon: 'task',
                 data: task
             })));
         }
         
-        // Add recent emails
-        if (emailsData.success && emailsData.emails) {
-            activities = activities.concat(emailsData.emails.slice(0, 3).map(email => ({
-                type: 'email',
-                title: email.subject || 'No Subject',
-                subtitle: `From: ${email.sender || 'Unknown'} • ${formatDate(email.received_date)}`,
-                icon: 'email',
-                data: email
+        // Add recent important people interactions
+        if (peopleData.success && peopleData.people) {
+            const recentContacts = peopleData.people.filter(person => person.total_emails > 1).slice(0, 2);
+            activities = activities.concat(recentContacts.map(person => ({
+                type: 'person',
+                title: `Recent Contact: ${person.name}`,
+                subtitle: `${person.total_emails} interactions • ${person.company || 'Unknown company'}`,
+                icon: 'person',
+                data: person
             })));
         }
         
-        // Sort by date/relevance and limit
+        // Add strategic insights
+        if (insightsData.success && insightsData.strategic_insights) {
+            const recentInsights = insightsData.strategic_insights.slice(0, 2);
+            activities = activities.concat(recentInsights.map(insight => ({
+                type: 'insight',
+                title: `Business Insight: ${insight.title}`,
+                subtitle: `${insight.description.slice(0, 80)}...`,
+                icon: 'insight',
+                data: insight
+            })));
+        }
+        
+        // Limit total activities
         activities = activities.slice(0, 6);
         
         displayRecentActivity(activities);
@@ -339,6 +355,54 @@ function displayInsights(insights) {
     `).join('');
 }
 
+function displayStrategicInsights(insights) {
+    const container = document.getElementById('insightsContainer');
+    const loading = document.getElementById('insightsLoading');
+    
+    if (loading) loading.remove();
+    
+    if (!insights || insights.length === 0) {
+        container.innerHTML = `
+            <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
+                <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                        <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM116,136V112a12,12,0,0,1,24,0v24a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,176Z"></path>
+                    </svg>
+                </div>
+                <div class="flex flex-col justify-center">
+                    <p class="text-white text-base font-medium leading-normal">No insights yet</p>
+                    <p class="text-[#90aecb] text-sm font-normal leading-normal">Process your emails to generate AI insights</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = insights.map(insight => `
+        <div class="bg-[#101a23] px-4 py-4 rounded-lg border border-[#223649] hover:bg-[#152028] transition-colors cursor-pointer">
+            <div class="flex items-start gap-4">
+                <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
+                    <div class="text-2xl">${insight.icon || '🧠'}</div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-3">
+                        <h3 class="text-white text-base font-medium leading-normal line-clamp-1">${escapeHtml(insight.title || 'Business Insight')}</h3>
+                        <span class="px-2 py-1 text-xs rounded-full ${getPriorityColor(insight.priority)} shrink-0">${insight.priority || 'medium'}</span>
+                    </div>
+                    <p class="text-[#90aecb] text-sm font-normal leading-normal mt-1 line-clamp-2">${escapeHtml(insight.description || 'Strategic business intelligence')}</p>
+                    ${insight.details ? `<p class="text-[#78879a] text-xs leading-normal mt-2 line-clamp-3">${escapeHtml(insight.details)}</p>` : ''}
+                    ${insight.action ? `
+                        <div class="mt-3 p-2 bg-[#0b1117] rounded border border-[#223649]">
+                            <p class="text-[#0b80ee] text-xs font-medium">💡 Recommended Action:</p>
+                            <p class="text-[#a8b8c8] text-xs mt-1">${escapeHtml(insight.action)}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
 function displayRecentActivity(activities) {
     const container = document.getElementById('activityContainer');
     const loading = document.getElementById('activityLoading');
@@ -378,10 +442,20 @@ function displayRecentActivity(activities) {
 function getActivityIcon(type) {
     const icons = {
         task: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z"></path></svg>',
-        email: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"></path></svg>',
-        person: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM74.08,197.5a64,64,0,0,1,107.84,0,87.83,87.83,0,0,1-107.84,0ZM96,120a32,32,0,1,1,32,32A32,32,0,0,1,96,120Z"></path></svg>'
+        person: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM74.08,197.5a64,64,0,0,1,107.84,0,87.83,87.83,0,0,1-107.84,0ZM96,120a32,32,0,1,1,32,32A32,32,0,0,1,96,120Z"></path></svg>',
+        insight: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M176,232a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h80A8,8,0,0,1,176,232Zm40-128a87.55,87.55,0,0,1-33.64,69.21A16.24,16.24,0,0,0,176,189.45V192a16,16,0,0,1-16,16H96a16,16,0,0,1-16-16v-2.55a16.24,16.24,0,0,0-6.36-12.76A87.55,87.55,0,0,1,40,104.49C39.74,56.83,78.26,17.14,125.88,16A88,88,0,0,1,216,104Z"></path></svg>',
+        email: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"></path></svg>'
     };
-    return icons[type] || icons.task;
+    return icons[type] || icons.insight;
+}
+
+function getPriorityColor(priority) {
+    const colors = {
+        'high': 'bg-red-600 text-white',
+        'medium': 'bg-yellow-600 text-white', 
+        'low': 'bg-green-600 text-white'
+    };
+    return colors[priority] || colors.medium;
 }
 
 async function processEmails() {
@@ -392,7 +466,7 @@ async function processEmails() {
     btn.disabled = true;
     
     try {
-        const response = await fetch('/api/process-emails', {
+        const response = await fetch('/api/trigger-email-sync', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -400,14 +474,38 @@ async function processEmails() {
             body: JSON.stringify({
                 max_emails: 20,
                 days_back: 7,
-                force_refresh: false
+                force_refresh: true
             })
         });
         
         const data = await response.json();
         
         if (data.success) {
-            showSuccess(`Processed ${data.summary.emails_fetched} emails and created ${data.summary.tasks_created} tasks`);
+            // Show detailed success message with AI processing results
+            const results = data.database_populated || {};
+            const stages = data.processing_stages || {};
+            
+            let successMessage = `🤖 AI Processing Complete!\n\n`;
+            successMessage += `📧 Analyzed ${stages.emails_fetched || 0} emails\n`;
+            successMessage += `🧠 Generated ${results.insights_generated || 0} strategic insights\n`;
+            successMessage += `👥 Extracted ${results.people_extracted || 0} business contacts\n`;
+            successMessage += `✅ Created ${results.tasks_created || 0} actionable tasks\n`;
+            successMessage += `📋 Identified ${results.projects_identified || 0} projects\n\n`;
+            
+            if (data.next_steps && data.next_steps.length > 0) {
+                successMessage += `Next Steps:\n${data.next_steps.join('\n')}`;
+            }
+            
+            showSuccess(successMessage);
+            
+            // Show processing details in console for debugging
+            console.log('AI Processing Results:', {
+                stages: stages,
+                database_populated: results,
+                ai_processing_success: stages.ai_processing_success,
+                next_steps: data.next_steps
+            });
+            
             // Reload data
             await loadInitialData();
         } else {
@@ -498,16 +596,31 @@ function formatDate(dateString) {
     }
 }
 
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function showSuccess(message) {
-    // Simple toast notification
+    // Simple toast notification with support for multi-line messages
     const toast = document.createElement('div');
-    toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg z-50';
+    toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg z-50 max-w-md shadow-lg';
+    toast.style.whiteSpace = 'pre-line'; // Support line breaks
+    toast.style.fontSize = '14px';
+    toast.style.lineHeight = '1.4';
     toast.textContent = message;
     document.body.appendChild(toast);
     
+    // Show longer for detailed AI results
+    const displayTime = message.includes('🤖') ? 8000 : 3000;
+    
     setTimeout(() => {
-        document.body.removeChild(toast);
-    }, 3000);
+        if (document.body.contains(toast)) {
+            document.body.removeChild(toast);
+        }
+    }, displayTime);
 }
 
 function showError(message) {

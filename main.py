@@ -19,6 +19,7 @@ import tempfile
 import time
 import uuid
 from typing import List, Dict
+import json
 
 # Add the chief_of_staff_ai directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'chief_of_staff_ai'))
@@ -56,6 +57,7 @@ def get_strategic_business_insights(user_email: str) -> List[Dict]:
         people = get_db_manager().get_user_people(db_user.id, limit=50)
         tasks = get_db_manager().get_user_tasks(db_user.id, limit=50)
         projects = get_db_manager().get_user_projects(db_user.id, limit=20)
+        topics = get_db_manager().get_user_topics(db_user.id, limit=50)
         
         # Filter quality data
         analyzed_emails = [e for e in emails if e.ai_summary and len(e.ai_summary or '') > 10]
@@ -63,164 +65,211 @@ def get_strategic_business_insights(user_email: str) -> List[Dict]:
                                                                 for pattern in ['noreply', 'no-reply', 'automated'])]
         active_projects = [p for p in projects if p.status == 'active']
         pending_tasks = [t for t in tasks if t.status in ['pending', 'open']]
+        strong_topics = [t for t in topics if t.strength and t.strength > 80]  # High-confidence topics
         
-        # 1. RELATIONSHIP INTELLIGENCE
-        if human_contacts:
-            insights.append({
-                'type': 'relationship_intelligence',
-                'title': f'Professional Network Growth',
-                'description': f'You\'ve built connections with {len(human_contacts)} professional contacts across {len(set(p.company for p in human_contacts if p.company))} organizations.',
-                'details': f'Key relationships include contacts from {", ".join(list(set(p.company for p in human_contacts if p.company))[:3])}.',
-                'action': 'Consider reaching out to maintain these valuable professional relationships.',
-                'priority': 'medium',
-                'icon': '👥'
-            })
-        
-        # 2. COMMUNICATION PATTERNS
-        if analyzed_emails:
-            recent_senders = {}
-            for email in analyzed_emails[-30:]:  # Last 30 emails
-                sender = email.sender_name or email.sender
-                recent_senders[sender] = recent_senders.get(sender, 0) + 1
+        # 1. BUSINESS RELATIONSHIP INTELLIGENCE - Enhanced
+        if human_contacts and analyzed_emails:
+            # Find key business relationships with rich context
+            relationship_insights = []
+            for person in human_contacts[:5]:  # Top 5 contacts
+                person_emails = [e for e in analyzed_emails if e.sender and person.email_address and 
+                               e.sender.lower() == person.email_address.lower()]
+                
+                if person_emails:
+                    latest_email = max(person_emails, key=lambda x: x.email_date or datetime.min)
+                    context = latest_email.ai_summary if latest_email.ai_summary else "Recent business communication"
+                    
+                    relationship_insights.append({
+                        'person': person.name,
+                        'company': person.company or 'Unknown company',
+                        'context': context[:100] + "..." if len(context) > 100 else context,
+                        'emails': len(person_emails),
+                        'latest': latest_email.email_date.strftime('%Y-%m-%d') if latest_email.email_date else 'Recently'
+                    })
             
-            top_correspondents = sorted(recent_senders.items(), key=lambda x: x[1], reverse=True)[:3]
-            if top_correspondents:
+            if relationship_insights:
+                top_relationship = relationship_insights[0]
                 insights.append({
-                    'type': 'communication_pattern',
-                    'title': 'Active Communication Threads',
-                    'description': f'Most active correspondence with {top_correspondents[0][0]} ({top_correspondents[0][1]} emails).',
-                    'details': f'Top correspondents: {", ".join([f"{name} ({count})" for name, count in top_correspondents])}',
-                    'action': 'These frequent exchanges suggest important ongoing work or relationships.',
+                    'type': 'relationship_intelligence',
+                    'title': f'Key Business Relationship: {top_relationship["person"]}',
+                    'description': f'{top_relationship["emails"]} active communications with {top_relationship["person"]} at {top_relationship["company"]}. Latest: {top_relationship["context"]}',
+                    'details': f'Last contact: {top_relationship["latest"]}. Consider scheduling follow-up to maintain this valuable business relationship.',
+                    'action': f'Reach out to {top_relationship["person"]} to continue your {top_relationship["company"]} discussions',
                     'priority': 'high',
-                    'icon': '💬'
+                    'icon': '🤝'
                 })
         
-        # 3. PROJECT INTELLIGENCE
-        if active_projects:
+        # 2. STRATEGIC TOPIC INTELLIGENCE - Enhanced
+        if strong_topics:
+            for topic in strong_topics[:2]:  # Top 2 strong topics
+                topic_emails = [e for e in analyzed_emails if e.topics and topic.name in e.topics]
+                topic_people = list(set([e.sender_name or e.sender.split('@')[0] for e in topic_emails if e.sender]))
+                
+                latest_email = max(topic_emails, key=lambda x: x.email_date or datetime.min) if topic_emails else None
+                
+                insights.append({
+                    'type': 'strategic_topic',
+                    'title': f'Strategic Focus: {topic.name.title()}',
+                    'description': f'High-value topic with {len(topic_emails)} related communications involving {len(topic_people)} people. {topic.strength}% confidence level.',
+                    'details': f'Latest activity: {latest_email.ai_summary[:80] + "..." if latest_email and latest_email.ai_summary else "Recent discussions"}. Key participants: {", ".join(topic_people[:3])}.',
+                    'action': f'Consider deepening your {topic.name} strategy - this appears to be a significant business opportunity',
+                    'priority': 'high',
+                    'icon': '🎯'
+                })
+        
+        # 3. FOLLOW-UP OPPORTUNITIES - Enhanced  
+        follow_up_candidates = []
+        for email in analyzed_emails[-20:]:  # Recent 20 emails
+            if (email.ai_summary and 
+                any(keyword in email.ai_summary.lower() for keyword in ['follow', 'next', 'meeting', 'discuss', 'connect', 'update']) and
+                email.sender and email.sender != user_email):
+                
+                follow_up_candidates.append({
+                    'sender': email.sender_name or email.sender.split('@')[0],
+                    'subject': email.subject or 'Follow-up needed',
+                    'summary': email.ai_summary,
+                    'date': email.email_date.strftime('%Y-%m-%d') if email.email_date else 'Recent'
+                })
+        
+        if follow_up_candidates:
+            candidate = follow_up_candidates[0]
             insights.append({
-                'type': 'project_intelligence',
-                'title': 'Active Project Portfolio',
-                'description': f'Currently managing {len(active_projects)} active projects.',
-                'details': f'Projects: {", ".join([p.name for p in active_projects[:3]])}.',
-                'action': 'Review project priorities and resource allocation.',
-                'priority': 'high',
-                'icon': '📋'
+                'type': 'follow_up_opportunity',
+                'title': f'Follow-up Opportunity: {candidate["sender"]}',
+                'description': f'Recent communication suggests next steps needed. Subject: "{candidate["subject"]}"',
+                'details': f'{candidate["summary"][:120] + "..." if len(candidate["summary"]) > 120 else candidate["summary"]}',
+                'action': f'Schedule follow-up with {candidate["sender"]} to advance this discussion',
+                'priority': 'medium',
+                'icon': '📅'
             })
         
-        # 4. TASK INTELLIGENCE
-        if pending_tasks:
-            high_priority_tasks = [t for t in pending_tasks if t.priority == 'high']
-            overdue_tasks = [t for t in pending_tasks if t.due_date and t.due_date < datetime.now()]
-            
-            if high_priority_tasks or overdue_tasks:
-                insights.append({
-                    'type': 'task_intelligence',
-                    'title': 'Task Priority Analysis',
-                    'description': f'{len(high_priority_tasks)} high-priority tasks and {len(overdue_tasks)} overdue items need attention.',
-                    'details': f'Total pending: {len(pending_tasks)} tasks. Focus on urgent items first.',
-                    'action': 'Prioritize high-impact tasks and address overdue items.',
-                    'priority': 'high' if overdue_tasks else 'medium',
-                    'icon': '⚡'
-                })
-        
-        # 5. BUSINESS INTELLIGENCE FROM EMAIL CONTENT
+        # 4. BUSINESS INTELLIGENCE FROM EMAIL CONTENT - Enhanced
         business_decisions = []
         opportunities = []
         challenges = []
         
-        for email in analyzed_emails:
+        for email in analyzed_emails[-30:]:  # Recent 30 emails
             if email.key_insights and isinstance(email.key_insights, dict):
                 insights_data = email.key_insights
-                business_decisions.extend(insights_data.get('key_decisions', []))
-                opportunities.extend(insights_data.get('strategic_opportunities', []))
-                challenges.extend(insights_data.get('business_challenges', []))
+                
+                decisions = insights_data.get('key_decisions', [])
+                for decision in decisions:
+                    if len(decision) > 20:  # Substantial decisions only
+                        business_decisions.append({
+                            'decision': decision,
+                            'source': email.sender_name or email.sender.split('@')[0],
+                            'date': email.email_date.strftime('%Y-%m-%d') if email.email_date else 'Recent'
+                        })
+                
+                opps = insights_data.get('strategic_opportunities', [])
+                for opp in opps:
+                    if len(opp) > 20:
+                        opportunities.append({
+                            'opportunity': opp,
+                            'source': email.sender_name or email.sender.split('@')[0],
+                            'date': email.email_date.strftime('%Y-%m-%d') if email.email_date else 'Recent'
+                        })
         
         if business_decisions:
+            decision = business_decisions[0]
             insights.append({
-                'type': 'strategic_intelligence',
-                'title': 'Strategic Decisions Tracked',
-                'description': f'Identified {len(business_decisions)} strategic decisions across recent communications.',
-                'details': f'Recent decision: "{business_decisions[0][:100]}..."' if business_decisions else '',
-                'action': 'Review decision outcomes and track implementation progress.',
+                'type': 'strategic_decision',
+                'title': 'Strategic Decision Tracked',
+                'description': f'Important business decision identified from {decision["source"]}',
+                'details': f'Decision: {decision["decision"][:150] + "..." if len(decision["decision"]) > 150 else decision["decision"]}',
+                'action': 'Review decision implementation and track outcomes',
                 'priority': 'high',
-                'icon': '🎯'
+                'icon': '⚡'
             })
         
         if opportunities:
+            opportunity = opportunities[0]
             insights.append({
-                'type': 'opportunity_intelligence', 
-                'title': 'Business Opportunities Identified',
-                'description': f'Discovered {len(opportunities)} potential business opportunities.',
-                'details': f'Top opportunity: "{opportunities[0][:100]}..."' if opportunities else '',
-                'action': 'Evaluate and prioritize these opportunities for potential action.',
+                'type': 'business_opportunity',
+                'title': 'Business Opportunity Identified',
+                'description': f'Potential opportunity discussed with {opportunity["source"]}',
+                'details': f'Opportunity: {opportunity["opportunity"][:150] + "..." if len(opportunity["opportunity"]) > 150 else opportunity["opportunity"]}',
+                'action': 'Evaluate this opportunity and develop action plan',
                 'priority': 'medium',
                 'icon': '💡'
             })
         
-        if challenges:
-            insights.append({
-                'type': 'challenge_intelligence',
-                'title': 'Business Challenges Detected',
-                'description': f'Identified {len(challenges)} business challenges requiring attention.',
-                'details': f'Key challenge: "{challenges[0][:100]}..."' if challenges else '',
-                'action': 'Develop strategies to address these challenges.',
-                'priority': 'medium',
-                'icon': '⚠️'
-            })
-        
-        # 6. ENGAGEMENT INSIGHTS
-        if analyzed_emails and human_contacts:
-            recent_new_contacts = [p for p in human_contacts if p.total_emails and p.total_emails <= 2]
+        # 5. ENGAGEMENT INSIGHTS - Enhanced
+        if human_contacts and analyzed_emails:
+            recent_new_contacts = []
+            for person in human_contacts:
+                person_emails = [e for e in analyzed_emails if e.sender and person.email_address and 
+                               e.sender.lower() == person.email_address.lower()]
+                if len(person_emails) <= 3 and len(person_emails) > 0:  # New relationship
+                    latest = max(person_emails, key=lambda x: x.email_date or datetime.min)
+                    recent_new_contacts.append({
+                        'name': person.name,
+                        'company': person.company or 'Unknown company',
+                        'context': latest.ai_summary[:80] + "..." if latest.ai_summary else "New business contact",
+                        'emails': len(person_emails)
+                    })
+            
             if recent_new_contacts:
+                contact = recent_new_contacts[0]
                 insights.append({
-                    'type': 'engagement_intelligence',
-                    'title': 'New Professional Connections',
-                    'description': f'Connected with {len(recent_new_contacts)} new professional contacts recently.',
-                    'details': f'New contacts from: {", ".join(set(p.company for p in recent_new_contacts if p.company)[:3])}',
-                    'action': 'Follow up to strengthen these new professional relationships.',
+                    'type': 'new_relationship',
+                    'title': f'New Business Connection: {contact["name"]}',
+                    'description': f'Early-stage relationship with {contact["name"]} at {contact["company"]} ({contact["emails"]} interactions)',
+                    'details': f'Recent context: {contact["context"]}',
+                    'action': f'Nurture this new relationship with {contact["name"]} - potential for business value',
                     'priority': 'medium',
-                    'icon': '🤝'
+                    'icon': '🌟'
                 })
         
-        # 7. PRODUCTIVITY INSIGHTS
-        total_processed = len(analyzed_emails)
-        if total_processed > 0:
+        # 6. PRODUCTIVITY INSIGHTS - Enhanced with specifics
+        if analyzed_emails:
             insights.append({
                 'type': 'productivity_intelligence',
-                'title': 'Communication Intelligence',
-                'description': f'AI has analyzed {total_processed} business communications to extract actionable insights.',
-                'details': f'Extracted {len(pending_tasks)} actionable tasks and identified {len(human_contacts)} business contacts.',
-                'action': 'Your AI Chief of Staff is building comprehensive business knowledge to help you stay on top of opportunities.',
+                'title': 'AI Business Intelligence Summary',
+                'description': f'Analyzed {len(analyzed_emails)} business communications, identified {len(human_contacts)} contacts across {len(strong_topics)} high-value topics',
+                'details': f'Key topics: {", ".join([t.name for t in strong_topics[:3]])}. Your AI Chief of Staff is building comprehensive business knowledge.',
+                'action': 'Review insights above and take recommended actions to advance your business relationships',
                 'priority': 'low',
                 'icon': '🧠'
             })
         
-        # If no insights generated, provide helpful guidance
+        # If no meaningful insights, provide specific guidance
         if not insights:
-            insights.append({
-                'type': 'guidance',
-                'title': 'Building Your Business Intelligence',
-                'description': 'Process more emails to unlock strategic insights about your business.',
-                'details': 'Your AI Chief of Staff will analyze communication patterns, extract tasks, and identify opportunities as you sync more data.',
-                'action': 'Use the "Process Emails" button to start building your comprehensive business knowledge base.',
-                'priority': 'medium',
-                'icon': '🚀'
-            })
+            if analyzed_emails:
+                insights.append({
+                    'type': 'guidance',
+                    'title': 'Business Intelligence Ready',
+                    'description': f'Found {len(analyzed_emails)} analyzed emails but no clear action items detected',
+                    'details': 'Your communications appear to be primarily informational. The AI is tracking relationships and topics.',
+                    'action': 'Continue processing emails to build more comprehensive business intelligence',
+                    'priority': 'medium',
+                    'icon': '📊'
+                })
+            else:
+                insights.append({
+                    'type': 'guidance',
+                    'title': 'Building Your Business Intelligence',
+                    'description': 'Process emails to unlock strategic insights about relationships and opportunities',
+                    'details': 'Your AI Chief of Staff will analyze communication patterns, extract tasks, and identify business opportunities.',
+                    'action': 'Use "Process Emails" to start building your comprehensive business knowledge base',
+                    'priority': 'medium',
+                    'icon': '🚀'
+                })
         
-        # Sort by priority (high, medium, low)
+        # Sort by priority and limit
         priority_order = {'high': 0, 'medium': 1, 'low': 2}
         insights.sort(key=lambda x: priority_order.get(x['priority'], 2))
         
-        return insights[:6]  # Return top 6 insights
+        return insights[:5]  # Return top 5 insights
         
     except Exception as e:
         logger.error(f"Error generating strategic insights: {str(e)}")
         return [{
             'type': 'error',
-            'title': 'Insights Processing',
-            'description': 'Unable to generate strategic insights at this time.',
-            'details': 'Please try processing some emails first.',
-            'action': 'Process your emails to build business intelligence.',
+            'title': 'Insights Processing Error',
+            'description': f'Error analyzing your business data: {str(e)[:100]}',
+            'details': 'Please try processing emails again or check your data',
+            'action': 'Process your emails again to rebuild business intelligence',
             'priority': 'medium',
             'icon': '⚠️'
         }]
@@ -558,21 +607,35 @@ def create_app():
             logger.error(f"Email fetch API error: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
-    @app.route('/api/process-emails', methods=['POST'])
-    def api_process_emails():
-        """API endpoint to intelligently process emails with comprehensive analysis"""
-        if 'user_email' not in session:
+    @app.route('/api/trigger-email-sync', methods=['POST'])
+    def api_trigger_email_sync():
+        """UNIFIED EMAIL PROCESSING - Single trigger from Settings page that does everything"""
+        user = get_current_user()
+        if not user:
             return jsonify({'error': 'Not authenticated'}), 401
-        
-        user_email = session['user_email']
         
         try:
             data = request.get_json() or {}
-            max_emails = data.get('max_emails', 10)
+            max_emails = data.get('max_emails', 20)
             days_back = data.get('days_back', 7)
             force_refresh = data.get('force_refresh', False)
             
-            # First fetch emails if needed
+            user_email = user['email']
+            
+            # Validate parameters
+            if max_emails < 1 or max_emails > 500:
+                return jsonify({'error': 'max_emails must be between 1 and 500'}), 400
+            if days_back < 1 or days_back > 365:
+                return jsonify({'error': 'days_back must be between 1 and 365'}), 400
+            
+            logger.info(f"🚀 Starting unified email processing for {user_email}: {max_emails} emails, {days_back} days back")
+            
+            # Clear any existing cache to ensure fresh processing
+            from chief_of_staff_ai.strategic_intelligence.strategic_intelligence_cache import strategic_intelligence_cache
+            strategic_intelligence_cache.invalidate(user_email)
+            
+            # STEP 1: Fetch emails from Gmail
+            logger.info("📧 Step 1: Fetching emails from Gmail...")
             fetch_result = gmail_fetcher.fetch_recent_emails(
                 user_email=user_email,
                 limit=max_emails,
@@ -581,42 +644,125 @@ def create_app():
             )
             
             if not fetch_result.get('success'):
-                return jsonify(fetch_result), 400
+                return jsonify({
+                    'success': False,
+                    'error': f"Email fetch failed: {fetch_result.get('error')}",
+                    'stage': 'fetch'
+                }), 400
             
-            # Normalize emails first
+            emails_fetched = fetch_result.get('count', 0)
+            logger.info(f"✅ Fetched {emails_fetched} emails from Gmail")
+            
+            # STEP 2: Normalize emails for better quality
+            logger.info("🔧 Step 2: Normalizing emails...")
             normalize_result = email_normalizer.normalize_user_emails(user_email, limit=max_emails)
+            emails_normalized = normalize_result.get('processed', 0)
+            logger.info(f"✅ Normalized {emails_normalized} emails")
             
-            # Use intelligent processing instead of basic task extraction
+            # STEP 3: Process with AI to extract people, tasks, projects, insights
+            logger.info("🤖 Step 3: Processing emails with AI intelligence...")
             intelligence_result = email_intelligence.process_user_emails_intelligently(
                 user_email=user_email,
                 limit=max_emails,
                 force_refresh=force_refresh
             )
             
-            # Get current user data for display
-            user = get_db_manager().get_user_by_email(user_email)
-            all_tasks = get_db_manager().get_user_tasks(user.id) if user else []
+            # STEP 4: Get final counts from database
+            logger.info("📊 Step 4: Calculating final results...")
+            db_user = get_db_manager().get_user_by_email(user_email)
             
-            return jsonify({
-                'success': True,
-                'fetch_result': fetch_result,
-                'normalize_result': normalize_result,
-                'intelligence_result': intelligence_result,
-                'summary': {
-                    'emails_fetched': fetch_result.get('count', 0),
-                    'emails_normalized': normalize_result.get('processed', 0),
-                    'emails_analyzed': intelligence_result.get('processed_emails', 0),
-                    'insights_extracted': intelligence_result.get('insights_extracted', 0),
-                    'people_identified': intelligence_result.get('people_identified', 0),
-                    'projects_identified': intelligence_result.get('projects_identified', 0),
-                    'tasks_created': intelligence_result.get('tasks_created', 0),
-                    'total_tasks': len(all_tasks)
-                }
-            })
+            if db_user:
+                # Get actual counts from database
+                all_emails = get_db_manager().get_user_emails(db_user.id)
+                all_people = get_db_manager().get_user_people(db_user.id)
+                all_tasks = get_db_manager().get_user_tasks(db_user.id)
+                all_projects = get_db_manager().get_user_projects(db_user.id)
+                
+                # Filter for meaningful data
+                analyzed_emails = [e for e in all_emails if e.ai_summary and len(e.ai_summary.strip()) > 10]
+                real_people = [p for p in all_people if p.name and p.email_address and '@' in p.email_address]
+                real_tasks = [t for t in all_tasks if t.description and len(t.description.strip()) > 5]
+                active_projects = [p for p in all_projects if p.status == 'active']
+                
+                # Calculate business insights
+                strategic_insights = get_strategic_business_insights(user_email)
+                
+                logger.info(f"✅ Final Results:")
+                logger.info(f"   📧 {len(analyzed_emails)} emails with AI analysis")
+                logger.info(f"   👥 {len(real_people)} real people extracted")
+                logger.info(f"   ✅ {len(real_tasks)} actionable tasks created")
+                logger.info(f"   📋 {len(active_projects)} active projects identified")
+                logger.info(f"   🧠 {len(strategic_insights)} business insights generated")
+                
+                # Success response with comprehensive data
+                return jsonify({
+                    'success': True,
+                    'message': f'Successfully processed {emails_fetched} emails and populated all data!',
+                    'processing_stages': {
+                        'emails_fetched': emails_fetched,
+                        'emails_normalized': emails_normalized,
+                        'emails_analyzed': len(analyzed_emails),
+                        'ai_processing_success': intelligence_result.get('success', False)
+                    },
+                    'database_populated': {
+                        'total_emails': len(all_emails),
+                        'emails_with_ai': len(analyzed_emails),
+                        'people_extracted': len(real_people),
+                        'tasks_created': len(real_tasks),
+                        'projects_identified': len(active_projects),
+                        'insights_generated': len(strategic_insights)
+                    },
+                    'data_ready': {
+                        'people_tab': len(real_people) > 0,
+                        'tasks_tab': len(real_tasks) > 0,
+                        'insights_tab': len(strategic_insights) > 0,
+                        'all_tabs_populated': len(real_people) > 0 and len(real_tasks) > 0 and len(strategic_insights) > 0
+                    },
+                    'results': {
+                        'fetch': fetch_result,
+                        'normalize': normalize_result,
+                        'intelligence': intelligence_result
+                    },
+                    'summary': {
+                        'emails_fetched': emails_fetched,
+                        'emails_normalized': emails_normalized,
+                        'emails_analyzed': intelligence_result.get('processed_emails', len(analyzed_emails)),
+                        'insights_extracted': intelligence_result.get('insights_extracted', len(strategic_insights)),
+                        'people_identified': intelligence_result.get('people_identified', len(real_people)),
+                        'projects_identified': intelligence_result.get('projects_identified', len(active_projects)),
+                        'tasks_created': intelligence_result.get('tasks_created', len(real_tasks)),
+                        'total_emails': len(all_emails),
+                        'total_tasks': len(real_tasks),
+                        'total_people': len(real_people)
+                    },
+                    'next_steps': [
+                        f"✅ {len(real_people)} people are now available in the People tab",
+                        f"✅ {len(real_tasks)} tasks are now available in the Tasks tab", 
+                        f"✅ {len(strategic_insights)} insights are now available on the Home tab",
+                        "✅ All data is now populated and ready to use!"
+                    ] if len(real_people) > 0 else [
+                        "ℹ️ No meaningful data found - try processing more emails or check your Gmail connection"
+                    ]
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'User not found after processing',
+                    'stage': 'final_verification'
+                }), 500
             
         except Exception as e:
-            logger.error(f"Email processing API error: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            logger.error(f"❌ Unified email processing error: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': f'Email processing failed: {str(e)}',
+                'stage': 'processing'
+            }), 500
+
+    @app.route('/api/process-emails', methods=['POST'])
+    def api_process_emails():
+        """DEPRECATED: Redirect to unified trigger-email-sync endpoint"""
+        return api_trigger_email_sync()
     
     @app.route('/api/chat', methods=['POST'])
     def api_chat():
@@ -952,13 +1098,18 @@ Remember: This knowledge base represents their actual business communications an
     
     @app.route('/api/tasks', methods=['GET'])
     def api_get_tasks():
-        """API endpoint to get existing tasks"""
+        """API endpoint to get real tasks from database"""
         if 'user_email' not in session:
             return jsonify({'error': 'Not authenticated'}), 401
         
         user_email = session['user_email']
         
         try:
+            # Clear any cache to ensure fresh data
+            from chief_of_staff_ai.strategic_intelligence.strategic_intelligence_cache import strategic_intelligence_cache
+            strategic_intelligence_cache.invalidate(user_email)
+            
+            # Get real user and their tasks
             user = get_db_manager().get_user_by_email(user_email)
             if not user:
                 return jsonify({'error': 'User not found'}), 404
@@ -970,15 +1121,62 @@ Remember: This knowledge base represents their actual business communications an
             if limit:
                 tasks = tasks[:limit]
             
+            # Format real tasks data properly
+            tasks_data = []
+            for task in tasks:
+                if task.description and len(task.description.strip()) > 3:  # Only meaningful tasks
+                    tasks_data.append({
+                        'id': task.id,
+                        'description': task.description,
+                        'details': task.notes or '',
+                        'priority': task.priority or 'medium',
+                        'status': task.status or 'pending',
+                        'category': task.category or 'general',
+                        'confidence': task.confidence or 0.8,
+                        'assignee': task.assignee or user_email,
+                        'due_date': task.due_date.isoformat() if task.due_date else None,
+                        'created_at': task.created_at.isoformat() if task.created_at else None,
+                        'source_email_subject': task.source_email_subject,
+                        'task_type': 'real_task',
+                        'data_source': 'real_database'
+                    })
+            
             return jsonify({
                 'success': True,
-                'tasks': [task.to_dict() for task in tasks],
-                'count': len(tasks),
-                'status_filter': status
+                'tasks': tasks_data,
+                'count': len(tasks_data),
+                'status_filter': status,
+                'data_source': 'real_database'
             })
             
         except Exception as e:
             logger.error(f"Get tasks API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/email-insights', methods=['GET'])
+    def api_get_email_insights():
+        """API endpoint to get real strategic business insights from database"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            # Clear any cache to ensure fresh data
+            from chief_of_staff_ai.strategic_intelligence.strategic_intelligence_cache import strategic_intelligence_cache
+            strategic_intelligence_cache.invalidate(user['email'])
+            
+            # Use the real strategic business insights function
+            strategic_insights = get_strategic_business_insights(user['email'])
+            
+            return jsonify({
+                'success': True,
+                'strategic_insights': strategic_insights,
+                'count': len(strategic_insights),
+                'data_source': 'real_business_insights'
+            })
+            
+        except Exception as e:
+            logger.error(f"Get email insights API error: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/flush-database', methods=['POST'])
@@ -1070,13 +1268,18 @@ Remember: This knowledge base represents their actual business communications an
     
     @app.route('/api/people', methods=['GET'])
     def api_get_people():
-        """API endpoint to get people insights"""
+        """API endpoint to get real people from database"""
         if 'user_email' not in session:
             return jsonify({'error': 'Not authenticated'}), 401
         
         user_email = session['user_email']
         
         try:
+            # Clear any cache to ensure fresh data
+            from chief_of_staff_ai.strategic_intelligence.strategic_intelligence_cache import strategic_intelligence_cache
+            strategic_intelligence_cache.invalidate(user_email)
+            
+            # Get real user and their people
             user = get_db_manager().get_user_by_email(user_email)
             if not user:
                 return jsonify({'error': 'User not found'}), 404
@@ -1084,20 +1287,30 @@ Remember: This knowledge base represents their actual business communications an
             limit = int(request.args.get('limit', 50))
             people = get_db_manager().get_user_people(user.id, limit)
             
-            # Convert to frontend-expected format
+            # Format real people data properly
             people_data = []
             for person in people:
-                person_dict = person.to_dict()
-                # Map database field to expected frontend field
-                person_dict['email'] = person_dict.get('email_address')
-                person_dict['relationship'] = person_dict.get('relationship_type')
-                person_dict['last_contact'] = person_dict.get('last_interaction')
-                people_data.append(person_dict)
+                if person.name and person.email_address:  # Only real people
+                    people_data.append({
+                        'id': person.id,
+                        'name': person.name,
+                        'email': person.email_address,
+                        'relationship': person.relationship_type or 'Contact',
+                        'company': person.company or 'Unknown',
+                        'title': person.title or 'Unknown',
+                        'last_contact': person.last_interaction.isoformat() if person.last_interaction else None,
+                        'total_emails': person.total_emails or 0,
+                        'engagement_score': person.importance_level or 0.5,
+                        'relationship_context': f"Email contact with {person.total_emails or 0} interactions",
+                        'strategic_importance': 'high' if (person.total_emails or 0) > 10 else 'medium' if (person.total_emails or 0) > 3 else 'low',
+                        'data_source': 'real_database'
+                    })
             
             return jsonify({
                 'success': True,
                 'people': people_data,
-                'count': len(people_data)
+                'count': len(people_data),
+                'data_source': 'real_database'
             })
             
         except Exception as e:
@@ -1163,284 +1376,6 @@ Remember: This knowledge base represents their actual business communications an
         except Exception as e:
             logger.error(f"Failed to get chat knowledge for {user_email}: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
-    
-    @app.route('/api/email-insights', methods=['GET'])
-    def api_get_email_insights():
-        """API endpoint to get strategic business insights with AI analysis"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        try:
-            db_user = get_db_manager().get_user_by_email(user['email'])
-            if not db_user:
-                return jsonify({'error': 'User not found'}), 404
-            
-            # Get comprehensive business intelligence
-            strategic_insights = get_strategic_business_insights(user['email'])
-            
-            return jsonify({
-                'success': True,
-                'strategic_insights': strategic_insights,
-                'count': len(strategic_insights)
-            })
-            
-        except Exception as e:
-            logger.error(f"Get strategic insights API error: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/download-knowledge', methods=['GET'])
-    def api_download_knowledge():
-        """API endpoint to download comprehensive knowledge base as text file"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-
-        try:
-            db_user = get_db_manager().get_user_by_email(user['email'])
-            if not db_user:
-                return jsonify({'error': 'User not found'}), 404
-
-            # Get comprehensive knowledge data
-            emails = get_db_manager().get_user_emails(db_user.id, limit=1000)
-            people = get_db_manager().get_user_people(db_user.id, limit=500)
-            tasks = get_db_manager().get_user_tasks(db_user.id, limit=1000)
-            projects = get_db_manager().get_user_projects(db_user.id, limit=200)
-            topics = get_db_manager().get_user_topics(db_user.id, limit=1000)
-
-            # Get business knowledge summary
-            try:
-                knowledge_response = email_intelligence.get_chat_knowledge_summary(user['email'])
-                business_knowledge = knowledge_response.get('knowledge_base', {}) if knowledge_response.get('success') else {}
-            except:
-                business_knowledge = {}
-
-            # Generate comprehensive text content
-            content_lines = []
-            content_lines.append("=" * 80)
-            content_lines.append("AI CHIEF OF STAFF - COMPREHENSIVE KNOWLEDGE BASE")
-            content_lines.append("=" * 80)
-            content_lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            content_lines.append(f"User: {user['email']}")
-            content_lines.append("")
-
-            # === EXECUTIVE SUMMARY ===
-            content_lines.append("📊 EXECUTIVE SUMMARY")
-            content_lines.append("-" * 40)
-            
-            analyzed_emails = [e for e in emails if e.ai_summary]
-            human_contacts = [p for p in people if p.name and not any(pattern in (p.email_address or '').lower() 
-                                                                    for pattern in ['noreply', 'no-reply', 'automated', 'system'])]
-            active_projects = [p for p in projects if p.status == 'active']
-            pending_tasks = [t for t in tasks if t.status == 'pending']
-            
-            content_lines.append(f"• {len(emails)} total emails processed")
-            content_lines.append(f"• {len(analyzed_emails)} emails with AI insights ({len(analyzed_emails)/max(len(emails),1)*100:.1f}%)")
-            content_lines.append(f"• {len(human_contacts)} human contacts identified")
-            content_lines.append(f"• {len(active_projects)} active projects")
-            content_lines.append(f"• {len(pending_tasks)} pending tasks")
-            content_lines.append(f"• {len([t for t in topics if t.is_official])} official topics defined")
-            content_lines.append("")
-
-            # === BUSINESS INTELLIGENCE ===
-            if business_knowledge.get('business_intelligence'):
-                bi = business_knowledge['business_intelligence']
-                
-                if bi.get('recent_decisions'):
-                    content_lines.append("🎯 STRATEGIC BUSINESS DECISIONS")
-                    content_lines.append("-" * 40)
-                    for i, decision in enumerate(bi['recent_decisions'][:10], 1):
-                        if isinstance(decision, dict):
-                            content_lines.append(f"{i}. {decision.get('decision', 'Unknown decision')}")
-                            if decision.get('context'):
-                                content_lines.append(f"   Context: {decision['context']}")
-                            if decision.get('date'):
-                                content_lines.append(f"   Date: {decision['date']}")
-                        else:
-                            content_lines.append(f"{i}. {decision}")
-                        content_lines.append("")
-
-                if bi.get('top_opportunities'):
-                    content_lines.append("💡 BUSINESS OPPORTUNITIES")
-                    content_lines.append("-" * 40)
-                    for i, opportunity in enumerate(bi['top_opportunities'][:10], 1):
-                        if isinstance(opportunity, dict):
-                            content_lines.append(f"{i}. {opportunity.get('opportunity', 'Unknown opportunity')}")
-                            if opportunity.get('context'):
-                                content_lines.append(f"   Context: {opportunity['context']}")
-                        else:
-                            content_lines.append(f"{i}. {opportunity}")
-                        content_lines.append("")
-
-                if bi.get('current_challenges'):
-                    content_lines.append("⚠️ CURRENT CHALLENGES")
-                    content_lines.append("-" * 40)
-                    for i, challenge in enumerate(bi['current_challenges'][:10], 1):
-                        if isinstance(challenge, dict):
-                            content_lines.append(f"{i}. {challenge.get('challenge', 'Unknown challenge')}")
-                            if challenge.get('context'):
-                                content_lines.append(f"   Context: {challenge['context']}")
-                        else:
-                            content_lines.append(f"{i}. {challenge}")
-                        content_lines.append("")
-
-            # === KEY CONTACTS ===
-            if human_contacts:
-                content_lines.append("👥 KEY PROFESSIONAL CONTACTS")
-                content_lines.append("-" * 40)
-                
-                # Sort by importance and interaction frequency
-                sorted_contacts = sorted(human_contacts, 
-                                       key=lambda p: (p.importance_level or 0, p.total_emails or 0), 
-                                       reverse=True)[:20]
-                
-                for i, person in enumerate(sorted_contacts, 1):
-                    content_lines.append(f"{i}. {person.name}")
-                    if person.email_address:
-                        content_lines.append(f"   📧 {person.email_address}")
-                    if person.title or person.company:
-                        title_company = []
-                        if person.title:
-                            title_company.append(person.title)
-                        if person.company:
-                            title_company.append(f"at {person.company}")
-                        content_lines.append(f"   💼 {' '.join(title_company)}")
-                    if person.relationship_type:
-                        content_lines.append(f"   🤝 Relationship: {person.relationship_type}")
-                    if person.total_emails:
-                        content_lines.append(f"   📊 {person.total_emails} email interactions")
-                    if person.notes:
-                        content_lines.append(f"   📝 Notes: {person.notes[:200]}{'...' if len(person.notes) > 200 else ''}")
-                    content_lines.append("")
-                content_lines.append("")
-
-            # === ACTIVE PROJECTS ===
-            if projects:
-                content_lines.append("📋 PROJECTS")
-                content_lines.append("-" * 40)
-                for project in projects[:15]:  # Top 15 projects
-                    content_lines.append(f"• {project.name} ({project.status.upper()})")
-                    if project.description:
-                        content_lines.append(f"  Description: {project.description}")
-                    if project.priority:
-                        content_lines.append(f"  Priority: {project.priority}")
-                    if project.key_topics:
-                        content_lines.append(f"  Topics: {', '.join(project.key_topics[:5])}")
-                    if project.total_emails:
-                        content_lines.append(f"  Email activity: {project.total_emails} emails")
-                    content_lines.append("")
-                content_lines.append("")
-
-            # === TASK MANAGEMENT ===
-            if tasks:
-                content_lines.append("✅ TASK MANAGEMENT")
-                content_lines.append("-" * 40)
-                
-                # Group tasks by status
-                task_groups = {}
-                for task in tasks[:50]:  # Top 50 recent tasks
-                    status = task.status or 'pending'
-                    if status not in task_groups:
-                        task_groups[status] = []
-                    task_groups[status].append(task)
-                
-                for status, task_list in task_groups.items():
-                    content_lines.append(f"{status.upper()} TASKS ({len(task_list)}):")
-                    for task in task_list[:10]:  # Top 10 per status
-                        content_lines.append(f"  • {task.description}")
-                        if task.due_date:
-                            content_lines.append(f"    📅 Due: {task.due_date.strftime('%Y-%m-%d')}")
-                        if task.priority:
-                            content_lines.append(f"    🔥 Priority: {task.priority}")
-                        if task.assignee:
-                            content_lines.append(f"    👤 Assigned to: {task.assignee}")
-                    content_lines.append("")
-                content_lines.append("")
-
-            # === TOPICS & THEMES ===
-            if topics:
-                content_lines.append("🏷️ TOPICS & THEMES")
-                content_lines.append("-" * 40)
-                
-                official_topics = [t for t in topics if t.is_official]
-                ai_topics = [t for t in topics if not t.is_official]
-                
-                if official_topics:
-                    content_lines.append("OFFICIAL TOPICS:")
-                    for topic in official_topics:
-                        content_lines.append(f"  • {topic.name}")
-                        if topic.description:
-                            content_lines.append(f"    {topic.description}")
-                        if topic.email_count:
-                            content_lines.append(f"    📊 {topic.email_count} emails categorized")
-                        content_lines.append("")
-                
-                if ai_topics:
-                    content_lines.append("AI-DISCOVERED TOPICS:")
-                    # Sort by email count and confidence
-                    sorted_ai_topics = sorted(ai_topics, 
-                                            key=lambda t: (t.email_count or 0, t.confidence_score or 0), 
-                                            reverse=True)[:15]
-                    for topic in sorted_ai_topics:
-                        content_lines.append(f"  • {topic.name} ({topic.email_count or 0} emails)")
-                        if topic.confidence_score:
-                            content_lines.append(f"    Confidence: {topic.confidence_score:.1%}")
-                content_lines.append("")
-
-            # === EMAIL INSIGHTS ===
-            if analyzed_emails:
-                content_lines.append("📧 KEY EMAIL INSIGHTS")
-                content_lines.append("-" * 40)
-                
-                # Get the most important emails with insights
-                important_emails = sorted(analyzed_emails, 
-                                        key=lambda e: (e.priority_score or 0, len(e.ai_summary or '')), 
-                                        reverse=True)[:20]
-                
-                for i, email in enumerate(important_emails, 1):
-                    content_lines.append(f"{i}. {email.subject or 'No Subject'}")
-                    content_lines.append(f"   From: {email.sender_name or email.sender}")
-                    if email.email_date:
-                        content_lines.append(f"   Date: {email.email_date[:10]}")  # Just the date part
-                    if email.ai_summary:
-                        summary = email.ai_summary[:300] + ('...' if len(email.ai_summary) > 300 else '')
-                        content_lines.append(f"   AI Summary: {summary}")
-                    if email.topics:
-                        content_lines.append(f"   Topics: {', '.join(email.topics[:3])}")
-                    content_lines.append("")
-                content_lines.append("")
-
-            # === APPENDIX ===
-            content_lines.append("📎 APPENDIX - DATA EXPORT")
-            content_lines.append("-" * 40)
-            content_lines.append(f"Total Records Exported:")
-            content_lines.append(f"• {len(emails)} emails")
-            content_lines.append(f"• {len(people)} people")
-            content_lines.append(f"• {len(tasks)} tasks")
-            content_lines.append(f"• {len(projects)} projects") 
-            content_lines.append(f"• {len(topics)} topics")
-            content_lines.append("")
-            content_lines.append("This knowledge base is used as context in every Claude conversation")
-            content_lines.append("to provide personalized, informed assistance based on your actual")
-            content_lines.append("business communications, relationships, and ongoing projects.")
-            content_lines.append("")
-            content_lines.append("=" * 80)
-            content_lines.append("END OF KNOWLEDGE BASE")
-            content_lines.append("=" * 80)
-
-            # Create text content
-            text_content = "\n".join(content_lines)
-            
-            # Create response with file download
-            response = make_response(text_content)
-            response.headers['Content-Type'] = 'text/plain; charset=utf-8'
-            response.headers['Content-Disposition'] = f'attachment; filename="AI_Chief_of_Staff_Knowledge_Base_{datetime.now().strftime("%Y-%m-%d_%H-%M")}.txt"'
-            
-            return response
-
-        except Exception as e:
-            logger.error(f"Knowledge download error: {str(e)}")
-            return jsonify({'error': str(e)}), 500
     
     @app.route('/api/topics', methods=['GET'])
     def api_get_topics():
@@ -1845,87 +1780,231 @@ Remember: This knowledge base represents their actual business communications an
             logger.error(f"Update settings API error: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
-    @app.route('/api/trigger-email-sync', methods=['POST'])
-    def api_trigger_email_sync():
-        """API endpoint to trigger email sync with custom parameters"""
+    @app.route('/api/debug-data', methods=['GET'])
+    def api_debug_data():
+        """Debug endpoint to check what real data exists"""
         user = get_current_user()
         if not user:
             return jsonify({'error': 'Not authenticated'}), 401
         
         try:
-            data = request.get_json() or {}
-            max_emails = data.get('max_emails', 20)
-            days_back = data.get('days_back', 7)
-            force_refresh = data.get('force_refresh', False)
+            from chief_of_staff_ai.strategic_intelligence.strategic_intelligence_cache import strategic_intelligence_cache
             
-            user_email = user['email']
+            # Clear cache first
+            strategic_intelligence_cache.invalidate(user['email'])
             
-            # Validate parameters
-            if max_emails < 1 or max_emails > 500:
-                return jsonify({'error': 'max_emails must be between 1 and 500'}), 400
-            if days_back < 1 or days_back > 365:
-                return jsonify({'error': 'days_back must be between 1 and 365'}), 400
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
+                return jsonify({'error': 'User not found'}), 404
             
-            # First fetch emails
-            fetch_result = gmail_fetcher.fetch_recent_emails(
-                user_email=user_email,
-                limit=max_emails,
-                days_back=days_back,
-                force_refresh=force_refresh
-            )
+            # Get real data from database
+            emails = get_db_manager().get_user_emails(db_user.id, limit=50)
+            people = get_db_manager().get_user_people(db_user.id, limit=50)
+            tasks = get_db_manager().get_user_tasks(db_user.id, limit=50)
             
-            if not fetch_result.get('success'):
-                return jsonify({
-                    'success': False,
-                    'error': fetch_result.get('error', 'Email fetch failed'),
-                    'stage': 'fetch'
-                }), 400
+            # Analyze what we actually have
+            analyzed_emails = [e for e in emails if e.ai_summary and len(e.ai_summary.strip()) > 10]
+            real_people = [p for p in people if p.name and p.email_address and '@' in p.email_address]
+            real_tasks = [t for t in tasks if t.description and len(t.description.strip()) > 5]
             
-            # Normalize emails
-            normalize_result = email_normalizer.normalize_user_emails(user_email, limit=max_emails)
-            
-            # Process with AI intelligence
-            intelligence_result = email_intelligence.process_user_emails_intelligently(
-                user_email=user_email,
-                limit=max_emails,
-                force_refresh=force_refresh
-            )
-            
-            # Get updated counts
-            db_user = get_db_manager().get_user_by_email(user_email)
-            all_emails = get_db_manager().get_user_emails(db_user.id) if db_user else []
-            all_tasks = get_db_manager().get_user_tasks(db_user.id) if db_user else []
-            all_people = get_db_manager().get_user_people(db_user.id) if db_user else []
-            
-            return jsonify({
-                'success': True,
-                'message': f'Successfully synced {fetch_result.get("count", 0)} emails',
-                'results': {
-                    'fetch': fetch_result,
-                    'normalize': normalize_result,
-                    'intelligence': intelligence_result
+            debug_info = {
+                'user_email': user['email'],
+                'user_db_id': db_user.id,
+                'cache_cleared': True,
+                'raw_data': {
+                    'total_emails': len(emails),
+                    'emails_with_ai_summary': len(analyzed_emails),
+                    'total_people': len(people),
+                    'real_people': len(real_people),
+                    'total_tasks': len(tasks),
+                    'real_tasks': len(real_tasks)
                 },
-                'summary': {
-                    'emails_fetched': fetch_result.get('count', 0),
-                    'emails_normalized': normalize_result.get('processed', 0),
-                    'emails_analyzed': intelligence_result.get('processed_emails', 0),
-                    'insights_extracted': intelligence_result.get('insights_extracted', 0),
-                    'people_identified': intelligence_result.get('people_identified', 0),
-                    'projects_identified': intelligence_result.get('projects_identified', 0),
-                    'tasks_created': intelligence_result.get('tasks_created', 0),
-                    'total_emails': len(all_emails),
-                    'total_tasks': len(all_tasks),
-                    'total_people': len(all_people)
-                }
-            })
+                'sample_emails': [
+                    {
+                        'subject': e.subject,
+                        'sender': e.sender_name or e.sender,
+                        'has_ai_summary': bool(e.ai_summary),
+                        'ai_summary_length': len(e.ai_summary) if e.ai_summary else 0,
+                        'date': e.email_date.isoformat() if e.email_date else None
+                    } for e in emails[:5]
+                ],
+                'sample_people': [
+                    {
+                        'name': p.name,
+                        'email': p.email_address,
+                        'company': p.company,
+                        'total_emails': p.total_emails
+                    } for p in real_people[:5]
+                ],
+                'sample_tasks': [
+                    {
+                        'description': t.description,
+                        'priority': t.priority,
+                        'status': t.status,
+                        'source': t.source_email_subject
+                    } for t in real_tasks[:5]
+                ]
+            }
+            
+            return jsonify(debug_info)
             
         except Exception as e:
-            logger.error(f"Trigger email sync API error: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': str(e),
-                'stage': 'processing'
-            }), 500
+            logger.error(f"Debug data API error: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/download-knowledge-base', methods=['GET'])
+    def api_download_knowledge_base():
+        """API endpoint to download complete knowledge base as JSON - instant export of chat-ready data"""
+        user = get_current_user()
+        if not user:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        try:
+            db_user = get_db_manager().get_user_by_email(user['email'])
+            if not db_user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Collect all user data (this is the same data used for chat queries - should be instant)
+            emails = get_db_manager().get_user_emails(db_user.id, limit=1000)
+            people = get_db_manager().get_user_people(db_user.id, limit=500)
+            tasks = get_db_manager().get_user_tasks(db_user.id, limit=500)
+            projects = get_db_manager().get_user_projects(db_user.id, limit=200)
+            topics = get_db_manager().get_user_topics(db_user.id, limit=100)
+            
+            # Get strategic insights (same data used in chat)
+            strategic_insights = get_strategic_business_insights(user['email'])
+            
+            # Get comprehensive business knowledge (same data used in chat)
+            business_knowledge = email_intelligence.get_business_knowledge_summary(user['email'])
+            chat_knowledge = email_intelligence.get_chat_knowledge_summary(user['email'])
+            
+            # Format export data - using the same structure as chat queries
+            knowledge_base_export = {
+                'export_metadata': {
+                    'user_email': user['email'],
+                    'export_date': datetime.now().isoformat(),
+                    'export_version': '1.0',
+                    'data_source': 'chat_ready_knowledge_base',
+                    'total_records': {
+                        'emails': len(emails),
+                        'people': len(people),
+                        'tasks': len(tasks),
+                        'projects': len(projects),
+                        'topics': len(topics)
+                    }
+                },
+                'strategic_insights': strategic_insights,
+                'business_intelligence': business_knowledge.get('business_knowledge', {}) if business_knowledge.get('success') else {},
+                'chat_knowledge': chat_knowledge.get('knowledge_base', {}) if chat_knowledge.get('success') else {},
+                'emails': [
+                    {
+                        'id': e.id,
+                        'gmail_id': e.gmail_id,
+                        'subject': e.subject,
+                        'sender': e.sender,
+                        'sender_name': e.sender_name,
+                        'recipients': e.recipients,
+                        'email_date': e.email_date.isoformat() if e.email_date else None,
+                        'ai_summary': e.ai_summary,
+                        'ai_category': e.ai_category,
+                        'key_insights': e.key_insights,
+                        'topics': e.topics,
+                        'action_required': e.action_required,
+                        'follow_up_required': e.follow_up_required,
+                        'sentiment_score': e.sentiment_score,
+                        'urgency_score': e.urgency_score,
+                        'processed_at': e.processed_at.isoformat() if e.processed_at else None
+                    } for e in emails
+                ],
+                'people': [
+                    {
+                        'id': p.id,
+                        'name': p.name,
+                        'email_address': p.email_address,
+                        'title': p.title,
+                        'company': p.company,
+                        'relationship_type': p.relationship_type,
+                        'notes': p.notes,
+                        'importance_level': p.importance_level,
+                        'total_emails': p.total_emails,
+                        'last_interaction': p.last_interaction.isoformat() if p.last_interaction else None,
+                        'first_mentioned': p.first_mentioned.isoformat() if p.first_mentioned else None,
+                        'created_at': p.created_at.isoformat() if hasattr(p, 'created_at') and p.created_at else None,
+                        'communication_frequency': p.communication_frequency,
+                        'skills': p.skills,
+                        'interests': p.interests,
+                        'key_topics': p.key_topics
+                    } for p in people
+                ],
+                'tasks': [
+                    {
+                        'id': t.id,
+                        'description': t.description,
+                        'assignee': t.assignee,
+                        'priority': t.priority,
+                        'status': t.status,
+                        'category': t.category,
+                        'due_date': t.due_date.isoformat() if t.due_date else None,
+                        'due_date_text': t.due_date_text,
+                        'confidence': t.confidence,
+                        'source_text': t.source_text,
+                        'context': getattr(t, 'context', None),
+                        'notes': getattr(t, 'notes', None),
+                        'created_at': t.created_at.isoformat() if t.created_at else None,
+                        'completed_at': t.completed_at.isoformat() if t.completed_at else None,
+                        'source_email_subject': getattr(t, 'source_email_subject', None)
+                    } for t in tasks
+                ],
+                'projects': [
+                    {
+                        'id': p.id,
+                        'name': p.name,
+                        'slug': p.slug,
+                        'description': p.description,
+                        'status': p.status,
+                        'priority': p.priority,
+                        'category': p.category,
+                        'start_date': p.start_date.isoformat() if p.start_date else None,
+                        'end_date': p.end_date.isoformat() if p.end_date else None,
+                        'progress': getattr(p, 'progress', None),
+                        'key_topics': p.key_topics,
+                        'stakeholders': p.stakeholders,
+                        'created_at': p.created_at.isoformat() if p.created_at else None
+                    } for p in projects
+                ],
+                'topics': [
+                    {
+                        'id': t.id,
+                        'name': t.name,
+                        'slug': t.slug,
+                        'description': t.description,
+                        'is_official': t.is_official,
+                        'email_count': t.email_count,
+                        'confidence_score': t.confidence_score,
+                        'strength': getattr(t, 'strength', None),
+                        'keywords': json.loads(t.keywords) if t.keywords else [],
+                        'created_at': t.created_at.isoformat() if t.created_at else None,
+                        'last_used': t.last_used.isoformat() if t.last_used else None
+                    } for t in topics
+                ]
+            }
+            
+            # Create downloadable JSON response
+            response = make_response(jsonify(knowledge_base_export))
+            
+            # Set headers for file download
+            filename = f"knowledge_base_{user['email'].replace('@', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response.headers['Content-Type'] = 'application/json'
+            response.headers['Content-Length'] = len(response.get_data())
+            
+            logger.info(f"Knowledge base download completed for {user['email']}: {len(emails)} emails, {len(people)} people, {len(tasks)} tasks")
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Knowledge base download error: {str(e)}")
+            return jsonify({'error': f'Download failed: {str(e)}'}), 500
 
     # Error handlers
     @app.errorhandler(404)
@@ -1954,302 +2033,6 @@ Remember: This knowledge base represents their actual business communications an
             response.headers['X-Content-Type-Options'] = 'nosniff'
         return response
     
-    # Add these new API endpoints after the existing API routes, around line 1800
-
-    @app.route('/api/build-trusted-contacts', methods=['POST'])
-    def api_build_trusted_contacts():
-        """Build trusted contact database from sent emails"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        try:
-            from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
-            
-            # Get parameters
-            data = request.get_json() or {}
-            days_back = data.get('days_back', 365)
-            
-            # Build trusted contact database
-            result = smart_contact_strategy.build_trusted_contact_database(
-                user_email=user['email'],
-                days_back=days_back
-            )
-            
-            return jsonify(result)
-            
-        except Exception as e:
-            logger.error(f"Error building trusted contacts: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/classify-email', methods=['POST'])
-    def api_classify_email():
-        """Classify an email using Smart Contact Strategy"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        try:
-            from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
-            
-            # Get email data
-            email_data = request.get_json()
-            if not email_data:
-                return jsonify({'error': 'No email data provided'}), 400
-            
-            # Classify email
-            decision = smart_contact_strategy.classify_incoming_email(
-                user_email=user['email'],
-                email_data=email_data
-            )
-            
-            return jsonify({
-                'action': decision.action,
-                'confidence': decision.confidence,
-                'reason': decision.reason,
-                'priority': decision.priority,
-                'estimated_tokens': decision.estimated_tokens
-            })
-            
-        except Exception as e:
-            logger.error(f"Error classifying email: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/engagement-metrics', methods=['GET'])
-    def api_engagement_metrics():
-        """Get user engagement pattern analysis"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        try:
-            from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
-            
-            # Get engagement insights
-            insights = smart_contact_strategy.get_engagement_insights(user['email'])
-            
-            return jsonify(insights)
-            
-        except Exception as e:
-            logger.error(f"Error getting engagement metrics: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/processing-efficiency', methods=['POST'])
-    def api_processing_efficiency():
-        """Calculate processing efficiency for a set of emails"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        try:
-            from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
-            
-            # Get emails data
-            data = request.get_json()
-            emails = data.get('emails', [])
-            
-            if not emails:
-                return jsonify({'error': 'No emails provided'}), 400
-            
-            # Calculate efficiency
-            efficiency = smart_contact_strategy.calculate_processing_efficiency(
-                user_email=user['email'],
-                emails=emails
-            )
-            
-            return jsonify(efficiency)
-            
-        except Exception as e:
-            logger.error(f"Error calculating processing efficiency: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/trusted-contacts', methods=['GET'])
-    def api_get_trusted_contacts():
-        """Get trusted contacts for a user"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        try:
-            # Get trusted contacts from database
-            trusted_contacts = get_db_manager().get_trusted_contacts(user['id'])
-            
-            return jsonify({
-                'success': True,
-                'trusted_contacts': [contact.to_dict() for contact in trusted_contacts],
-                'count': len(trusted_contacts)
-            })
-            
-        except Exception as e:
-            logger.error(f"Error getting trusted contacts: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/contact-contexts', methods=['GET'])
-    def api_get_contact_contexts():
-        """Get contact contexts for rich display"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        try:
-            person_id = request.args.get('person_id', type=int)
-            context_type = request.args.get('context_type')
-            
-            # Get contact contexts from database
-            contexts = get_db_manager().get_contact_contexts(
-                user_id=user['id'],
-                person_id=person_id,
-                context_type=context_type
-            )
-            
-            return jsonify({
-                'success': True,
-                'contexts': [context.to_dict() for context in contexts],
-                'count': len(contexts)
-            })
-            
-        except Exception as e:
-            logger.error(f"Error getting contact contexts: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-    
-    @app.route('/api/task-contexts', methods=['GET'])
-    def api_get_task_contexts():
-        """Get task contexts for rich display"""
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        try:
-            task_id = request.args.get('task_id', type=int)
-            context_type = request.args.get('context_type')
-            
-            # Get task contexts from database
-            contexts = get_db_manager().get_task_contexts(
-                user_id=user['id'],
-                task_id=task_id,
-                context_type=context_type
-            )
-            
-            return jsonify({
-                'success': True,
-                'contexts': [context.to_dict() for context in contexts],
-                'count': len(contexts)
-            })
-            
-        except Exception as e:
-            logger.error(f"Error getting task contexts: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-
-    @app.route('/api/strategic-intelligence', methods=['POST'])
-    def api_generate_strategic_intelligence():
-        """
-        NEW: Strategic Intelligence Generation API
-        
-        Replaces email-centric processing with unified strategic intelligence.
-        Transforms all communications into strategic business contexts, insights, and recommendations.
-        """
-        user = get_current_user()
-        if not user:
-            return jsonify({'error': 'Not authenticated'}), 401
-        
-        if not claude_client:
-            return jsonify({'error': 'Claude integration not configured'}), 500
-        
-        try:
-            from chief_of_staff_ai.strategic_intelligence import StrategyEngine
-            
-            user_email = user['email']
-            
-            # Initialize Strategic Intelligence Engine
-            strategy_engine = StrategyEngine(claude_client, get_db_manager())
-            
-            # Generate comprehensive strategic intelligence
-            logger.info(f"Generating strategic intelligence for {user_email}")
-            intelligence_result = strategy_engine.generate_strategic_intelligence(user_email)
-            
-            if not intelligence_result.get('success'):
-                return jsonify({
-                    'success': False,
-                    'error': intelligence_result.get('error', 'Strategic intelligence generation failed')
-                }), 500
-            
-            # Format response for frontend
-            response_data = {
-                'success': True,
-                'message': 'Strategic intelligence generated successfully',
-                'intelligence_brief': intelligence_result['intelligence_brief'],
-                'business_contexts': [
-                    {
-                        'id': ctx.context_id,
-                        'name': ctx.name,
-                        'description': ctx.description,
-                        'type': ctx.context_type,
-                        'status': ctx.current_status,
-                        'priority_score': ctx.priority_score,
-                        'impact_assessment': ctx.impact_assessment,
-                        'key_people': ctx.key_people,
-                        'confidence_level': ctx.confidence_level
-                    } for ctx in intelligence_result['business_contexts']
-                ],
-                'strategic_insights': [
-                    {
-                        'id': insight.insight_id,
-                        'title': insight.title,
-                        'type': insight.insight_type,
-                        'description': insight.description,
-                        'business_implications': insight.business_implications,
-                        'recommended_response': insight.recommended_response,
-                        'confidence_level': insight.confidence_level
-                    } for insight in intelligence_result['strategic_insights']
-                ],
-                'recommendations': [
-                    {
-                        'id': rec.recommendation_id,
-                        'title': rec.title,
-                        'description': rec.description,
-                        'rationale': rec.rationale,
-                        'impact_analysis': rec.impact_analysis,
-                        'urgency_level': rec.urgency_level,
-                        'estimated_impact': rec.estimated_impact,
-                        'time_sensitivity': rec.time_sensitivity,
-                        'suggested_actions': rec.suggested_actions,
-                        'confidence_score': rec.confidence_score
-                    } for rec in intelligence_result['recommendations']
-                ],
-                'generated_at': intelligence_result['generated_at'],
-                'processing_type': 'strategic_intelligence'
-            }
-            
-            logger.info(f"Strategic intelligence generated: {len(intelligence_result['business_contexts'])} contexts, "
-                       f"{len(intelligence_result['strategic_insights'])} insights, "
-                       f"{len(intelligence_result['recommendations'])} recommendations")
-            
-            return jsonify(response_data)
-            
-        except Exception as e:
-            logger.error(f"Strategic intelligence API error: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': f'Strategic intelligence generation failed: {str(e)}',
-                'processing_type': 'strategic_intelligence'
-            }), 500
-
-    @app.route('/strategic-intelligence')
-    def strategic_intelligence_page():
-        """Strategic Intelligence page for unified business intelligence"""
-        user = get_current_user()
-        if not user:
-            return redirect('/login')
-        return render_template('strategic_intelligence.html')
-    
-    @app.route('/settings')
-    def settings_page():
-        """Settings page for configuring email sync and other preferences"""
-        user = get_current_user()
-        if not user:
-            return redirect('/login')
-        return render_template('settings.html')
-
     return app
 
 # Create the Flask application

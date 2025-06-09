@@ -1325,40 +1325,38 @@ Additional Context:
         return False
 
     def _is_non_human_contact(self, email_address: str) -> bool:
-        """Determine if an email address belongs to a non-human sender"""
+        """Determine if an email address belongs to a non-human sender - BALANCED VERSION"""
         if not email_address:
             return True
             
         email_lower = email_address.lower()
         
-        # Enhanced non-human patterns including newsletter services
-        enhanced_non_human_patterns = [
-            'noreply', 'no-reply', 'donotreply', 'do-not-reply', 'support@',
-            'admin@', 'info@', 'contact@', 'help@', 'service@', 'team@',
-            'hello@', 'hi@', 'notification', 'automated', 'system@',
-            'robot@', 'bot@', 'mailer@', 'daemon@', 'postmaster@',
-            'newsletter@', 'news@', 'updates@', 'digest@', 'marketing@',
-            'promotions@', 'offers@', 'sales@', 'campaigns@', 'mail@',
-            'substack', 'beehiiv', 'mailchimp', 'constantcontact',
-            'campaign-archive', 'sendgrid', 'mailgun', 'mandrill'
+        # FOCUSED: Only filter obvious automation, preserve business contacts
+        definite_non_human_patterns = [
+            'noreply', 'no-reply', 'donotreply', 'do-not-reply', 
+            'mailer-daemon', 'postmaster@', 'daemon@', 'bounce@',
+            'robot@', 'bot@', 'automated@', 'system@notification',
+            'newsletter@', 'digest@', 'updates@notifications'
         ]
         
-        # Check against enhanced non-human patterns
-        for pattern in enhanced_non_human_patterns:
+        # Check against definite non-human patterns only
+        for pattern in definite_non_human_patterns:
             if pattern in email_lower:
                 return True
         
-        # Check for system domains
-        system_domains = [
-            'googleapis.com', 'github.com', 'linkedin.com', 'facebook.com',
-            'twitter.com', 'amazon.com', 'microsoft.com', 'google.com',
-            'apple.com', 'stripe.com', 'paypal.com', 'slack.com',
-            'substack.com', 'beehiiv.com', 'mailchimp.com', 'medium.com'
+        # SPECIFIC: Only filter major newsletter/automation services
+        automation_domains = [
+            'substack.com', 'beehiiv.com', 'mailchimp.com', 'constantcontact.com',
+            'campaign-archive.com', 'sendgrid.net', 'mailgun.org', 'mandrill.com'
         ]
         
-        for domain in system_domains:
+        for domain in automation_domains:
             if domain in email_lower:
                 return True
+        
+        # PRESERVE: Keep business contacts that might use standard business email patterns
+        # Removed: 'admin@', 'info@', 'contact@', 'help@', 'service@', 'team@', 'hello@', 'hi@'
+        # Removed: 'linkedin.com', 'facebook.com', etc. - people use these for business
                 
         return False
 
