@@ -1,0 +1,1103 @@
+# Predictive Analytics Engine - Future Intelligence
+# This transforms your system from reactive to genuinely predictive
+
+import logging
+import numpy as np
+from typing import Dict, List, Optional, Tuple, Any
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+import json
+from collections import defaultdict, deque
+import threading
+import time
+
+from processors.unified_entity_engine import entity_engine, EntityContext
+from models.enhanced_models import Person, Topic, Task, CalendarEvent, Email, IntelligenceInsight
+from models.database import get_db_manager
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class PredictionResult:
+    prediction_type: str
+    confidence: float
+    predicted_value: Any
+    reasoning: str
+    time_horizon: str  # short_term, medium_term, long_term
+    data_points_used: int
+    created_at: datetime
+
+@dataclass
+class TrendPattern:
+    entity_type: str
+    entity_id: int
+    pattern_type: str  # growth, decline, cyclical, volatile
+    strength: float
+    confidence: float
+    data_points: List[Tuple[datetime, float]]
+    prediction: Optional[float] = None
+
+class PredictiveAnalytics:
+    """
+    Advanced predictive analytics engine that learns from patterns and predicts future states.
+    This is what makes your system truly intelligent - anticipating rather than just reacting.
+    """
+    
+    def __init__(self):
+        self.pattern_cache = {}
+        self.prediction_cache = {}
+        self.learning_models = {}
+        self.pattern_detection_thread = None
+        self.running = False
+        
+    def start(self):
+        """Start the predictive analytics engine"""
+        self.running = True
+        self.pattern_detection_thread = threading.Thread(
+            target=self._continuous_pattern_detection, 
+            name="PredictiveAnalytics"
+        )
+        self.pattern_detection_thread.daemon = True
+        self.pattern_detection_thread.start()
+        logger.info("Started predictive analytics engine")
+    
+    def stop(self):
+        """Stop the predictive analytics engine"""
+        self.running = False
+        if self.pattern_detection_thread:
+            self.pattern_detection_thread.join(timeout=5)
+        logger.info("Stopped predictive analytics engine")
+    
+    # =====================================================================
+    # RELATIONSHIP PREDICTION METHODS
+    # =====================================================================
+    
+    def predict_relationship_opportunities(self, user_id: int) -> List[PredictionResult]:
+        """Predict relationship opportunities and networking needs"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Get all people and their interaction patterns
+                people = session.query(Person).filter(Person.user_id == user_id).all()
+                
+                for person in people:
+                    # Predict relationship decay
+                    decay_prediction = self._predict_relationship_decay(person)
+                    if decay_prediction:
+                        predictions.append(decay_prediction)
+                    
+                    # Predict optimal contact timing
+                    contact_prediction = self._predict_optimal_contact_time(person)
+                    if contact_prediction:
+                        predictions.append(contact_prediction)
+                
+                # Predict networking opportunities
+                network_predictions = self._predict_networking_opportunities(people)
+                predictions.extend(network_predictions)
+                
+        except Exception as e:
+            logger.error(f"Failed to predict relationship opportunities: {str(e)}")
+        
+        return predictions
+    
+    def _predict_relationship_decay(self, person: Person) -> Optional[PredictionResult]:
+        """Predict if a relationship is at risk of decay"""
+        if not person.last_contact or person.total_interactions < 3:
+            return None
+        
+        days_since_contact = (datetime.utcnow() - person.last_contact).days
+        importance = person.importance_level or 0.5
+        
+        # Calculate decay risk based on importance and recency
+        expected_contact_frequency = self._calculate_expected_frequency(person)
+        decay_risk = min(1.0, days_since_contact / expected_contact_frequency)
+        
+        if decay_risk > 0.7 and importance > 0.6:
+            return PredictionResult(
+                prediction_type='relationship_decay_risk',
+                confidence=decay_risk,
+                predicted_value=f"High risk of relationship decay with {person.name}",
+                reasoning=f"No contact for {days_since_contact} days, expected frequency is {expected_contact_frequency} days",
+                time_horizon='short_term',
+                data_points_used=person.total_interactions,
+                created_at=datetime.utcnow()
+            )
+        
+        return None
+    
+    def _predict_optimal_contact_time(self, person: Person) -> Optional[PredictionResult]:
+        """Predict optimal time to contact someone"""
+        if not person.last_contact or person.total_interactions < 2:
+            return None
+        
+        # Analyze historical contact patterns
+        contact_pattern = self._analyze_contact_pattern(person)
+        
+        if contact_pattern and contact_pattern['confidence'] > 0.6:
+            next_optimal = contact_pattern['next_optimal_date']
+            days_until = (next_optimal - datetime.utcnow()).days
+            
+            if 0 <= days_until <= 7:  # Within next week
+                return PredictionResult(
+                    prediction_type='optimal_contact_timing',
+                    confidence=contact_pattern['confidence'],
+                    predicted_value=next_optimal,
+                    reasoning=f"Based on historical pattern, optimal contact window approaching",
+                    time_horizon='short_term',
+                    data_points_used=person.total_interactions,
+                    created_at=datetime.utcnow()
+                )
+        
+        return None
+    
+    def _predict_networking_opportunities(self, people: List[Person]) -> List[PredictionResult]:
+        """Predict networking opportunities based on relationship graph"""
+        predictions = []
+        
+        try:
+            # Build relationship graph
+            relationship_graph = self._build_relationship_graph(people)
+            
+            # Find potential introductions
+            for person_a in people:
+                if (person_a.importance_level or 0) > 0.7:
+                    # Find people who might benefit from meeting person_a
+                    potential_matches = self._find_introduction_opportunities(
+                        person_a, people, relationship_graph
+                    )
+                    
+                    for match_person, confidence in potential_matches:
+                        if confidence > 0.6:
+                            predictions.append(PredictionResult(
+                                prediction_type='networking_opportunity',
+                                confidence=confidence,
+                                predicted_value=f"Introduction opportunity: {person_a.name} ↔ {match_person.name}",
+                                reasoning=f"Complementary professional contexts and mutual benefit potential",
+                                time_horizon='medium_term',
+                                data_points_used=len(people),
+                                created_at=datetime.utcnow()
+                            ))
+            
+        except Exception as e:
+            logger.error(f"Failed to predict networking opportunities: {str(e)}")
+        
+        return predictions
+    
+    # =====================================================================
+    # TOPIC MOMENTUM PREDICTION
+    # =====================================================================
+    
+    def predict_topic_trends(self, user_id: int) -> List[PredictionResult]:
+        """Predict which topics will become important"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Get topics with historical data
+                topics = session.query(Topic).filter(
+                    Topic.user_id == user_id,
+                    Topic.total_mentions > 1
+                ).all()
+                
+                for topic in topics:
+                    # Analyze topic momentum
+                    momentum_prediction = self._predict_topic_momentum(topic, session)
+                    if momentum_prediction:
+                        predictions.append(momentum_prediction)
+                
+                # Predict emerging topics
+                emerging_predictions = self._predict_emerging_topics(user_id, session)
+                predictions.extend(emerging_predictions)
+                
+        except Exception as e:
+            logger.error(f"Failed to predict topic trends: {str(e)}")
+        
+        return predictions
+    
+    def _predict_topic_momentum(self, topic: Topic, session) -> Optional[PredictionResult]:
+        """Predict if a topic will gain or lose momentum"""
+        # Get historical mention pattern
+        mention_history = self._get_topic_mention_history(topic, session)
+        
+        if len(mention_history) < 3:
+            return None
+        
+        # Analyze trend
+        trend_analysis = self._analyze_time_series_trend(mention_history)
+        
+        if trend_analysis['confidence'] > 0.6:
+            prediction_type = 'topic_momentum_increase' if trend_analysis['direction'] > 0 else 'topic_momentum_decrease'
+            
+            return PredictionResult(
+                prediction_type=prediction_type,
+                confidence=trend_analysis['confidence'],
+                predicted_value=trend_analysis['predicted_next_value'],
+                reasoning=f"Topic showing {trend_analysis['direction_text']} trend over {len(mention_history)} data points",
+                time_horizon='medium_term',
+                data_points_used=len(mention_history),
+                created_at=datetime.utcnow()
+            )
+        
+        return None
+    
+    def _predict_emerging_topics(self, user_id: int, session) -> List[PredictionResult]:
+        """Predict topics that will emerge based on early signals"""
+        predictions = []
+        
+        try:
+            # Look at recent emails for early topic signals
+            recent_emails = session.query(Email).filter(
+                Email.user_id == user_id,
+                Email.email_date > datetime.utcnow() - timedelta(days=7)
+            ).all()
+            
+            # Analyze keywords and patterns in recent communications
+            keyword_patterns = self._analyze_emerging_keyword_patterns(recent_emails)
+            
+            for pattern in keyword_patterns:
+                if pattern['emergence_score'] > 0.7:
+                    predictions.append(PredictionResult(
+                        prediction_type='emerging_topic',
+                        confidence=pattern['emergence_score'],
+                        predicted_value=pattern['keywords'],
+                        reasoning=f"Early signals detected in recent communications",
+                        time_horizon='short_term',
+                        data_points_used=len(recent_emails),
+                        created_at=datetime.utcnow()
+                    ))
+            
+        except Exception as e:
+            logger.error(f"Failed to predict emerging topics: {str(e)}")
+        
+        return predictions
+    
+    # =====================================================================
+    # BUSINESS OPPORTUNITY PREDICTION
+    # =====================================================================
+    
+    def predict_business_opportunities(self, user_id: int) -> List[PredictionResult]:
+        """Predict business opportunities based on communication patterns"""
+        predictions = []
+        
+        try:
+            # Predict meeting outcomes
+            meeting_predictions = self._predict_meeting_outcomes(user_id)
+            predictions.extend(meeting_predictions)
+            
+            # Predict project opportunities
+            project_predictions = self._predict_project_opportunities(user_id)
+            predictions.extend(project_predictions)
+            
+            # Predict decision timing
+            decision_predictions = self._predict_decision_timing(user_id)
+            predictions.extend(decision_predictions)
+            
+        except Exception as e:
+            logger.error(f"Failed to predict business opportunities: {str(e)}")
+        
+        return predictions
+    
+    def _predict_meeting_outcomes(self, user_id: int) -> List[PredictionResult]:
+        """Predict likely outcomes of upcoming meetings"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Get upcoming meetings
+                upcoming_meetings = session.query(CalendarEvent).filter(
+                    CalendarEvent.user_id == user_id,
+                    CalendarEvent.start_time > datetime.utcnow(),
+                    CalendarEvent.start_time < datetime.utcnow() + timedelta(days=7)
+                ).all()
+                
+                for meeting in upcoming_meetings:
+                    outcome_prediction = self._analyze_meeting_success_probability(meeting, session)
+                    if outcome_prediction:
+                        predictions.append(outcome_prediction)
+            
+        except Exception as e:
+            logger.error(f"Failed to predict meeting outcomes: {str(e)}")
+        
+        return predictions
+    
+    def _predict_project_opportunities(self, user_id: int) -> List[PredictionResult]:
+        """Predict potential project opportunities from communication patterns"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Analyze recent communications for project signals
+                recent_emails = session.query(Email).filter(
+                    Email.user_id == user_id,
+                    Email.email_date > datetime.utcnow() - timedelta(days=14),
+                    Email.strategic_importance > 0.6
+                ).all()
+                
+                project_signals = self._detect_project_formation_signals(recent_emails)
+                
+                for signal in project_signals:
+                    if signal['probability'] > 0.6:
+                        predictions.append(PredictionResult(
+                            prediction_type='project_opportunity',
+                            confidence=signal['probability'],
+                            predicted_value=signal['description'],
+                            reasoning=signal['reasoning'],
+                            time_horizon='medium_term',
+                            data_points_used=len(recent_emails),
+                            created_at=datetime.utcnow()
+                        ))
+            
+        except Exception as e:
+            logger.error(f"Failed to predict project opportunities: {str(e)}")
+        
+        return predictions
+    
+    # =====================================================================
+    # PATTERN DETECTION AND ANALYSIS
+    # =====================================================================
+    
+    def _continuous_pattern_detection(self):
+        """Continuously detect patterns in user data"""
+        while self.running:
+            try:
+                # Get active users for pattern analysis
+                active_users = self._get_active_users_for_analysis()
+                
+                for user_id in active_users:
+                    # Detect new patterns
+                    patterns = self._detect_user_patterns(user_id)
+                    
+                    # Update pattern cache
+                    self.pattern_cache[user_id] = patterns
+                    
+                    # Generate predictions based on patterns
+                    predictions = self._generate_pattern_based_predictions(user_id, patterns)
+                    
+                    # Store high-confidence predictions
+                    self._store_predictions(user_id, predictions)
+                
+                # Sleep for analysis interval (every 2 hours)
+                time.sleep(7200)
+                
+            except Exception as e:
+                logger.error(f"Error in continuous pattern detection: {str(e)}")
+                time.sleep(300)  # Sleep 5 minutes on error
+    
+    def _detect_user_patterns(self, user_id: int) -> Dict[str, List[TrendPattern]]:
+        """Detect patterns in user's business intelligence data"""
+        patterns = {
+            'communication_patterns': [],
+            'topic_patterns': [],
+            'relationship_patterns': [],
+            'temporal_patterns': []
+        }
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Detect communication patterns
+                comm_patterns = self._detect_communication_patterns(user_id, session)
+                patterns['communication_patterns'] = comm_patterns
+                
+                # Detect topic evolution patterns
+                topic_patterns = self._detect_topic_evolution_patterns(user_id, session)
+                patterns['topic_patterns'] = topic_patterns
+                
+                # Detect relationship patterns
+                rel_patterns = self._detect_relationship_evolution_patterns(user_id, session)
+                patterns['relationship_patterns'] = rel_patterns
+                
+                # Detect temporal patterns (time-based behaviors)
+                temporal_patterns = self._detect_temporal_patterns(user_id, session)
+                patterns['temporal_patterns'] = temporal_patterns
+            
+        except Exception as e:
+            logger.error(f"Failed to detect user patterns: {str(e)}")
+        
+        return patterns
+    
+    # =====================================================================
+    # ADVANCED ANALYTICS HELPER METHODS
+    # =====================================================================
+    
+    def _analyze_time_series_trend(self, data_points: List[Tuple[datetime, float]]) -> Dict:
+        """Analyze trend in time series data"""
+        if len(data_points) < 3:
+            return {'confidence': 0, 'direction': 0}
+        
+        # Sort by time
+        sorted_points = sorted(data_points, key=lambda x: x[0])
+        
+        # Extract values and calculate simple linear regression
+        values = [point[1] for point in sorted_points]
+        n = len(values)
+        x = list(range(n))
+        
+        # Calculate slope using least squares
+        x_mean = sum(x) / n
+        y_mean = sum(values) / n
+        
+        numerator = sum((x[i] - x_mean) * (values[i] - y_mean) for i in range(n))
+        denominator = sum((x[i] - x_mean) ** 2 for i in range(n))
+        
+        if denominator == 0:
+            return {'confidence': 0, 'direction': 0}
+        
+        slope = numerator / denominator
+        
+        # Calculate R-squared for confidence
+        y_pred = [slope * (i - x_mean) + y_mean for i in x]
+        ss_res = sum((values[i] - y_pred[i]) ** 2 for i in range(n))
+        ss_tot = sum((values[i] - y_mean) ** 2 for i in range(n))
+        
+        r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+        
+        # Predict next value
+        next_value = slope * n + y_mean
+        
+        return {
+            'confidence': max(0, min(1, r_squared)),
+            'direction': 1 if slope > 0 else -1 if slope < 0 else 0,
+            'direction_text': 'increasing' if slope > 0 else 'decreasing' if slope < 0 else 'stable',
+            'slope': slope,
+            'predicted_next_value': max(0, next_value)
+        }
+    
+    def _calculate_expected_frequency(self, person: Person) -> int:
+        """Calculate expected contact frequency for a person"""
+        base_frequency = 30  # Default 30 days
+        
+        # Adjust based on importance
+        importance_factor = (person.importance_level or 0.5)
+        frequency = base_frequency * (1 - importance_factor * 0.7)
+        
+        # Adjust based on relationship type
+        relationship_adjustments = {
+            'colleague': 0.7,
+            'client': 0.5,
+            'partner': 0.6,
+            'manager': 0.4,
+            'friend': 0.8
+        }
+        
+        rel_type = person.relationship_type or 'contact'
+        adjustment = relationship_adjustments.get(rel_type.lower(), 1.0)
+        
+        return max(7, int(frequency * adjustment))
+    
+    def _analyze_contact_pattern(self, person: Person) -> Optional[Dict]:
+        """Analyze historical contact pattern for a person"""
+        # This would analyze email timestamps to detect patterns
+        # For now, return a simplified pattern based on importance
+        
+        if not person.last_contact or person.total_interactions < 3:
+            return None
+        
+        expected_freq = self._calculate_expected_frequency(person)
+        days_since = (datetime.utcnow() - person.last_contact).days
+        
+        # Simple pattern: next optimal contact based on expected frequency
+        next_optimal = person.last_contact + timedelta(days=expected_freq)
+        confidence = min(1.0, person.total_interactions / 10)
+        
+        return {
+            'next_optimal_date': next_optimal,
+            'confidence': confidence,
+            'pattern_type': 'regular'
+        }
+    
+    def _build_relationship_graph(self, people: List[Person]) -> Dict:
+        """Build a relationship graph for networking analysis"""
+        # Simplified relationship graph based on shared topics and companies
+        graph = defaultdict(list)
+        
+        for i, person_a in enumerate(people):
+            for j, person_b in enumerate(people[i+1:], i+1):
+                # Calculate relationship strength
+                strength = self._calculate_relationship_strength(person_a, person_b)
+                if strength > 0.3:
+                    graph[person_a.id].append((person_b.id, strength))
+                    graph[person_b.id].append((person_a.id, strength))
+        
+        return dict(graph)
+    
+    def _calculate_relationship_strength(self, person_a: Person, person_b: Person) -> float:
+        """Calculate relationship strength between two people"""
+        strength = 0.0
+        
+        # Same company
+        if person_a.company and person_b.company and person_a.company == person_b.company:
+            strength += 0.4
+        
+        # Similar titles
+        if person_a.title and person_b.title:
+            # Simple word overlap
+            title_a_words = set(person_a.title.lower().split())
+            title_b_words = set(person_b.title.lower().split())
+            overlap = len(title_a_words & title_b_words)
+            if overlap > 0:
+                strength += 0.2
+        
+        # Shared topics (would need to implement topic relationships)
+        # For now, use importance levels as proxy
+        importance_similarity = 1 - abs((person_a.importance_level or 0.5) - (person_b.importance_level or 0.5))
+        strength += importance_similarity * 0.2
+        
+        return min(1.0, strength)
+    
+    def _calculate_introduction_benefit(self, person_a: Person, person_b: Person) -> float:
+        """Calculate potential benefit of introducing two people"""
+        benefit = 0.0
+        
+        # High importance people are good to introduce
+        avg_importance = ((person_a.importance_level or 0.5) + (person_b.importance_level or 0.5)) / 2
+        benefit += avg_importance * 0.4
+        
+        # Complementary companies/industries
+        if person_a.company and person_b.company and person_a.company != person_b.company:
+            benefit += 0.3
+        
+        # Different but relevant titles
+        if person_a.title and person_b.title:
+            # Simple heuristic: different titles might be complementary
+            if person_a.title != person_b.title:
+                benefit += 0.2
+        
+        # Both are active communicators
+        if (person_a.total_interactions or 0) > 5 and (person_b.total_interactions or 0) > 5:
+            benefit += 0.1
+        
+        return min(1.0, benefit)
+    
+    def _get_topic_mention_history(self, topic: Topic, session) -> List[Tuple[datetime, int]]:
+        """Get historical mention data for a topic"""
+        # This would analyze emails over time to track topic mentions
+        # For now, create a simplified history based on available data
+        
+        history = []
+        
+        # Get emails related to this topic (simplified)
+        related_emails = session.query(Email).filter(
+            Email.user_id == topic.user_id,
+            Email.primary_topic_id == topic.id
+        ).order_by(Email.email_date).all()
+        
+        # Group by week and count mentions
+        weekly_counts = defaultdict(int)
+        for email in related_emails:
+            if email.email_date:
+                week_start = email.email_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                week_start = week_start - timedelta(days=week_start.weekday())
+                weekly_counts[week_start] += 1
+        
+        # Convert to time series
+        for week, count in sorted(weekly_counts.items()):
+            history.append((week, count))
+        
+        return history
+    
+    def _analyze_emerging_keyword_patterns(self, recent_emails: List[Email]) -> List[Dict]:
+        """Analyze recent emails for emerging keyword patterns"""
+        patterns = []
+        
+        # Extract keywords from recent emails
+        keyword_frequency = defaultdict(int)
+        email_count = len(recent_emails)
+        
+        for email in recent_emails:
+            if email.ai_summary:
+                # Simple keyword extraction (would be more sophisticated in production)
+                words = email.ai_summary.lower().split()
+                # Filter for meaningful business terms
+                business_words = [
+                    word for word in words 
+                    if len(word) > 4 and word.isalpha() and word not in [
+                        'email', 'meeting', 'discussion', 'conversation', 'message'
+                    ]
+                ]
+                
+                for word in business_words[:5]:  # Top 5 words per email
+                    keyword_frequency[word] += 1
+        
+        # Find keywords appearing in multiple emails (emerging patterns)
+        for keyword, frequency in keyword_frequency.items():
+            if frequency >= max(2, email_count * 0.3):  # At least 30% of emails or 2+ mentions
+                emergence_score = min(1.0, frequency / email_count)
+                
+                patterns.append({
+                    'keywords': [keyword],
+                    'emergence_score': emergence_score,
+                    'frequency': frequency,
+                    'email_coverage': frequency / email_count
+                })
+        
+        return sorted(patterns, key=lambda x: x['emergence_score'], reverse=True)[:5]
+    
+    def _analyze_meeting_success_probability(self, meeting: CalendarEvent, session) -> Optional[PredictionResult]:
+        """Analyze probability of meeting success based on historical data"""
+        try:
+            # Factors influencing meeting success
+            success_factors = []
+            
+            # Preparation factor
+            if hasattr(meeting, 'preparation_priority') and meeting.preparation_priority:
+                prep_factor = meeting.preparation_priority
+                success_factors.append(('preparation', prep_factor))
+            
+            # Attendee relationship strength
+            if meeting.attendee_intelligence:
+                # Parse attendee intelligence for relationship strength
+                rel_strength = 0.7  # Simplified
+                success_factors.append(('relationships', rel_strength))
+            
+            # Meeting duration appropriateness
+            if meeting.start_time and meeting.end_time:
+                duration_minutes = (meeting.end_time - meeting.start_time).total_seconds() / 60
+                # Optimal meeting length factor
+                if 30 <= duration_minutes <= 60:
+                    duration_factor = 0.8
+                elif 15 <= duration_minutes < 30 or 60 < duration_minutes <= 90:
+                    duration_factor = 0.6
+                else:
+                    duration_factor = 0.4
+                success_factors.append(('duration', duration_factor))
+            
+            if success_factors:
+                # Calculate overall success probability
+                avg_factor = sum(factor[1] for factor in success_factors) / len(success_factors)
+                
+                return PredictionResult(
+                    prediction_type='meeting_success_probability',
+                    confidence=avg_factor,
+                    predicted_value=f"{int(avg_factor * 100)}% success probability",
+                    reasoning=f"Based on {len(success_factors)} success factors: {', '.join([f[0] for f in success_factors])}",
+                    time_horizon='short_term',
+                    data_points_used=len(success_factors),
+                    created_at=datetime.utcnow()
+                )
+            
+        except Exception as e:
+            logger.error(f"Failed to analyze meeting success probability: {str(e)}")
+        
+        return None
+    
+    def _detect_project_formation_signals(self, recent_emails: List[Email]) -> List[Dict]:
+        """Detect signals indicating potential project formation"""
+        signals = []
+        
+        # Project formation keywords
+        project_keywords = [
+            'project', 'initiative', 'proposal', 'collaboration', 'partnership',
+            'development', 'implementation', 'launch', 'rollout', 'strategy'
+        ]
+        
+        decision_keywords = [
+            'decision', 'approve', 'budget', 'funding', 'resources', 'timeline',
+            'deadline', 'commitment', 'agreement', 'contract'
+        ]
+        
+        # Analyze emails for project signals
+        project_signals = defaultdict(int)
+        decision_signals = defaultdict(int)
+        
+        for email in recent_emails:
+            content = (email.ai_summary or '').lower()
+            
+            # Count project-related terms
+            for keyword in project_keywords:
+                if keyword in content:
+                    project_signals[keyword] += 1
+            
+            # Count decision-related terms
+            for keyword in decision_keywords:
+                if keyword in content:
+                    decision_signals[keyword] += 1
+        
+        # Generate signal analysis
+        if project_signals and decision_signals:
+            project_score = min(1.0, sum(project_signals.values()) / len(recent_emails))
+            decision_score = min(1.0, sum(decision_signals.values()) / len(recent_emails))
+            
+            combined_probability = (project_score + decision_score) / 2
+            
+            if combined_probability > 0.5:
+                top_project_terms = sorted(project_signals.items(), key=lambda x: x[1], reverse=True)[:3]
+                top_decision_terms = sorted(decision_signals.items(), key=lambda x: x[1], reverse=True)[:3]
+                
+                signals.append({
+                    'probability': combined_probability,
+                    'description': f"Potential project formation involving {', '.join([term[0] for term in top_project_terms])}",
+                    'reasoning': f"Project terms: {', '.join([term[0] for term in top_project_terms])}. Decision terms: {', '.join([term[0] for term in top_decision_terms])}",
+                    'signal_strength': combined_probability,
+                    'project_terms': dict(top_project_terms),
+                    'decision_terms': dict(top_decision_terms)
+                })
+        
+        return signals
+    
+    def _predict_decision_timing(self, user_id: int) -> List[PredictionResult]:
+        """Predict when important decisions might be made"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Look for decision-pending patterns in recent communications
+                recent_emails = session.query(Email).filter(
+                    Email.user_id == user_id,
+                    Email.email_date > datetime.utcnow() - timedelta(days=21),
+                    Email.strategic_importance > 0.5
+                ).all()
+                
+                decision_patterns = self._analyze_decision_patterns(recent_emails)
+                
+                for pattern in decision_patterns:
+                    if pattern['urgency_score'] > 0.6:
+                        predictions.append(PredictionResult(
+                            prediction_type='decision_timing',
+                            confidence=pattern['confidence'],
+                            predicted_value=pattern['predicted_timeframe'],
+                            reasoning=pattern['reasoning'],
+                            time_horizon=pattern['time_horizon'],
+                            data_points_used=len(recent_emails),
+                            created_at=datetime.utcnow()
+                        ))
+            
+        except Exception as e:
+            logger.error(f"Failed to predict decision timing: {str(e)}")
+        
+        return predictions
+    
+    def _analyze_decision_patterns(self, emails: List[Email]) -> List[Dict]:
+        """Analyze patterns that indicate pending decisions"""
+        patterns = []
+        
+        # Decision urgency indicators
+        urgency_keywords = [
+            'urgent', 'asap', 'immediately', 'critical', 'deadline', 'time-sensitive',
+            'need decision', 'waiting for', 'pending approval', 'final decision'
+        ]
+        
+        timeline_keywords = [
+            'this week', 'next week', 'end of month', 'quarter end', 'by friday',
+            'before weekend', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'
+        ]
+        
+        # Analyze emails for decision patterns
+        decision_emails = []
+        for email in emails:
+            content = (email.ai_summary or '').lower()
+            urgency_score = 0
+            timeline_hints = []
+            
+            # Check for urgency indicators
+            for keyword in urgency_keywords:
+                if keyword in content:
+                    urgency_score += 0.2
+            
+            # Check for timeline hints
+            for keyword in timeline_keywords:
+                if keyword in content:
+                    timeline_hints.append(keyword)
+                    urgency_score += 0.1
+            
+            if urgency_score > 0.3:
+                decision_emails.append({
+                    'email': email,
+                    'urgency_score': min(1.0, urgency_score),
+                    'timeline_hints': timeline_hints,
+                    'content_snippet': content[:200]
+                })
+        
+        # Generate decision patterns
+        if decision_emails:
+            avg_urgency = sum(e['urgency_score'] for e in decision_emails) / len(decision_emails)
+            
+            # Predict timeframe based on timeline hints
+            if any('this week' in e['timeline_hints'] for e in decision_emails):
+                timeframe = 'Within 1 week'
+                horizon = 'short_term'
+            elif any('next week' in e['timeline_hints'] for e in decision_emails):
+                timeframe = 'Within 2 weeks'
+                horizon = 'short_term'
+            else:
+                timeframe = 'Within 1 month'
+                horizon = 'medium_term'
+            
+            patterns.append({
+                'urgency_score': avg_urgency,
+                'confidence': avg_urgency,
+                'predicted_timeframe': timeframe,
+                'time_horizon': horizon,
+                'reasoning': f"Decision urgency detected in {len(decision_emails)} recent communications",
+                'decision_emails_count': len(decision_emails)
+            })
+        
+        return patterns
+    
+    # =====================================================================
+    # PATTERN DETECTION HELPERS
+    # =====================================================================
+    
+    def _detect_communication_patterns(self, user_id: int, session) -> List[TrendPattern]:
+        """Detect patterns in communication frequency and timing"""
+        patterns = []
+        
+        try:
+            # Get email activity over time
+            emails = session.query(Email).filter(
+                Email.user_id == user_id,
+                Email.email_date > datetime.utcnow() - timedelta(days=90)
+            ).order_by(Email.email_date).all()
+            
+            # Group by day and count
+            daily_counts = defaultdict(int)
+            for email in emails:
+                if email.email_date:
+                    day = email.email_date.date()
+                    daily_counts[day] += 1
+            
+            # Convert to time series and analyze trend
+            if len(daily_counts) > 7:
+                data_points = [(datetime.combine(day, datetime.min.time()), count) 
+                              for day, count in sorted(daily_counts.items())]
+                
+                trend_analysis = self._analyze_time_series_trend(data_points)
+                
+                if trend_analysis['confidence'] > 0.5:
+                    pattern = TrendPattern(
+                        entity_type='communication',
+                        entity_id=user_id,
+                        pattern_type='growth' if trend_analysis['direction'] > 0 else 'decline',
+                        strength=abs(trend_analysis['slope']),
+                        confidence=trend_analysis['confidence'],
+                        data_points=data_points,
+                        prediction=trend_analysis['predicted_next_value']
+                    )
+                    patterns.append(pattern)
+            
+        except Exception as e:
+            logger.error(f"Failed to detect communication patterns: {str(e)}")
+        
+        return patterns
+    
+    def _detect_topic_evolution_patterns(self, user_id: int, session) -> List[TrendPattern]:
+        """Detect how topics evolve over time"""
+        patterns = []
+        
+        try:
+            topics = session.query(Topic).filter(
+                Topic.user_id == user_id,
+                Topic.total_mentions > 2
+            ).all()
+            
+            for topic in topics:
+                mention_history = self._get_topic_mention_history(topic, session)
+                
+                if len(mention_history) > 3:
+                    trend_analysis = self._analyze_time_series_trend(mention_history)
+                    
+                    if trend_analysis['confidence'] > 0.4:
+                        pattern = TrendPattern(
+                            entity_type='topic',
+                            entity_id=topic.id,
+                            pattern_type='growth' if trend_analysis['direction'] > 0 else 'decline',
+                            strength=abs(trend_analysis['slope']),
+                            confidence=trend_analysis['confidence'],
+                            data_points=mention_history,
+                            prediction=trend_analysis['predicted_next_value']
+                        )
+                        patterns.append(pattern)
+            
+        except Exception as e:
+            logger.error(f"Failed to detect topic evolution patterns: {str(e)}")
+        
+        return patterns
+    
+    def _detect_relationship_evolution_patterns(self, user_id: int, session) -> List[TrendPattern]:
+        """Detect how relationships evolve over time"""
+        patterns = []
+        
+        try:
+            people = session.query(Person).filter(
+                Person.user_id == user_id,
+                Person.total_interactions > 3
+            ).all()
+            
+            for person in people:
+                # Analyze interaction frequency over time
+                interaction_pattern = self._analyze_relationship_interaction_pattern(person, session)
+                
+                if interaction_pattern and interaction_pattern['confidence'] > 0.4:
+                    pattern = TrendPattern(
+                        entity_type='relationship',
+                        entity_id=person.id,
+                        pattern_type=interaction_pattern['pattern_type'],
+                        strength=interaction_pattern['strength'],
+                        confidence=interaction_pattern['confidence'],
+                        data_points=interaction_pattern['data_points']
+                    )
+                    patterns.append(pattern)
+            
+        except Exception as e:
+            logger.error(f"Failed to detect relationship evolution patterns: {str(e)}")
+        
+        return patterns
+    
+    def _detect_temporal_patterns(self, user_id: int, session) -> List[TrendPattern]:
+        """Detect time-based behavioral patterns"""
+        patterns = []
+        
+        try:
+            # Analyze email timing patterns
+            emails = session.query(Email).filter(
+                Email.user_id == user_id,
+                Email.email_date > datetime.utcnow() - timedelta(days=60)
+            ).all()
+            
+            # Group by hour of day
+            hourly_activity = defaultdict(int)
+            for email in emails:
+                if email.email_date:
+                    hour = email.email_date.hour
+                    hourly_activity[hour] += 1
+            
+            # Find peak activity hours
+            if hourly_activity:
+                peak_hours = sorted(hourly_activity.items(), key=lambda x: x[1], reverse=True)[:3]
+                total_emails = sum(hourly_activity.values())
+                
+                for hour, count in peak_hours:
+                    if count / total_emails > 0.15:  # More than 15% of activity
+                        pattern = TrendPattern(
+                            entity_type='temporal',
+                            entity_id=user_id,
+                            pattern_type='peak_activity',
+                            strength=count / total_emails,
+                            confidence=0.8,
+                            data_points=[(datetime.now().replace(hour=hour), count)]
+                        )
+                        patterns.append(pattern)
+            
+        except Exception as e:
+            logger.error(f"Failed to detect temporal patterns: {str(e)}")
+        
+        return patterns
+    
+    def _analyze_relationship_interaction_pattern(self, person: Person, session) -> Optional[Dict]:
+        """Analyze interaction pattern for a specific relationship"""
+        try:
+            # Get emails from this person over time
+            emails = session.query(Email).filter(
+                Email.user_id == person.user_id,
+                Email.sender == person.email_address,
+                Email.email_date > datetime.utcnow() - timedelta(days=90)
+            ).order_by(Email.email_date).all()
+            
+            if len(emails) < 3:
+                return None
+            
+            # Group by week
+            weekly_counts = defaultdict(int)
+            for email in emails:
+                if email.email_date:
+                    week_start = email.email_date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    week_start = week_start - timedelta(days=week_start.weekday())
+                    weekly_counts[week_start] += 1
+            
+            # Analyze trend
+            data_points = [(week, count) for week, count in sorted(weekly_counts.items())]
+            
+            if len(data_points) > 2:
+                trend_analysis = self._analyze_time_series_trend(data_points)
+                
+                return {
+                    'pattern_type': 'growth' if trend_analysis['direction'] > 0 else 'decline',
+                    'strength': abs(trend_analysis['slope']),
+                    'confidence': trend_analysis['confidence'],
+                    'data_points': data_points
+                }
+            
+        except Exception as e:
+            logger.error(f"Failed to analyze relationship interaction pattern: {str(e)}")
+        
+        return None
+    
+    def _generate_pattern_based_predictions(self, user_id: int, patterns: Dict) -> List[PredictionResult]:
+        """Generate predictions based on detected patterns"""
+        predictions = []
+        
+        try:
+            # Communication pattern predictions
+            for pattern in patterns.get('communication_patterns', []):
+                if pattern.confidence > 0.6:
+                    pred = PredictionResult(
+                        prediction_type=f'communication_{pattern.pattern_type}',
+                        confidence=pattern.confidence,
+                        predicted_value=pattern.prediction,
+                        reasoning=f"Communication activity showing {pattern.pattern_type} pattern",
+                        time_horizon='short_term',
+                        data_points_used=len(pattern.data_points),
+                        created_at=datetime.utcnow()
+                    )
+                    predictions.append(pred)
+            
+            # Topic pattern predictions
+            for pattern in patterns.get('topic_patterns', []):
+                if pattern.confidence > 0.5:
+                    pred = PredictionResult(
+                        prediction_type=f'topic_{pattern.pattern_type}',
+                        confidence=pattern.confidence,
+                        predicted_value=pattern.prediction,
+                        reasoning=f"Topic showing {pattern.pattern_type} trend in mentions",
+                        time_horizon='medium_term',
+                        data_points_used=len(pattern.data_points),
+                        created_at=datetime.utcnow()
+                    )
+                    predictions.append(pred)
+            
+        except Exception as e:
+            logger.error(f"Failed to generate pattern-based predictions: {str(e)}")
+        
+        return predictions
+    
+    def _store_predictions(self, user_id: int, predictions: List[PredictionResult]):
+        """Store high-confidence predictions as intelligence insights"""
+        try:
+            with get_db_manager().get_session() as session:
+                for prediction in predictions:
+                    if prediction.confidence > 0.7:  # Only store high-confidence predictions
+                        insight = IntelligenceInsight(
+                            user_id=user_id,
+                            insight_type=f'prediction_{prediction.prediction_type}',
+                            title=f"Predictive Insight: {prediction.prediction_type.replace('_', ' ').title()}",
+                            description=f"{prediction.predicted_value}. {prediction.reasoning}",
+                            priority='high' if prediction.confidence > 0.8 else 'medium',
+                            confidence=prediction.confidence,
+                            status='new'
+                        )
+                        session.add(insight)
+                
+                session.commit()
+                
+        except Exception as e:
+            logger.error(f"Failed to store predictions: {str(e)}")
+    
+    def _get_active_users_for_analysis(self) -> List[int]:
+        """Get users with recent activity for pattern analysis"""
+        try:
+            with get_db_manager().get_session() as session:
+                # Users with emails in last 7 days
+                recent_cutoff = datetime.utcnow() - timedelta(days=7)
+                
+                active_user_ids = session.query(Email.user_id).filter(
+                    Email.email_date > recent_cutoff
+                ).distinct().all()
+                
+                return [user_id[0] for user_id in active_user_ids]
+                
+        except Exception as e:
+            logger.error(f"Failed to get active users: {str(e)}")
+            return []
+
+# Global instance
+predictive_analytics = PredictiveAnalytics()

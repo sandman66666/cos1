@@ -1,0 +1,784 @@
+# Enhanced API Integration Layer - Real-Time Intelligence
+# This replaces your current main.py with entity-centric, real-time processing
+
+from flask import Flask, request, jsonify, session, redirect, url_for
+from flask_cors import CORS
+import logging
+from datetime import datetime, timedelta
+import json
+from typing import Dict, List, Optional
+
+from config.settings import settings
+from processors.realtime_processing import realtime_processor, EventType
+from processors.unified_entity_engine import entity_engine, EntityContext
+from processors.enhanced_ai_pipeline import enhanced_ai_processor
+from integrations.gmail_fetcher import gmail_fetcher
+from integrations.calendar_fetcher import calendar_fetcher
+from models.database import get_db_manager
+from models.enhanced_models import User, Topic, Person, Task, CalendarEvent, IntelligenceInsight
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+app.secret_key = settings.SECRET_KEY
+CORS(app)
+
+# Start real-time processor
+realtime_processor.start()
+
+# =====================================================================
+# ENHANCED UNIFIED PROCESSING ENDPOINTS
+# =====================================================================
+
+@app.route('/api/unified-intelligence-sync', methods=['POST'])
+def unified_intelligence_sync():
+    """
+    Enhanced unified processing that integrates email, calendar, and generates
+    real-time intelligence with entity-centric architecture.
+    """
+    try:
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        
+        user = get_db_manager().get_user_by_email(user_email)
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Get processing parameters
+        data = request.get_json() or {}
+        max_emails = data.get('max_emails', 20)
+        days_back = data.get('days_back', 7)
+        days_forward = data.get('days_forward', 14)
+        force_refresh = data.get('force_refresh', False)
+        
+        processing_summary = {
+            'success': True,
+            'processing_stages': {},
+            'entity_intelligence': {},
+            'insights_generated': [],
+            'real_time_processing': True,
+            'next_steps': []
+        }
+        
+        # Stage 1: Fetch and process emails in real-time
+        logger.info(f"Starting unified intelligence sync for {user_email}")
+        
+        # Fetch emails
+        email_result = gmail_fetcher.fetch_recent_emails(
+            user_email, max_emails=max_emails, days_back=days_back, force_refresh=force_refresh
+        )
+        
+        processing_summary['processing_stages']['emails_fetched'] = email_result.get('emails_fetched', 0)
+        
+        if email_result.get('success') and email_result.get('emails'):
+            # Process each email through real-time pipeline
+            for email_data in email_result['emails']:
+                realtime_processor.process_new_email(email_data, user.id, priority=3)
+        
+        # Stage 2: Fetch and enhance calendar events
+        calendar_result = calendar_fetcher.fetch_calendar_events(
+            user_email, days_back=3, days_forward=days_forward, create_prep_tasks=True
+        )
+        
+        processing_summary['processing_stages']['calendar_events_fetched'] = calendar_result.get('events_fetched', 0)
+        
+        if calendar_result.get('success') and calendar_result.get('events'):
+            # Process each calendar event through real-time pipeline
+            for event_data in calendar_result['events']:
+                realtime_processor.process_new_calendar_event(event_data, user.id, priority=4)
+        
+        # Stage 3: Generate comprehensive business intelligence
+        intelligence_summary = generate_360_business_intelligence(user.id)
+        processing_summary['entity_intelligence'] = intelligence_summary
+        
+        # Stage 4: Generate proactive insights
+        proactive_insights = entity_engine.generate_proactive_insights(user.id)
+        processing_summary['insights_generated'] = [
+            {
+                'type': insight.insight_type,
+                'title': insight.title,
+                'description': insight.description,
+                'priority': insight.priority
+            }
+            for insight in proactive_insights
+        ]
+        
+        # Generate next steps based on intelligence
+        processing_summary['next_steps'] = generate_intelligent_next_steps(intelligence_summary, proactive_insights)
+        
+        logger.info(f"Completed unified intelligence sync for {user_email}: "
+                   f"{processing_summary['processing_stages']['emails_fetched']} emails, "
+                   f"{processing_summary['processing_stages']['calendar_events_fetched']} events, "
+                   f"{len(proactive_insights)} insights")
+        
+        return jsonify(processing_summary)
+        
+    except Exception as e:
+        logger.error(f"Failed unified intelligence sync: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'processing_stages': {},
+            'real_time_processing': False
+        }), 500
+
+# =====================================================================
+# ENTITY-CENTRIC API ENDPOINTS
+# =====================================================================
+
+@app.route('/api/topics', methods=['GET', 'POST'])
+def topics_api():
+    """Enhanced topics API with intelligence accumulation"""
+    user_email = session.get('user_email')
+    if not user_email:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    user = get_db_manager().get_user_by_email(user_email)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    try:
+        with get_db_manager().get_session() as session:
+            people = session.query(Person).filter(Person.user_id == user.id).all()
+            
+            people_data = []
+            for person in people:
+                # Calculate relationship metrics
+                relationship_strength = calculate_relationship_strength(person)
+                communication_frequency = calculate_communication_frequency(person)
+                topic_connections = len(person.topics)
+                
+                person_data = {
+                    'id': person.id,
+                    'name': person.name,
+                    'email_address': person.email_address,
+                    'phone': person.phone,
+                    'company': person.company,
+                    'title': person.title,
+                    'relationship_type': person.relationship_type,
+                    'importance_level': person.importance_level,
+                    'total_interactions': person.total_interactions,
+                    'last_contact': person.last_contact.isoformat() if person.last_contact else None,
+                    'linkedin_url': person.linkedin_url,
+                    'professional_story': person.professional_story,
+                    'created_at': person.created_at.isoformat(),
+                    'updated_at': person.updated_at.isoformat(),
+                    
+                    # Relationship intelligence
+                    'relationship_intelligence': {
+                        'strength': relationship_strength,
+                        'communication_frequency': communication_frequency,
+                        'topic_connections': topic_connections,
+                        'engagement_score': calculate_engagement_score(person)
+                    },
+                    
+                    # Connected topics
+                    'connected_topics': [
+                        {
+                            'name': topic.name,
+                            'affinity_score': get_person_topic_affinity(person.id, topic.id)
+                        }
+                        for topic in person.topics[:5]  # Top 5 topics
+                    ]
+                }
+                people_data.append(person_data)
+            
+            # Sort by importance and recent activity
+            people_data.sort(key=lambda x: (x['importance_level'] or 0, x['total_interactions']), reverse=True)
+            
+            return jsonify({
+                'success': True,
+                'people': people_data,
+                'summary': {
+                    'total_people': len(people_data),
+                    'high_importance': len([p for p in people_data if (p['importance_level'] or 0) > 0.7]),
+                    'recent_contacts': len([p for p in people_data if p['last_contact'] and 
+                                          datetime.fromisoformat(p['last_contact']) > datetime.utcnow() - timedelta(days=30)]),
+                    'topic_connected': len([p for p in people_data if p['relationship_intelligence']['topic_connections'] > 0])
+                }
+            })
+            
+    except Exception as e:
+        logger.error(f"Failed to get people with relationship intelligence: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/tasks', methods=['GET'])
+def tasks_with_context_intelligence():
+    """Get tasks with full context stories and entity relationships"""
+    user_email = session.get('user_email')
+    if not user_email:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    user = get_db_manager().get_user_by_email(user_email)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    try:
+        status_filter = request.args.get('status', None)
+        limit = int(request.args.get('limit', 50))
+        
+        with get_db_manager().get_session() as session:
+            query = session.query(Task).filter(Task.user_id == user.id)
+            
+            if status_filter:
+                query = query.filter(Task.status == status_filter)
+            
+            tasks = query.order_by(Task.created_at.desc()).limit(limit).all()
+            
+            tasks_data = []
+            for task in tasks:
+                # Get related entities
+                related_topics = [topic.name for topic in task.topics]
+                assignee_info = None
+                if task.assignee:
+                    assignee_info = {
+                        'name': task.assignee.name,
+                        'email': task.assignee.email_address
+                    }
+                
+                task_data = {
+                    'id': task.id,
+                    'description': task.description,
+                    'context_story': task.context_story,
+                    'priority': task.priority,
+                    'status': task.status,
+                    'category': task.category,
+                    'confidence': task.confidence,
+                    'due_date': task.due_date.isoformat() if task.due_date else None,
+                    'created_at': task.created_at.isoformat(),
+                    'updated_at': task.updated_at.isoformat(),
+                    'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+                    
+                    # Entity relationships
+                    'assignee': assignee_info,
+                    'related_topics': related_topics,
+                    'source_type': 'email' if task.source_email_id else 'calendar' if task.source_event_id else 'manual',
+                    
+                    # Business context
+                    'business_intelligence': {
+                        'has_context': bool(task.context_story),
+                        'entity_connections': len(related_topics) + (1 if assignee_info else 0),
+                        'strategic_importance': calculate_task_strategic_importance(task)
+                    }
+                }
+                tasks_data.append(task_data)
+            
+            return jsonify({
+                'success': True,
+                'tasks': tasks_data,
+                'summary': {
+                    'total_tasks': len(tasks_data),
+                    'by_status': {
+                        'pending': len([t for t in tasks_data if t['status'] == 'pending']),
+                        'in_progress': len([t for t in tasks_data if t['status'] == 'in_progress']),
+                        'completed': len([t for t in tasks_data if t['status'] == 'completed'])
+                    },
+                    'by_priority': {
+                        'high': len([t for t in tasks_data if t['priority'] == 'high']),
+                        'medium': len([t for t in tasks_data if t['priority'] == 'medium']),
+                        'low': len([t for t in tasks_data if t['priority'] == 'low'])
+                    },
+                    'with_context': len([t for t in tasks_data if t['business_intelligence']['has_context']])
+                }
+            })
+            
+    except Exception as e:
+        logger.error(f"Failed to get tasks with context intelligence: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/intelligence-insights', methods=['GET'])
+def get_intelligence_insights():
+    """Get proactive intelligence insights"""
+    user_email = session.get('user_email')
+    if not user_email:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    user = get_db_manager().get_user_by_email(user_email)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    try:
+        status_filter = request.args.get('status', 'new')
+        insight_type = request.args.get('type', None)
+        limit = int(request.args.get('limit', 20))
+        
+        with get_db_manager().get_session() as session:
+            query = session.query(IntelligenceInsight).filter(
+                IntelligenceInsight.user_id == user.id
+            )
+            
+            if status_filter:
+                query = query.filter(IntelligenceInsight.status == status_filter)
+            
+            if insight_type:
+                query = query.filter(IntelligenceInsight.insight_type == insight_type)
+            
+            # Filter out expired insights
+            query = query.filter(
+                (IntelligenceInsight.expires_at.is_(None)) | 
+                (IntelligenceInsight.expires_at > datetime.utcnow())
+            )
+            
+            insights = query.order_by(
+                IntelligenceInsight.priority.desc(),
+                IntelligenceInsight.created_at.desc()
+            ).limit(limit).all()
+            
+            insights_data = []
+            for insight in insights:
+                insight_data = {
+                    'id': insight.id,
+                    'insight_type': insight.insight_type,
+                    'title': insight.title,
+                    'description': insight.description,
+                    'priority': insight.priority,
+                    'confidence': insight.confidence,
+                    'status': insight.status,
+                    'user_feedback': insight.user_feedback,
+                    'created_at': insight.created_at.isoformat(),
+                    'expires_at': insight.expires_at.isoformat() if insight.expires_at else None,
+                    
+                    # Related entity info
+                    'related_entity': {
+                        'type': insight.related_entity_type,
+                        'id': insight.related_entity_id
+                    } if insight.related_entity_type else None
+                }
+                insights_data.append(insight_data)
+            
+            return jsonify({
+                'success': True,
+                'insights': insights_data,
+                'summary': {
+                    'total_insights': len(insights_data),
+                    'by_type': count_by_field(insights_data, 'insight_type'),
+                    'by_priority': count_by_field(insights_data, 'priority'),
+                    'actionable': len([i for i in insights_data if i['status'] == 'new'])
+                }
+            })
+            
+    except Exception as e:
+        logger.error(f"Failed to get intelligence insights: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/insights/<int:insight_id>/feedback', methods=['POST'])
+def submit_insight_feedback(insight_id: int):
+    """Submit feedback on intelligence insight"""
+    user_email = session.get('user_email')
+    if not user_email:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    user = get_db_manager().get_user_by_email(user_email)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    try:
+        feedback_data = request.get_json()
+        feedback_type = feedback_data.get('feedback')  # helpful, not_helpful, acted_on
+        
+        if feedback_type not in ['helpful', 'not_helpful', 'acted_on']:
+            return jsonify({'success': False, 'error': 'Invalid feedback type'}), 400
+        
+        # Process feedback through real-time system
+        realtime_processor.process_user_action(
+            'insight_feedback',
+            {
+                'insight_id': insight_id,
+                'feedback': feedback_type
+            },
+            user.id
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Feedback submitted successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Failed to submit insight feedback: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# =====================================================================
+# BUSINESS INTELLIGENCE GENERATION
+# =====================================================================
+
+def generate_360_business_intelligence(user_id: int) -> Dict:
+    """Generate comprehensive 360-degree business intelligence"""
+    try:
+        intelligence = {
+            'entity_summary': {},
+            'relationship_intelligence': {},
+            'strategic_insights': {},
+            'activity_patterns': {},
+            'intelligence_quality': {}
+        }
+        
+        with get_db_manager().get_session() as session:
+            # Entity summary
+            topics_count = session.query(Topic).filter(Topic.user_id == user_id).count()
+            people_count = session.query(Person).filter(Person.user_id == user_id).count()
+            tasks_count = session.query(Task).filter(Task.user_id == user_id).count()
+            events_count = session.query(CalendarEvent).filter(CalendarEvent.user_id == user_id).count()
+            
+            intelligence['entity_summary'] = {
+                'topics': topics_count,
+                'people': people_count,
+                'tasks': tasks_count,
+                'calendar_events': events_count,
+                'total_entities': topics_count + people_count + tasks_count + events_count
+            }
+            
+            # Relationship intelligence
+            from models.enhanced_models import EntityRelationship
+            relationships_count = session.query(EntityRelationship).filter(
+                EntityRelationship.user_id == user_id
+            ).count()
+            
+            # Active topics (mentioned in last 30 days)
+            active_topics = session.query(Topic).filter(
+                Topic.user_id == user_id,
+                Topic.last_mentioned > datetime.utcnow() - timedelta(days=30)
+            ).count()
+            
+            # Recent contacts
+            recent_contacts = session.query(Person).filter(
+                Person.user_id == user_id,
+                Person.last_contact > datetime.utcnow() - timedelta(days=30)
+            ).count()
+            
+            intelligence['relationship_intelligence'] = {
+                'total_relationships': relationships_count,
+                'active_topics': active_topics,
+                'recent_contacts': recent_contacts,
+                'relationship_density': relationships_count / max(1, people_count + topics_count)
+            }
+            
+            # Activity patterns
+            recent_tasks = session.query(Task).filter(
+                Task.user_id == user_id,
+                Task.created_at > datetime.utcnow() - timedelta(days=7)
+            ).count()
+            
+            intelligence['activity_patterns'] = {
+                'tasks_this_week': recent_tasks,
+                'average_daily_tasks': recent_tasks / 7,
+                'topic_momentum': active_topics / max(1, topics_count)
+            }
+            
+            # Intelligence quality metrics
+            high_confidence_tasks = session.query(Task).filter(
+                Task.user_id == user_id,
+                Task.confidence > 0.8
+            ).count()
+            
+            tasks_with_context = session.query(Task).filter(
+                Task.user_id == user_id,
+                Task.context_story.isnot(None)
+            ).count()
+            
+            intelligence['intelligence_quality'] = {
+                'high_confidence_extractions': high_confidence_tasks / max(1, tasks_count),
+                'contextualized_tasks': tasks_with_context / max(1, tasks_count),
+                'entity_interconnection': relationships_count / max(1, intelligence['entity_summary']['total_entities'])
+            }
+        
+        return intelligence
+        
+    except Exception as e:
+        logger.error(f"Failed to generate 360 business intelligence: {str(e)}")
+        return {}
+
+def generate_intelligent_next_steps(intelligence_summary: Dict, insights: List) -> List[str]:
+    """Generate intelligent next steps based on business intelligence"""
+    next_steps = []
+    
+    try:
+        entity_summary = intelligence_summary.get('entity_summary', {})
+        relationship_intel = intelligence_summary.get('relationship_intelligence', {})
+        activity_patterns = intelligence_summary.get('activity_patterns', {})
+        
+        # Intelligence-driven recommendations
+        if entity_summary.get('topics', 0) > 5 and relationship_intel.get('relationship_density', 0) < 0.3:
+            next_steps.append("🔗 Consider connecting related topics and people to improve relationship intelligence")
+        
+        if activity_patterns.get('topic_momentum', 0) > 0.7:
+            next_steps.append("📈 High topic activity detected - schedule strategic planning time")
+        
+        if relationship_intel.get('recent_contacts', 0) < relationship_intel.get('total_relationships', 0) * 0.3:
+            next_steps.append("👥 Reach out to important contacts you haven't spoken with recently")
+        
+        if activity_patterns.get('tasks_this_week', 0) > 10:
+            next_steps.append("⚡ High task volume - consider prioritizing and delegating")
+        
+        # Insight-driven recommendations
+        high_priority_insights = [i for i in insights if i.priority == 'high']
+        if high_priority_insights:
+            next_steps.append(f"🚨 Address {len(high_priority_insights)} high-priority insights")
+        
+        # Default recommendations if no specific patterns
+        if not next_steps:
+            next_steps.append("✅ Continue processing communications to build business intelligence")
+            next_steps.append("📊 Review insights regularly to stay ahead of opportunities")
+        
+    except Exception as e:
+        logger.error(f"Failed to generate intelligent next steps: {str(e)}")
+        next_steps = ["Continue building your business intelligence through regular processing"]
+    
+    return next_steps
+
+# =====================================================================
+# UTILITY FUNCTIONS
+# =====================================================================
+
+def calculate_topic_activity_level(topic: Topic) -> float:
+    """Calculate topic activity level based on mentions and recency"""
+    if not topic.total_mentions or not topic.last_mentioned:
+        return 0.0
+    
+    # Factor in recency and frequency
+    days_since_mention = (datetime.utcnow() - topic.last_mentioned).days
+    recency_factor = max(0, 1 - (days_since_mention / 30))  # Decay over 30 days
+    frequency_factor = min(1.0, topic.total_mentions / 10)  # Normalize to 10 mentions
+    
+    return (recency_factor + frequency_factor) / 2
+
+def calculate_topic_momentum(topic: Topic) -> float:
+    """Calculate topic momentum (trending up or down)"""
+    # This would analyze mention patterns over time
+    # For now, return activity level as proxy
+    return calculate_topic_activity_level(topic)
+
+def calculate_relationship_strength(person: Person) -> float:
+    """Calculate relationship strength score"""
+    factors = []
+    
+    # Interaction frequency
+    if person.total_interactions:
+        factors.append(min(1.0, person.total_interactions / 20))
+    
+    # Recency
+    if person.last_contact:
+        days_since = (datetime.utcnow() - person.last_contact).days
+        recency_score = max(0, 1 - (days_since / 90))  # Decay over 90 days
+        factors.append(recency_score)
+    
+    # Importance level
+    if person.importance_level:
+        factors.append(person.importance_level)
+    
+    return sum(factors) / len(factors) if factors else 0.0
+
+def calculate_communication_frequency(person: Person) -> str:
+    """Calculate communication frequency category"""
+    if not person.last_contact or not person.total_interactions:
+        return 'never'
+    
+    days_since = (datetime.utcnow() - person.last_contact).days
+    
+    if days_since <= 7:
+        return 'weekly'
+    elif days_since <= 30:
+        return 'monthly'
+    elif days_since <= 90:
+        return 'quarterly'
+    else:
+        return 'rarely'
+
+def calculate_engagement_score(person: Person) -> float:
+    """Calculate overall engagement score"""
+    relationship_strength = calculate_relationship_strength(person)
+    topic_connections = len(person.topics) if hasattr(person, 'topics') else 0
+    topic_factor = min(1.0, topic_connections / 5)  # Normalize to 5 topics
+    
+    return (relationship_strength + topic_factor) / 2
+
+def get_person_topic_affinity(person_id: int, topic_id: int) -> float:
+    """Get person-topic affinity score"""
+    try:
+        from models.enhanced_models import person_topic_association
+        from models.database import get_db_manager
+        
+        with get_db_manager().get_session() as session:
+            result = session.execute(
+                person_topic_association.select().where(
+                    (person_topic_association.c.person_id == person_id) &
+                    (person_topic_association.c.topic_id == topic_id)
+                )
+            ).first()
+            
+            return result.affinity_score if result else 0.5
+            
+    except Exception as e:
+        logger.error(f"Failed to get person-topic affinity: {str(e)}")
+        return 0.5
+
+def calculate_task_strategic_importance(task: Task) -> float:
+    """Calculate strategic importance of task"""
+    factors = []
+    
+    # Priority factor
+    priority_scores = {'high': 1.0, 'medium': 0.6, 'low': 0.3}
+    factors.append(priority_scores.get(task.priority, 0.5))
+    
+    # Confidence factor
+    factors.append(task.confidence)
+    
+    # Context factor
+    if task.context_story:
+        factors.append(0.8)
+    
+    # Entity connections factor
+    connections = len(task.topics) if hasattr(task, 'topics') else 0
+    if task.assignee:
+        connections += 1
+    factors.append(min(1.0, connections / 3))
+    
+    return sum(factors) / len(factors)
+
+def count_by_field(data: List[Dict], field: str) -> Dict:
+    """Count occurrences of field values"""
+    counts = {}
+    for item in data:
+        value = item.get(field, 'unknown')
+        counts[value] = counts.get(value, 0) + 1
+    return counts
+
+if __name__ == '__main__':
+    app.run(
+        host=settings.HOST,
+        port=settings.PORT,
+        debug=settings.DEBUG
+    )': False, 'error': 'User not found'}), 404
+    
+    if request.method == 'GET':
+        return get_topics_with_intelligence(user.id)
+    elif request.method == 'POST':
+        return create_topic_with_intelligence(user.id, request.get_json())
+
+def get_topics_with_intelligence(user_id: int):
+    """Get topics with accumulated intelligence and relationships"""
+    try:
+        with get_db_manager().get_session() as session:
+            topics = session.query(Topic).filter(Topic.user_id == user_id).all()
+            
+            topics_data = []
+            for topic in topics:
+                # Get related entities count
+                related_people = len(topic.people)
+                related_tasks = len(topic.tasks)
+                related_events = len(topic.events)
+                
+                topic_data = {
+                    'id': topic.id,
+                    'name': topic.name,
+                    'description': topic.description,
+                    'keywords': topic.keywords.split(',') if topic.keywords else [],
+                    'is_official': topic.is_official,
+                    'confidence_score': topic.confidence_score,
+                    'total_mentions': topic.total_mentions,
+                    'last_mentioned': topic.last_mentioned.isoformat() if topic.last_mentioned else None,
+                    'strategic_importance': topic.strategic_importance,
+                    'intelligence_summary': topic.intelligence_summary,
+                    'created_at': topic.created_at.isoformat(),
+                    'updated_at': topic.updated_at.isoformat(),
+                    'version': topic.version,
+                    
+                    # Relationship intelligence
+                    'related_entities': {
+                        'people': related_people,
+                        'tasks': related_tasks,
+                        'events': related_events,
+                        'total': related_people + related_tasks + related_events
+                    },
+                    
+                    # Activity metrics
+                    'activity_level': calculate_topic_activity_level(topic),
+                    'momentum': calculate_topic_momentum(topic)
+                }
+                topics_data.append(topic_data)
+            
+            # Sort by strategic importance and recent activity
+            topics_data.sort(key=lambda x: (x['strategic_importance'], x['total_mentions']), reverse=True)
+            
+            return jsonify({
+                'success': True,
+                'topics': topics_data,
+                'summary': {
+                    'total_topics': len(topics_data),
+                    'official_topics': len([t for t in topics_data if t['is_official']]),
+                    'active_topics': len([t for t in topics_data if t['activity_level'] > 0.5]),
+                    'high_momentum': len([t for t in topics_data if t['momentum'] > 0.7])
+                }
+            })
+            
+    except Exception as e:
+        logger.error(f"Failed to get topics with intelligence: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def create_topic_with_intelligence(user_id: int, topic_data: Dict):
+    """Create topic with intelligent categorization and relationships"""
+    try:
+        name = topic_data.get('name', '').strip()
+        description = topic_data.get('description', '')
+        keywords = topic_data.get('keywords', [])
+        
+        if not name:
+            return jsonify({'success': False, 'error': 'Topic name is required'}), 400
+        
+        # Create entity context
+        context = EntityContext(
+            source_type='manual',
+            user_id=user_id,
+            confidence=1.0  # High confidence for manual creation
+        )
+        
+        # Create topic through unified engine
+        topic = entity_engine.create_or_update_topic(
+            topic_name=name,
+            description=description,
+            keywords=keywords,
+            context=context
+        )
+        
+        if topic:
+            # Mark as official since it was manually created
+            with get_db_manager().get_session() as session:
+                topic = session.merge(topic)
+                topic.is_official = True
+                session.commit()
+            
+            # Trigger real-time analysis to find related entities
+            realtime_processor.process_entity_update(
+                'topic', topic.id, {'manual_creation': True}, user_id
+            )
+            
+            return jsonify({
+                'success': True,
+                'topic': {
+                    'id': topic.id,
+                    'name': topic.name,
+                    'description': topic.description,
+                    'is_official': topic.is_official,
+                    'created_at': topic.created_at.isoformat()
+                }
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to create topic'}), 500
+            
+    except Exception as e:
+        logger.error(f"Failed to create topic with intelligence: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/people', methods=['GET'])
+def people_with_relationship_intelligence():
+    """Get people with comprehensive relationship intelligence"""
+    user_email = session.get('user_email')
+    if not user_email:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    user = get_db_manager().get_user_by_email(user_email)
+    if not user:
+        return jsonify({'success
