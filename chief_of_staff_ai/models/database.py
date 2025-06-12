@@ -529,6 +529,16 @@ class Topic(Base):
         return f"<Topic(name='{self.name}', is_official={self.is_official})>"
     
     def to_dict(self):
+        # Handle keywords field properly - could be JSON array or comma-separated string
+        keywords_list = []
+        if self.keywords:
+            try:
+                # Try to parse as JSON first
+                keywords_list = json.loads(self.keywords)
+            except (json.JSONDecodeError, TypeError):
+                # If not valid JSON, treat as comma-separated string
+                keywords_list = [k.strip() for k in self.keywords.split(',') if k.strip()]
+        
         return {
             'id': self.id,
             'user_id': self.user_id,
@@ -536,7 +546,7 @@ class Topic(Base):
             'slug': self.slug,
             'description': self.description,
             'is_official': self.is_official,
-            'keywords': json.loads(self.keywords) if self.keywords else [],
+            'keywords': keywords_list,
             'email_count': self.email_count,
             'confidence_score': self.confidence_score,
             'created_at': self.created_at.isoformat() if self.created_at else None,

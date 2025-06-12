@@ -505,24 +505,32 @@ class CalendarFetcher:
             
             # Add enhanced context to event
             if context_parts or business_insights or relevant_topics:
-                event_data['business_context'] = '; '.join(context_parts)
-                event_data['known_attendees'] = known_attendees
-                event_data['business_insights'] = business_insights[:10]  # Top 10 insights
-                event_data['relevant_topics'] = relevant_topics
-                event_data['topic_connections'] = topic_connections
+                # Combine context parts into a single business_context string
+                all_context_parts = context_parts.copy()
+                
+                if business_insights:
+                    insights_summary = f"Recent insights: {len(business_insights)} business activities"
+                    all_context_parts.append(insights_summary)
+                
+                if relevant_topics:
+                    topics_summary = f"Related topics: {', '.join([t['name'] for t in relevant_topics[:3]])}"
+                    all_context_parts.append(topics_summary)
+                
+                event_data['business_context'] = '; '.join(all_context_parts)
+                
+                # Set preparation flags
                 event_data['preparation_needed'] = len(business_insights) > 0 or len(relevant_topics) > 0
                 
-                # Set AI summary with context
+                # AI summary generation
                 if business_insights or relevant_topics:
                     summary_parts = []
-                    if relevant_topics:
-                        summary_parts.append(f"Topics: {', '.join([t['name'] for t in relevant_topics[:2]])}")
-                    if known_attendees:
-                        summary_parts.append(f"Key attendees: {', '.join([p['name'] for p in known_attendees[:2]])}")
+                    if event_data.get('title'):
+                        summary_parts.append(f"Meeting: {event_data['title']}")
+                    
                     if business_insights:
                         summary_parts.append(f"Recent activity: {len(business_insights)} business insights")
                     
-                    event_data['ai_summary'] = '; '.join(summary_parts)
+                    event_data['ai_summary'] = '\n'.join(summary_parts)
             
             return event_data
             

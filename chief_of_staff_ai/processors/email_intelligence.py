@@ -989,7 +989,7 @@ Additional Context:
             return {'existing_projects': [], 'key_contacts': [], 'official_topics': []}
     
     def _filter_quality_emails_debug(self, emails: List[Email], user_email: str) -> List[Email]:
-        """Enhanced filtering for quality-focused email processing - DEBUG VERSION WITH RELAXED FILTERS"""
+        """Enhanced filtering for quality-focused email processing - ULTRA PERMISSIVE DEBUG VERSION"""
         quality_emails = []
         
         for email in emails:
@@ -1000,41 +1000,17 @@ Additional Context:
                 logger.debug(f"Skipping email from user themselves: {email.sender}")
                 continue
             
-            # Also check sender name to catch cases where user's name appears as sender
-            user_name_parts = user_email.split('@')[0].lower()  # Get username part
-            sender_name = (email.sender_name or '').lower()
-            if (sender_name and len(user_name_parts) > 3 and 
-                user_name_parts in sender_name.replace('.', '').replace('_', '')):
-                logger.debug(f"Skipping email from user by name: {sender_name}")
-                continue
-
-            # RELAXED: Only skip the most obvious non-human senders
-            if self._is_obviously_non_human_contact(email.sender or ''):
-                logger.debug(f"Skipping obviously non-human sender: {email.sender}")
+            # ULTRA PERMISSIVE: Accept almost all emails for debugging
+            # Only skip completely empty emails
+            content = email.body_clean or email.snippet or email.subject or ''
+            if len(content.strip()) < 3:  # Ultra permissive - just need any content
+                logger.debug(f"Skipping email with no content: {len(content)} chars")
                 continue
                 
-            # RELAXED: Skip only obvious newsletters and promotional content
-            if self._is_obvious_newsletter_or_promotional(email):
-                logger.debug(f"Skipping obvious newsletter/promotional content")
-                continue
-                
-            # RELAXED: Very permissive content length - just need some content
-            content = email.body_clean or email.snippet or ''
-            if len(content.strip()) < 10:  # Very permissive
-                logger.debug(f"Skipping email with minimal content: {len(content)} chars")
-                continue
-                
-            # RELAXED: Only skip very obvious automated emails
-            subject_lower = (email.subject or '').lower()
-            automated_subjects = ['automated', 'automatic reply', 'out of office']
-            if any(pattern in subject_lower for pattern in automated_subjects) and len(content) < 50:
-                logger.debug(f"Skipping automated email with subject: {email.subject}")
-                continue
-                
-            logger.debug(f"Email passed quality filters: {email.sender}")
+            logger.debug(f"Email passed ultra-permissive quality filters: {email.sender}")
             quality_emails.append(email)
         
-        logger.info(f"Quality filtering: {len(quality_emails)} emails passed out of {len(emails)} total")
+        logger.info(f"Quality filtering (DEBUG MODE): {len(quality_emails)} emails passed out of {len(emails)} total")
         return quality_emails
 
     def _is_obviously_non_human_contact(self, email_address: str) -> bool:
