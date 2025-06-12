@@ -253,8 +253,8 @@
     </div>
 
     <!-- Main Content -->
+    {% if session.user_email %}
     <div class="container-fluid">
-        {% if session.user_email %}
         <div class="row">
             <!-- Sidebar -->
             <div class="col-md-3 col-lg-2 sidebar">
@@ -293,42 +293,6 @@
                                 <i class="fas fa-chart-line me-2"></i>Analytics
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'realtime_page' %}active{% endif %}" href="{{ url_for('realtime_page') }}">
-                                <i class="fas fa-bolt me-2"></i>Real-time
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'batch_processing_page' %}active{% endif %}" href="{{ url_for('batch_processing_page') }}">
-                                <i class="fas fa-tasks me-2"></i>Batch Processing
-                            </a>
-                        </li>
-                    </ul>
-
-                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
-                        <span>API TOOLS</span>
-                    </h6>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'api_testing_page' %}active{% endif %}" href="{{ url_for('api_testing_page') }}">
-                                <i class="fas fa-vial me-2"></i>API Testing
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/api/docs/" target="_blank">
-                                <i class="fas fa-book me-2"></i>API Docs
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/api/docs/testing" target="_blank">
-                                <i class="fas fa-vial me-2"></i>API Testing
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/api/versions" target="_blank">
-                                <i class="fas fa-code-branch me-2"></i>API Versions
-                            </a>
-                        </li>
                     </ul>
                 </div>
             </div>
@@ -340,15 +304,19 @@
                 </div>
             </div>
         </div>
-        {% else %}
-        <!-- Not authenticated - full width content -->
+    </div>
+    {% else %}
+    <!-- Not authenticated - full width content -->
+    <div class="container-fluid">
         <div class="row justify-content-center">
             <div class="col-md-6 col-lg-4">
-                {% block content %}{% endblock %}
+                <div class="main-content">
+                    {% block content %}{% endblock %}
+                </div>
             </div>
         </div>
-        {% endif %}
     </div>
+    {% endif %}
 
     <!-- Footer -->
     <footer class="footer">

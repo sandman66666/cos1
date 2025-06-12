@@ -4,8 +4,8 @@
 import os
 import logging
 from datetime import datetime, timedelta
+from typing import List, Dict, Any
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
-from flask_socketio import SocketIO
 import anthropic
 
 # Configuration and Auth
@@ -21,7 +21,7 @@ from processors.unified_entity_engine import entity_engine, EntityContext
 from processors.enhanced_ai_pipeline import enhanced_ai_processor
 from processors.realtime_processing import realtime_processor, EventType
 from processors import processor_manager
-from models.enhanced_models import Topic, Person, Task, IntelligenceInsight, EntityRelationship
+from models.enhanced_models import Topic, Person, Task, IntelligenceInsight, EntityRelationship, Email
 
 # Database
 from models.database import get_db_manager
@@ -883,29 +883,39 @@ def get_proactive_intelligence_insights():
         logger.error(f"Failed to get intelligence insights: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/intelligence/trigger-insights', methods=['POST'])
-def trigger_proactive_insights():
-    """Manually trigger proactive insight generation"""
+@app.route('/api/intelligence/generate-insights', methods=['POST'])
+def generate_proactive_insights():
+    """Generate proactive insights manually (for testing)"""
+    user_email = session.get('user_email')
+    if not user_email:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    user = get_db_manager().get_user_by_email(user_email)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
     try:
-        user_email = session.get('user_email')
-        if not user_email:
-            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
-        
-        user = get_db_manager().get_user_by_email(user_email)
-        if not user:
-            return jsonify({'success': False, 'error': 'User not found'}), 404
-        
-        # Trigger through real-time processor
-        realtime_processor.trigger_proactive_insights(user.id, priority=1)
+        # Generate insights using entity engine
+        insights = entity_engine.generate_proactive_insights(user.id)
         
         return jsonify({
             'success': True,
-            'message': 'Proactive insight generation triggered',
-            'queue_status': realtime_processor.get_queue_status()
+            'insights_generated': len(insights),
+            'insights': [
+                {
+                    'type': insight.insight_type,
+                    'title': insight.title,
+                    'description': insight.description,
+                    'priority': insight.priority,
+                    'confidence': insight.confidence,
+                    'created_at': insight.created_at.isoformat()
+                }
+                for insight in insights
+            ]
         })
         
     except Exception as e:
-        logger.error(f"Failed to trigger insights: {str(e)}")
+        logger.error(f"Failed to generate proactive insights: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/real-time/status', methods=['GET'])
@@ -1111,6 +1121,360 @@ def get_enhanced_tasks():
     except Exception as e:
         logger.error(f"Failed to get enhanced tasks: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# =====================================================================
+# UNIFIED INTELLIGENCE SYNC ENDPOINT (MISSING FROM REFACTOR)
+# =====================================================================
+
+@app.route('/api/unified-intelligence-sync', methods=['POST'])
+def unified_intelligence_sync():
+    """
+    Enhanced unified processing that integrates email, calendar, and generates
+    real-time intelligence with entity-centric architecture.
+    """
+    try:
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        
+        user = get_db_manager().get_user_by_email(user_email)
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Get processing parameters
+        data = request.get_json() or {}
+        max_emails = data.get('max_emails', 20)
+        days_back = data.get('days_back', 7)
+        days_forward = data.get('days_forward', 14)
+        force_refresh = data.get('force_refresh', False)
+        
+        processing_summary = {
+            'success': True,
+            'processing_stages': {},
+            'entity_intelligence': {},
+            'insights_generated': [],
+            'real_time_processing': True,
+            'next_steps': []
+        }
+        
+        # Stage 1: Fetch and process emails in real-time
+        logger.info(f"Starting unified intelligence sync for {user_email}")
+        
+        # Fetch emails
+        email_result = gmail_fetcher.fetch_recent_emails(
+            user_email, max_emails=max_emails, days_back=days_back, force_refresh=force_refresh
+        )
+        
+        processing_summary['processing_stages']['emails_fetched'] = email_result.get('emails_fetched', 0)
+        
+        if email_result.get('success') and email_result.get('emails'):
+            # Process each email through real-time pipeline
+            for email_data in email_result['emails']:
+                realtime_processor.process_new_email(email_data, user.id, priority=3)
+        
+        # Stage 2: Fetch and enhance calendar events (if calendar fetcher available)
+        try:
+            from ingest.calendar_fetcher import calendar_fetcher
+            calendar_result = calendar_fetcher.fetch_calendar_events(
+                user_email, days_back=3, days_forward=days_forward, create_prep_tasks=True
+            )
+            
+            processing_summary['processing_stages']['calendar_events_fetched'] = calendar_result.get('events_fetched', 0)
+            
+            if calendar_result.get('success') and calendar_result.get('events'):
+                # Process each calendar event through real-time pipeline
+                for event_data in calendar_result['events']:
+                    realtime_processor.process_new_calendar_event(event_data, user.id, priority=4)
+        except ImportError:
+            logger.info("Calendar fetcher not available, skipping calendar processing")
+            processing_summary['processing_stages']['calendar_events_fetched'] = 0
+        
+        # Stage 3: Generate comprehensive business intelligence
+        intelligence_summary = generate_360_business_intelligence(user.id)
+        processing_summary['entity_intelligence'] = intelligence_summary
+        
+        # Stage 4: Generate proactive insights
+        proactive_insights = entity_engine.generate_proactive_insights(user.id)
+        processing_summary['insights_generated'] = [
+            {
+                'type': insight.insight_type if hasattr(insight, 'insight_type') else 'general',
+                'title': insight.title if hasattr(insight, 'title') else 'Insight',
+                'description': insight.description if hasattr(insight, 'description') else 'No description',
+                'priority': insight.priority if hasattr(insight, 'priority') else 'medium',
+                'confidence': insight.confidence if hasattr(insight, 'confidence') else 0.5
+            }
+            for insight in proactive_insights
+        ]
+        
+        # Generate next steps based on intelligence
+        processing_summary['next_steps'] = generate_intelligent_next_steps(intelligence_summary, proactive_insights)
+        
+        logger.info(f"Completed unified intelligence sync for {user_email}: "
+                   f"{processing_summary['processing_stages']['emails_fetched']} emails, "
+                   f"{processing_summary['processing_stages']['calendar_events_fetched']} events, "
+                   f"{len(proactive_insights)} insights")
+        
+        return jsonify(processing_summary)
+        
+    except Exception as e:
+        logger.error(f"Failed unified intelligence sync: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'processing_stages': {},
+            'real_time_processing': False
+        }), 500
+
+# =====================================================================
+# BUSINESS INTELLIGENCE GENERATION (MISSING FROM REFACTOR)
+# =====================================================================
+
+def generate_360_business_intelligence(user_id: int) -> Dict:
+    """Generate comprehensive 360-degree business intelligence"""
+    try:
+        intelligence = {
+            'entity_summary': {},
+            'relationship_intelligence': {},
+            'strategic_insights': {},
+            'activity_patterns': {},
+            'intelligence_quality': {}
+        }
+        
+        with get_db_manager().get_session() as session:
+            # Entity summary
+            topics_count = session.query(Topic).filter(Topic.user_id == user_id).count()
+            people_count = session.query(Person).filter(Person.user_id == user_id).count()
+            tasks_count = session.query(Task).filter(Task.user_id == user_id).count()
+            
+            from models.enhanced_models import CalendarEvent
+            events_count = session.query(CalendarEvent).filter(CalendarEvent.user_id == user_id).count()
+            
+            intelligence['entity_summary'] = {
+                'topics': topics_count,
+                'people': people_count,
+                'tasks': tasks_count,
+                'calendar_events': events_count,
+                'total_entities': topics_count + people_count + tasks_count + events_count
+            }
+            
+            # Relationship intelligence
+            from models.enhanced_models import EntityRelationship
+            relationships_count = session.query(EntityRelationship).filter(
+                EntityRelationship.user_id == user_id
+            ).count()
+            
+            # Active topics (mentioned in last 30 days)
+            active_topics = session.query(Topic).filter(
+                Topic.user_id == user_id,
+                Topic.last_mentioned > datetime.utcnow() - timedelta(days=30)
+            ).count()
+            
+            # Recent contacts
+            recent_contacts = session.query(Person).filter(
+                Person.user_id == user_id,
+                Person.last_contact > datetime.utcnow() - timedelta(days=30)
+            ).count()
+            
+            intelligence['relationship_intelligence'] = {
+                'total_relationships': relationships_count,
+                'active_topics': active_topics,
+                'recent_contacts': recent_contacts,
+                'relationship_density': relationships_count / max(1, people_count + topics_count)
+            }
+            
+            # Activity patterns
+            recent_tasks = session.query(Task).filter(
+                Task.user_id == user_id,
+                Task.created_at > datetime.utcnow() - timedelta(days=7)
+            ).count()
+            
+            intelligence['activity_patterns'] = {
+                'tasks_this_week': recent_tasks,
+                'average_daily_tasks': recent_tasks / 7,
+                'topic_momentum': active_topics / max(1, topics_count)
+            }
+            
+            # Intelligence quality metrics
+            high_confidence_tasks = session.query(Task).filter(
+                Task.user_id == user_id,
+                Task.confidence > 0.8
+            ).count()
+            
+            tasks_with_context = session.query(Task).filter(
+                Task.user_id == user_id,
+                Task.context_story.isnot(None)
+            ).count()
+            
+            intelligence['intelligence_quality'] = {
+                'high_confidence_extractions': high_confidence_tasks / max(1, tasks_count),
+                'contextualized_tasks': tasks_with_context / max(1, tasks_count),
+                'entity_interconnection': relationships_count / max(1, intelligence['entity_summary']['total_entities'])
+            }
+        
+        return intelligence
+        
+    except Exception as e:
+        logger.error(f"Failed to generate 360 business intelligence: {str(e)}")
+        return {}
+
+def generate_intelligent_next_steps(intelligence_summary: Dict, insights: List) -> List[str]:
+    """Generate intelligent next steps based on business intelligence"""
+    next_steps = []
+    
+    try:
+        entity_summary = intelligence_summary.get('entity_summary', {})
+        relationship_intel = intelligence_summary.get('relationship_intelligence', {})
+        activity_patterns = intelligence_summary.get('activity_patterns', {})
+        
+        # Suggest next steps based on data
+        if entity_summary.get('total_entities', 0) < 10:
+            next_steps.append("Process more email data to build comprehensive business intelligence")
+        
+        if relationship_intel.get('relationship_density', 0) < 0.3:
+            next_steps.append("Focus on building relationship connections between contacts and topics")
+        
+        if activity_patterns.get('tasks_this_week', 0) > 10:
+            next_steps.append("Consider prioritizing and organizing your task backlog")
+        
+        if len(insights) > 5:
+            next_steps.append("Review and act on high-priority insights")
+        elif len(insights) < 2:
+            next_steps.append("Continue processing communications to generate more insights")
+        
+        # Always suggest at least one action
+        if not next_steps:
+            next_steps.append("Continue using the system to build your business intelligence")
+        
+    except Exception as e:
+        logger.error(f"Failed to generate intelligent next steps: {str(e)}")
+        next_steps = ["Continue building your business intelligence"]
+    
+    return next_steps
+
+def calculate_relationship_strength(person: Person) -> float:
+    """Calculate relationship strength for a person"""
+    score = 0.0
+    
+    # Interaction frequency
+    if person.total_interactions > 10:
+        score += 0.3
+    elif person.total_interactions > 5:
+        score += 0.2
+    elif person.total_interactions > 0:
+        score += 0.1
+    
+    # Recent contact
+    if person.last_contact and person.last_contact > datetime.utcnow() - timedelta(days=7):
+        score += 0.3
+    elif person.last_contact and person.last_contact > datetime.utcnow() - timedelta(days=30):
+        score += 0.2
+    
+    # Importance level
+    if person.importance_level:
+        score += person.importance_level * 0.4
+    
+    return min(1.0, score)
+
+def calculate_communication_frequency(person: Person) -> str:
+    """Calculate communication frequency description"""
+    if not person.last_contact:
+        return "No recent contact"
+    
+    days_since = (datetime.utcnow() - person.last_contact).days
+    
+    if days_since <= 7:
+        return "Weekly"
+    elif days_since <= 30:
+        return "Monthly"
+    elif days_since <= 90:
+        return "Quarterly"
+    else:
+        return "Infrequent"
+
+def calculate_engagement_score(person: Person) -> float:
+    """Calculate engagement score for a person"""
+    score = 0.0
+    
+    # Interaction frequency
+    if person.total_interactions > 10:
+        score += 0.3
+    elif person.total_interactions > 5:
+        score += 0.2
+    elif person.total_interactions > 0:
+        score += 0.1
+    
+    # Recent contact
+    if person.last_contact and person.last_contact > datetime.utcnow() - timedelta(days=7):
+        score += 0.3
+    elif person.last_contact and person.last_contact > datetime.utcnow() - timedelta(days=30):
+        score += 0.2
+    
+    # Professional context
+    if person.professional_story:
+        score += 0.2
+    
+    # Topic connections
+    topic_count = len(person.topics) if person.topics else 0
+    if topic_count > 3:
+        score += 0.2
+    elif topic_count > 0:
+        score += 0.1
+    
+    return min(1.0, score)
+
+def get_person_topic_affinity(person_id: int, topic_id: int) -> float:
+    """Get affinity score between person and topic"""
+    try:
+        from models.database import get_db_manager
+        from models.enhanced_models import person_topic_association
+        
+        with get_db_manager().get_session() as session:
+            # Query the association table for affinity score
+            result = session.execute(
+                person_topic_association.select().where(
+                    (person_topic_association.c.person_id == person_id) &
+                    (person_topic_association.c.topic_id == topic_id)
+                )
+            ).first()
+            
+            return result.affinity_score if result else 0.5
+            
+    except Exception as e:
+        logger.error(f"Failed to get person-topic affinity: {str(e)}")
+        return 0.5
+
+def calculate_task_strategic_importance(task: Task) -> float:
+    """Calculate strategic importance of a task"""
+    importance = 0.0
+    
+    # High priority tasks are more strategic
+    if task.priority == 'high':
+        importance += 0.4
+    elif task.priority == 'medium':
+        importance += 0.2
+    
+    # Tasks with context are more strategic
+    if task.context_story:
+        importance += 0.3
+    
+    # Tasks with high confidence are more strategic
+    if task.confidence > 0.8:
+        importance += 0.2
+    
+    # Tasks connected to multiple topics are more strategic
+    topic_count = len(task.topics) if task.topics else 0
+    if topic_count > 2:
+        importance += 0.1
+    
+    return min(1.0, importance)
+
+def count_by_field(data_list: List[Dict], field: str) -> Dict:
+    """Count items by a specific field"""
+    counts = {}
+    for item in data_list:
+        value = item.get(field, 'unknown')
+        counts[value] = counts.get(value, 0) + 1
+    return counts
 
 # =====================================================================
 # HELPER FUNCTIONS FOR ENHANCED PROCESSING
@@ -1346,6 +1710,15 @@ if __name__ == '__main__':
         logger.error(f"Processor manager initialization failed: {str(e)}")
         # Don't exit - application can still run with reduced functionality
     
+    # Start real-time processing engine
+    try:
+        from processors.realtime_processing import realtime_processor
+        realtime_processor.start(num_workers=3)
+        logger.info("Real-time processing engine started successfully")
+    except Exception as e:
+        logger.error(f"Real-time processor startup failed: {str(e)}")
+        # Don't exit - application can still run with batch processing
+    
     logger.info("Enhanced API endpoints registered:")
     logger.info("  - Legacy compatibility maintained")
     logger.info("  - New v2 APIs available")
@@ -1353,9 +1726,8 @@ if __name__ == '__main__':
     logger.info("  - Entity management active")
     logger.info("  - Analytics engine ready")
     
-    # Start the application with SocketIO
-    socketio.run(
-        app,
+    # Start the application
+    app.run(
         host='0.0.0.0',
         port=settings.PORT,
         debug=settings.DEBUG

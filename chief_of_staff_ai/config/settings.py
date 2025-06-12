@@ -12,7 +12,7 @@ class Settings:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
     DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
-    PORT = int(os.getenv('PORT', 5000))
+    PORT = int(os.getenv('PORT', 8080))
     
     # Database Configuration
     DATABASE_URL = os.getenv('DATABASE_URL')
@@ -27,7 +27,7 @@ class Settings:
     # Google OAuth Configuration
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/auth/callback')
+    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:8080/auth/callback')
     
     # Gmail API Configuration
     GMAIL_SCOPES = [
@@ -56,7 +56,7 @@ class Settings:
     
     # Google OAuth & APIs
     OPENAI_API_KEY: str = os.getenv('OPENAI_API_KEY', '')
-    OPENAI_REDIRECT_URI: str = os.getenv('OPENAI_REDIRECT_URI', 'http://localhost:5000/auth/openai/callback')
+    OPENAI_REDIRECT_URI: str = os.getenv('OPENAI_REDIRECT_URI', 'http://localhost:8080/auth/openai/callback')
     
     # Calendar API Settings
     CALENDAR_SCOPES = [

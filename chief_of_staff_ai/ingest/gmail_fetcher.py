@@ -39,7 +39,7 @@ class GmailFetcher:
         """
         try:
             # Get Gmail credentials for user
-            credentials = gmail_auth.get_user_credentials(user_email)
+            credentials = gmail_auth.get_valid_credentials(user_email)
             if not credentials:
                 return {'success': False, 'error': 'User not authenticated'}
             
@@ -51,6 +51,7 @@ class GmailFetcher:
             query = f'after:{since_date.strftime("%Y/%m/%d")}'
             
             logger.info(f"Fetching emails for {user_email} from last {days_back} days (limit: {limit})")
+            logger.info(f"Gmail query: '{query}' (searching from {since_date.strftime('%Y-%m-%d')})")
             
             # Get message list
             results = service.users().messages().list(
@@ -60,8 +61,31 @@ class GmailFetcher:
             ).execute()
             
             messages = results.get('messages', [])
+            logger.info(f"Gmail API returned {len(messages)} total messages")
+            
+            # If no messages found, try a broader search
+            if not messages and days_back <= 30:
+                logger.info(f"No emails found in last {days_back} days, trying last 60 days...")
+                broader_since_date = datetime.utcnow() - timedelta(days=60)
+                broader_query = f'after:{broader_since_date.strftime("%Y/%m/%d")}'
+                
+                broader_results = service.users().messages().list(
+                    userId='me',
+                    q=broader_query,
+                    maxResults=limit
+                ).execute()
+                
+                broader_messages = broader_results.get('messages', [])
+                logger.info(f"Broader search (60 days) found {len(broader_messages)} messages")
+                
+                if broader_messages:
+                    messages = broader_messages
+                    query = broader_query
+                    logger.info("Using broader date range for email sync")
+            
             emails_fetched = 0
             processed_emails = []
+            skipped_duplicates = 0
             
             # Get user database record for enhanced processing
             user = get_db_manager().get_user_by_email(user_email)
@@ -86,10 +110,11 @@ class GmailFetcher:
                         # Check if we already processed this email (avoid duplicates)
                         if not force_refresh and self._is_email_processed(email_data['id'], user.id):
                             logger.debug(f"Skipping already processed email: {email_data['id']}")
+                            skipped_duplicates += 1
                             continue
                         
                         # Enhanced processing: Send to real-time processor
-                        if realtime_processor.is_running:
+                        if realtime_processor.running:
                             realtime_processor.process_new_email(email_data, user.id, priority=3)
                             logger.debug(f"Sent email to real-time processor: {email_data.get('subject', 'No subject')}")
                         else:
@@ -118,22 +143,22 @@ class GmailFetcher:
                 'emails': processed_emails,
                 'user_id': user.id,
                 'enhanced_processing': True,
-                'real_time_processing': realtime_processor.is_running,
+                'real_time_processing': realtime_processor.running,
                 'processing_stats': {
                     'total_messages_found': len(messages),
                     'successfully_processed': emails_fetched,
-                    'skipped_duplicates': len(messages) - emails_fetched,
-                    'sent_to_real_time': emails_fetched if realtime_processor.is_running else 0
+                    'skipped_duplicates': skipped_duplicates,
+                    'sent_to_real_time': emails_fetched if realtime_processor.running else 0
+                },
+                'search_details': {
+                    'query_used': query,
+                    'days_searched': days_back if len(messages) > 0 or days_back > 30 else 60,
+                    'force_refresh': force_refresh
                 },
                 'fetch_time': datetime.utcnow().isoformat()
             }
             
-            logger.info(f"Enhanced email fetch complete for {user_email}: {emails_fetched} emails processed")
-            
-            # Trigger proactive insights if we processed significant emails
-            if emails_fetched > 5 and realtime_processor.is_running:
-                realtime_processor.trigger_proactive_insights(user.id, priority=5)
-                logger.info("Triggered proactive insights generation")
+            logger.info(f"Enhanced email fetch complete for {user_email}: {emails_fetched} new emails, {skipped_duplicates} duplicates skipped")
             
             return result
             
@@ -821,6 +846,125 @@ class GmailFetcher:
         except Exception as e:
             logger.warning(f"Failed to store email metadata: {str(e)}")
 
+    def _extract_email_data(self, gmail_message: Dict) -> Dict:
+        """
+        Extract email data from Gmail message format
+        This is a wrapper around _process_gmail_message for compatibility
+        """
+        return self._process_gmail_message(gmail_message)
+
+    def get_email_sync_diagnostics(self, user_email: str, days_back: int = 30) -> Dict:
+        """
+        Get diagnostics for email sync to help troubleshoot why no emails are found
+        """
+        try:
+            # Get Gmail credentials
+            credentials = gmail_auth.get_valid_credentials(user_email)
+            if not credentials:
+                return {'success': False, 'error': 'User not authenticated'}
+            
+            # Build Gmail service
+            service = build('gmail', 'v1', credentials=credentials)
+            
+            diagnostics = {
+                'success': True,
+                'user_email': user_email,
+                'tests_performed': [],
+                'recommendations': []
+            }
+            
+            # Test 1: Check for any emails at all
+            all_emails_result = service.users().messages().list(
+                userId='me',
+                maxResults=1
+            ).execute()
+            
+            total_emails = len(all_emails_result.get('messages', []))
+            diagnostics['tests_performed'].append({
+                'test': 'Total emails in Gmail',
+                'result': f"Found {total_emails} emails total",
+                'status': 'pass' if total_emails > 0 else 'fail'
+            })
+            
+            if total_emails == 0:
+                diagnostics['recommendations'].append("Your Gmail account appears to be empty or inaccessible")
+                return diagnostics
+            
+            # Test 2: Check different date ranges
+            date_ranges = [7, 30, 90, 365]
+            for days in date_ranges:
+                since_date = datetime.utcnow() - timedelta(days=days)
+                query = f'after:{since_date.strftime("%Y/%m/%d")}'
+                
+                result = service.users().messages().list(
+                    userId='me',
+                    q=query,
+                    maxResults=50
+                ).execute()
+                
+                count = len(result.get('messages', []))
+                diagnostics['tests_performed'].append({
+                    'test': f'Emails in last {days} days',
+                    'query': query,
+                    'result': f"Found {count} emails",
+                    'status': 'pass' if count > 0 else 'fail'
+                })
+            
+            # Test 3: Check for emails in different labels
+            label_tests = [
+                ('in:inbox', 'Inbox emails'),
+                ('in:sent', 'Sent emails'), 
+                ('in:all', 'All mail'),
+                ('is:unread', 'Unread emails')
+            ]
+            
+            for query_part, description in label_tests:
+                result = service.users().messages().list(
+                    userId='me',
+                    q=query_part,
+                    maxResults=10
+                ).execute()
+                
+                count = len(result.get('messages', []))
+                diagnostics['tests_performed'].append({
+                    'test': description,
+                    'query': query_part,
+                    'result': f"Found {count} emails",
+                    'status': 'pass' if count > 0 else 'fail'
+                })
+            
+            # Generate recommendations
+            recent_email_counts = [t['result'] for t in diagnostics['tests_performed'] if 'last' in t['test'] and 'Found 0' not in t['result']]
+            
+            if not recent_email_counts:
+                diagnostics['recommendations'].append("Try syncing with a longer date range (60+ days)")
+                diagnostics['recommendations'].append("Check if you have emails in your Gmail account")
+            
+            # Check if emails might have been processed already
+            user = get_db_manager().get_user_by_email(user_email)
+            if user:
+                with get_db_manager().get_session() as session:
+                    from models.enhanced_models import Email
+                    processed_count = session.query(Email).filter(Email.user_id == user.id).count()
+                    diagnostics['tests_performed'].append({
+                        'test': 'Previously processed emails',
+                        'result': f"Found {processed_count} emails already processed",
+                        'status': 'info'
+                    })
+                    
+                    if processed_count > 0:
+                        diagnostics['recommendations'].append("Use 'force_refresh=true' to reprocess existing emails")
+            
+            return diagnostics
+            
+        except Exception as e:
+            logger.error(f"Failed to run email sync diagnostics: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'user_email': user_email
+            }
+
     def process_emails_with_enhanced_intelligence(self, user_email: str, email_batch: List[Dict], 
                                                 enable_real_time: bool = True) -> Dict:
         """
@@ -845,7 +989,7 @@ class GmailFetcher:
             
             for email_data in email_batch:
                 try:
-                    if enable_real_time and realtime_processor.is_running:
+                    if enable_real_time and realtime_processor.running:
                         # Send to real-time processor
                         realtime_processor.process_new_email(email_data, user.id, priority=2)
                         processing_results['processed_emails'] += 1
@@ -873,21 +1017,10 @@ class GmailFetcher:
             
             # Generate proactive insights after batch processing
             if processing_results['processed_emails'] > 0:
-                if enable_real_time and realtime_processor.is_running:
-                    realtime_processor.trigger_proactive_insights(user.id, priority=4)
-                    processing_results['proactive_insights_triggered'] = True
+                if enable_real_time and realtime_processor.running:
+                    processing_results['real_time_processing_enabled'] = True
                 else:
-                    # Generate insights directly
-                    insights = entity_engine.generate_proactive_insights(user.id)
-                    processing_results['proactive_insights'] = [
-                        {
-                            'type': insight.insight_type,
-                            'title': insight.title,
-                            'description': insight.description,
-                            'priority': insight.priority
-                        }
-                        for insight in insights
-                    ]
+                    processing_results['real_time_processing_enabled'] = False
             
             logger.info(f"Enhanced batch processing complete: {processing_results['processed_emails']}/{processing_results['total_emails']} emails processed")
             

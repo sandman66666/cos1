@@ -1327,7 +1327,7 @@ class CalendarFetcher:
         """
         try:
             # Get Calendar credentials
-            credentials = self.gmail_auth.get_user_credentials(user_email)
+            credentials = self.gmail_auth.get_valid_credentials(user_email)
             if not credentials:
                 return {'success': False, 'error': 'User not authenticated'}
             
