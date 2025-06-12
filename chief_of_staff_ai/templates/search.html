@@ -1,0 +1,918 @@
+{% extends "base.html" %}
+
+{% block title %}Universal Search - AI Chief of Staff{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-search me-2"></i>
+            Universal Search & Discovery
+        </h1>
+        <p class="text-muted mb-0">Search across all your data with intelligent filtering and insights</p>
+    </div>
+    <div>
+        <button class="btn btn-enhanced" onclick="openAdvancedSearch()">
+            <i class="fas fa-sliders-h me-2"></i>Advanced Search
+        </button>
+        <button class="btn btn-outline-info ms-2" onclick="exportResults()">
+            <i class="fas fa-download me-2"></i>Export Results
+        </button>
+    </div>
+</div>
+
+<!-- Search Interface -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card search-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <div class="search-input-container">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" id="universalSearch" class="form-control form-control-lg" 
+                                       placeholder="Search emails, tasks, people, topics... (try 'urgent emails from John' or 'tasks due this week')"
+                                       onkeyup="performSearch()" autocomplete="off">
+                                <button class="btn btn-outline-secondary" onclick="clearSearch()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div id="searchSuggestions" class="search-suggestions"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <select id="searchScope" class="form-select form-select-lg" onchange="performSearch()">
+                            <option value="all">All Data</option>
+                            <option value="emails">Emails</option>
+                            <option value="tasks">Tasks</option>
+                            <option value="people">People</option>
+                            <option value="topics">Topics</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <select id="sortBy" class="form-select form-select-lg" onchange="performSearch()">
+                            <option value="relevance">Relevance</option>
+                            <option value="date_desc">Newest First</option>
+                            <option value="date_asc">Oldest First</option>
+                            <option value="alphabetical">A to Z</option>
+                            <option value="importance">Importance</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Quick Filters -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="quick-filters mb-3">
+                            <span class="me-3"><strong>Quick Filters:</strong></span>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="quickFilter('today')">Today</button>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="quickFilter('this_week')">This Week</button>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="quickFilter('urgent')">Urgent</button>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="quickFilter('unread')">Unread</button>
+                            <button class="btn btn-sm btn-outline-primary me-2" onclick="quickFilter('high_priority')">High Priority</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">Clear All</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value" id="totalResults">0</div>
+                    <div class="stat-label">Total Results</div>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-search fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value" id="emailResults">0</div>
+                    <div class="stat-label">Emails</div>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-envelope fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value" id="taskResults">0</div>
+                    <div class="stat-label">Tasks</div>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-tasks fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value" id="entityResults">0</div>
+                    <div class="stat-label">People & Topics</div>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-users fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Results -->
+<div class="row">
+    <div class="col-md-3">
+        <!-- Filters Sidebar -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-filter me-2"></i>Filters
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Date Range Filter -->
+                <div class="mb-4">
+                    <label class="form-label"><strong>Date Range</strong></label>
+                    <div class="mb-2">
+                        <input type="date" id="dateFrom" class="form-control form-control-sm" onchange="performSearch()">
+                    </div>
+                    <div>
+                        <input type="date" id="dateTo" class="form-control form-control-sm" onchange="performSearch()">
+                    </div>
+                </div>
+                
+                <!-- Content Type Filter -->
+                <div class="mb-4">
+                    <label class="form-label"><strong>Content Types</strong></label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeEmails" checked onchange="performSearch()">
+                        <label class="form-check-label" for="includeEmails">Emails</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeTasks" checked onchange="performSearch()">
+                        <label class="form-check-label" for="includeTasks">Tasks</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includePeople" checked onchange="performSearch()">
+                        <label class="form-check-label" for="includePeople">People</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeTopics" checked onchange="performSearch()">
+                        <label class="form-check-label" for="includeTopics">Topics</label>
+                    </div>
+                </div>
+                
+                <!-- Priority Filter -->
+                <div class="mb-4">
+                    <label class="form-label"><strong>Priority</strong></label>
+                    <select id="priorityFilter" class="form-select form-select-sm" onchange="performSearch()">
+                        <option value="">All Priorities</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                
+                <!-- Status Filter -->
+                <div class="mb-4">
+                    <label class="form-label"><strong>Status</strong></label>
+                    <select id="statusFilter" class="form-select form-select-sm" onchange="performSearch()">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="unread">Unread</option>
+                    </select>
+                </div>
+                
+                <!-- People Filter -->
+                <div class="mb-4">
+                    <label class="form-label"><strong>Related People</strong></label>
+                    <select id="peopleFilter" class="form-select form-select-sm" onchange="performSearch()">
+                        <option value="">All People</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                
+                <!-- Tags/Topics Filter -->
+                <div class="mb-4">
+                    <label class="form-label"><strong>Topics/Tags</strong></label>
+                    <select id="topicsFilter" class="form-select form-select-sm" onchange="performSearch()">
+                        <option value="">All Topics</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <!-- Results Display -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Search Results
+                </h6>
+                <div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="listViewBtn" onclick="changeView('list')">
+                            <i class="fas fa-list"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="gridViewBtn" onclick="changeView('grid')">
+                            <i class="fas fa-th"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="detailViewBtn" onclick="changeView('detail')">
+                            <i class="fas fa-align-left"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="searchResults">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-search fa-3x mb-3"></i>
+                        <p>Enter a search term to begin discovery</p>
+                        <p class="small">Try searching for people, topics, or content across all your data</p>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                <div id="paginationContainer" class="d-flex justify-content-center mt-4" style="display: none !important;">
+                    <nav>
+                        <ul class="pagination" id="pagination">
+                            <!-- Pagination will be generated dynamically -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Search Modal -->
+<div class="modal fade" id="advancedSearchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-sliders-h me-2"></i>Advanced Search
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Search Conditions</h6>
+                        <div class="mb-3">
+                            <label for="advSearchTerms" class="form-label">Search Terms</label>
+                            <textarea class="form-control" id="advSearchTerms" rows="3" placeholder="Enter search terms, one per line"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="searchOperator" class="form-label">Operator</label>
+                            <select class="form-select" id="searchOperator">
+                                <option value="AND">AND (all terms must match)</option>
+                                <option value="OR">OR (any term can match)</option>
+                                <option value="NOT">NOT (exclude these terms)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Content Matching</h6>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="exactMatch">
+                                <label class="form-check-label" for="exactMatch">Exact phrase matching</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="caseSensitive">
+                                <label class="form-check-label" for="caseSensitive">Case sensitive</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="includeArchived">
+                                <label class="form-check-label" for="includeArchived">Include archived items</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-enhanced" onclick="applyAdvancedSearch()">
+                    <i class="fas fa-search me-2"></i>Apply Search
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .search-input-container {
+        position: relative;
+    }
+    
+    .search-suggestions {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+    
+    .suggestion-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f8f9fa;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .suggestion-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+    
+    .quick-filters .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    .result-item {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: white;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .result-item:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .result-type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-weight: bold;
+    }
+    
+    .result-email { border-left: 4px solid #f39c12; }
+    .result-task { border-left: 4px solid #27ae60; }
+    .result-person { border-left: 4px solid #3498db; }
+    .result-topic { border-left: 4px solid #9b59b6; }
+    
+    .highlight {
+        background-color: #fff3cd;
+        padding: 0.1rem 0.2rem;
+        border-radius: 3px;
+    }
+    
+    .grid-view .result-item {
+        height: 200px;
+        overflow: hidden;
+    }
+    
+    .detail-view .result-item {
+        padding: 1.5rem;
+    }
+    
+    .metadata {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .relevance-score {
+        background: linear-gradient(45deg, var(--success-color), var(--info-color));
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search functionality
+    let currentResults = [];
+    let currentPage = 1;
+    let resultsPerPage = 20;
+    let currentView = 'list';
+    let searchTimeout = null;
+    let people = [];
+    let topics = [];
+    
+    // Initialize search interface
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPeopleAndTopics();
+        initializeEventListeners();
+        
+        // Set list view as active by default
+        document.getElementById('listViewBtn').classList.add('active');
+    });
+    
+    // Load people and topics for filters
+    async function loadPeopleAndTopics() {
+        try {
+            const [peopleResponse, topicsResponse] = await Promise.all([
+                axios.get('/api/entities/people', { params: { limit: 500 } }),
+                axios.get('/api/entities/topics', { params: { limit: 500 } })
+            ]);
+            
+            if (peopleResponse.data.success) {
+                people = peopleResponse.data.data.people || [];
+                populatePeopleFilter();
+            }
+            
+            if (topicsResponse.data.success) {
+                topics = topicsResponse.data.data.topics || [];
+                populateTopicsFilter();
+            }
+        } catch (error) {
+            console.error('Error loading people/topics:', error);
+        }
+    }
+    
+    // Initialize event listeners
+    function initializeEventListeners() {
+        const searchInput = document.getElementById('universalSearch');
+        
+        searchInput.addEventListener('focus', function() {
+            showSearchSuggestions();
+        });
+        
+        searchInput.addEventListener('blur', function() {
+            setTimeout(() => hideSearchSuggestions(), 200);
+        });
+        
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-input-container')) {
+                hideSearchSuggestions();
+            }
+        });
+    }
+    
+    // Perform search with debouncing
+    function performSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(async () => {
+            await executeSearch();
+        }, 300);
+    }
+    
+    // Execute the actual search
+    async function executeSearch() {
+        const searchTerm = document.getElementById('universalSearch').value.trim();
+        const scope = document.getElementById('searchScope').value;
+        const sortBy = document.getElementById('sortBy').value;
+        
+        if (!searchTerm && scope === 'all') {
+            clearResults();
+            return;
+        }
+        
+        try {
+            showLoading();
+            
+            const filters = getActiveFilters();
+            const searchParams = {
+                query: searchTerm,
+                scope: scope,
+                sort_by: sortBy,
+                page: currentPage,
+                limit: resultsPerPage,
+                ...filters
+            };
+            
+            const response = await axios.get('/api/entities/search', { params: searchParams });
+            
+            hideLoading();
+            
+            if (response.data.success) {
+                currentResults = response.data.data.results || [];
+                displayResults(currentResults);
+                updateSearchStatistics(response.data.data.statistics);
+                updatePagination(response.data.data.pagination);
+            } else {
+                showAlert('Search failed: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Search error: ' + error.message, 'danger');
+        }
+    }
+    
+    // Get active filters
+    function getActiveFilters() {
+        return {
+            date_from: document.getElementById('dateFrom').value || null,
+            date_to: document.getElementById('dateTo').value || null,
+            include_emails: document.getElementById('includeEmails').checked,
+            include_tasks: document.getElementById('includeTasks').checked,
+            include_people: document.getElementById('includePeople').checked,
+            include_topics: document.getElementById('includeTopics').checked,
+            priority: document.getElementById('priorityFilter').value || null,
+            status: document.getElementById('statusFilter').value || null,
+            people: document.getElementById('peopleFilter').value || null,
+            topics: document.getElementById('topicsFilter').value || null
+        };
+    }
+    
+    // Display search results
+    function displayResults(results) {
+        const container = document.getElementById('searchResults');
+        
+        if (results.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-search fa-3x mb-3"></i>
+                    <p>No results found</p>
+                    <p class="small">Try adjusting your search terms or filters</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        const containerClass = currentView === 'grid' ? 'row' : '';
+        
+        if (currentView === 'grid') {
+            html = '<div class="row">';
+        }
+        
+        results.forEach(result => {
+            html += createResultItem(result);
+        });
+        
+        if (currentView === 'grid') {
+            html += '</div>';
+        }
+        
+        container.innerHTML = html;
+    }
+    
+    // Create result item HTML
+    function createResultItem(result) {
+        const typeClass = `result-${result.type}`;
+        const typeBadge = getTypeBadge(result.type);
+        const gridClass = currentView === 'grid' ? 'col-md-6 col-lg-4 mb-3' : '';
+        const detailClass = currentView === 'detail' ? 'detail-view' : '';
+        
+        const title = highlightSearchTerms(result.title || result.name || result.description);
+        const content = result.content ? highlightSearchTerms(result.content.substring(0, 200) + '...') : '';
+        const relevanceScore = Math.round(result.relevance_score * 100);
+        
+        return `
+            <div class="${gridClass}">
+                <div class="result-item ${typeClass} ${detailClass}" onclick="openResultDetail('${result.type}', '${result.id}')">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            ${typeBadge}
+                            <span class="relevance-score ms-2">${relevanceScore}%</span>
+                        </div>
+                        <small class="metadata">${formatDate(result.date)}</small>
+                    </div>
+                    
+                    <h6 class="mb-2">${title}</h6>
+                    
+                    ${content ? `<p class="text-muted mb-2">${content}</p>` : ''}
+                    
+                    <div class="metadata">
+                        ${result.from ? `<span><i class="fas fa-user me-1"></i>${result.from}</span>` : ''}
+                        ${result.priority ? `<span class="ms-3"><i class="fas fa-flag me-1"></i>${result.priority}</span>` : ''}
+                        ${result.status ? `<span class="ms-3"><i class="fas fa-circle me-1"></i>${result.status}</span>` : ''}
+                    </div>
+                    
+                    ${result.related_entities && result.related_entities.length > 0 ? `
+                        <div class="mt-2">
+                            ${result.related_entities.slice(0, 3).map(entity => 
+                                `<span class="entity-badge">${entity.name}</span>`
+                            ).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Get type badge HTML
+    function getTypeBadge(type) {
+        const badges = {
+            email: '<span class="result-type-badge bg-warning text-dark">Email</span>',
+            task: '<span class="result-type-badge bg-success">Task</span>',
+            person: '<span class="result-type-badge bg-info">Person</span>',
+            topic: '<span class="result-type-badge bg-primary">Topic</span>'
+        };
+        return badges[type] || '<span class="result-type-badge bg-secondary">Item</span>';
+    }
+    
+    // Highlight search terms in text
+    function highlightSearchTerms(text) {
+        const searchTerm = document.getElementById('universalSearch').value.trim();
+        if (!searchTerm) return text;
+        
+        const regex = new RegExp(`(${searchTerm})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+    
+    // Update search statistics
+    function updateSearchStatistics(stats) {
+        document.getElementById('totalResults').textContent = stats.total || 0;
+        document.getElementById('emailResults').textContent = stats.emails || 0;
+        document.getElementById('taskResults').textContent = stats.tasks || 0;
+        document.getElementById('entityResults').textContent = (stats.people || 0) + (stats.topics || 0);
+    }
+    
+    // Quick filter functions
+    function quickFilter(filterType) {
+        const searchInput = document.getElementById('universalSearch');
+        const currentSearch = searchInput.value.trim();
+        
+        const filterQueries = {
+            today: 'date:today',
+            this_week: 'date:this_week',
+            urgent: 'priority:high OR urgent',
+            unread: 'status:unread',
+            high_priority: 'priority:high'
+        };
+        
+        const filterQuery = filterQueries[filterType];
+        if (filterQuery) {
+            if (currentSearch) {
+                searchInput.value = `${currentSearch} ${filterQuery}`;
+            } else {
+                searchInput.value = filterQuery;
+            }
+            performSearch();
+        }
+    }
+    
+    // Change view mode
+    function changeView(viewType) {
+        currentView = viewType;
+        
+        // Update button states
+        document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`${viewType}ViewBtn`).classList.add('active');
+        
+        // Re-render results with new view
+        if (currentResults.length > 0) {
+            displayResults(currentResults);
+        }
+    }
+    
+    // Advanced search functions
+    function openAdvancedSearch() {
+        new bootstrap.Modal(document.getElementById('advancedSearchModal')).show();
+    }
+    
+    function applyAdvancedSearch() {
+        const terms = document.getElementById('advSearchTerms').value.trim();
+        const operator = document.getElementById('searchOperator').value;
+        const exactMatch = document.getElementById('exactMatch').checked;
+        const caseSensitive = document.getElementById('caseSensitive').checked;
+        
+        if (terms) {
+            let searchQuery = terms;
+            if (exactMatch) searchQuery = `"${searchQuery}"`;
+            if (caseSensitive) searchQuery += ' case:sensitive';
+            
+            document.getElementById('universalSearch').value = searchQuery;
+            bootstrap.Modal.getInstance(document.getElementById('advancedSearchModal')).hide();
+            performSearch();
+        }
+    }
+    
+    // Search suggestions
+    async function showSearchSuggestions() {
+        const searchTerm = document.getElementById('universalSearch').value.trim();
+        if (searchTerm.length < 2) return;
+        
+        try {
+            const response = await axios.get('/api/entities/search/suggestions', {
+                params: { query: searchTerm, limit: 5 }
+            });
+            
+            if (response.data.success) {
+                const suggestions = response.data.data.suggestions || [];
+                renderSearchSuggestions(suggestions);
+            }
+        } catch (error) {
+            console.error('Error loading suggestions:', error);
+        }
+    }
+    
+    function renderSearchSuggestions(suggestions) {
+        const container = document.getElementById('searchSuggestions');
+        
+        if (suggestions.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+        
+        container.innerHTML = suggestions.map(suggestion => `
+            <div class="suggestion-item" onclick="applySuggestion('${suggestion.query}')">
+                <div><strong>${suggestion.title}</strong></div>
+                <small class="text-muted">${suggestion.description}</small>
+            </div>
+        `).join('');
+        
+        container.style.display = 'block';
+    }
+    
+    function applySuggestion(query) {
+        document.getElementById('universalSearch').value = query;
+        hideSearchSuggestions();
+        performSearch();
+    }
+    
+    function hideSearchSuggestions() {
+        document.getElementById('searchSuggestions').style.display = 'none';
+    }
+    
+    // Utility functions
+    function populatePeopleFilter() {
+        const select = document.getElementById('peopleFilter');
+        select.innerHTML = '<option value="">All People</option>' + 
+            people.map(person => `<option value="${person.id}">${person.name}</option>`).join('');
+    }
+    
+    function populateTopicsFilter() {
+        const select = document.getElementById('topicsFilter');
+        select.innerHTML = '<option value="">All Topics</option>' + 
+            topics.map(topic => `<option value="${topic.id}">${topic.name}</option>`).join('');
+    }
+    
+    function clearSearch() {
+        document.getElementById('universalSearch').value = '';
+        clearResults();
+        hideSearchSuggestions();
+    }
+    
+    function clearFilters() {
+        document.getElementById('dateFrom').value = '';
+        document.getElementById('dateTo').value = '';
+        document.getElementById('priorityFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('peopleFilter').value = '';
+        document.getElementById('topicsFilter').value = '';
+        
+        // Reset checkboxes
+        ['includeEmails', 'includeTasks', 'includePeople', 'includeTopics'].forEach(id => {
+            document.getElementById(id).checked = true;
+        });
+        
+        performSearch();
+    }
+    
+    function clearResults() {
+        const container = document.getElementById('searchResults');
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-search fa-3x mb-3"></i>
+                <p>Enter a search term to begin discovery</p>
+                <p class="small">Try searching for people, topics, or content across all your data</p>
+            </div>
+        `;
+        
+        updateSearchStatistics({});
+        document.getElementById('paginationContainer').style.display = 'none';
+    }
+    
+    function openResultDetail(type, id) {
+        const routes = {
+            email: `/emails/${id}`,
+            task: `/tasks`,
+            person: `/people`,
+            topic: `/topics`
+        };
+        
+        const route = routes[type];
+        if (route) {
+            // In a real implementation, you might open a modal or navigate to a detail page
+            showAlert(`Opening ${type} detail for ID: ${id}`, 'info');
+        }
+    }
+    
+    function exportResults() {
+        if (currentResults.length === 0) {
+            showAlert('No results to export', 'warning');
+            return;
+        }
+        
+        const exportData = currentResults.map(result => ({
+            type: result.type,
+            title: result.title || result.name || result.description,
+            content: result.content,
+            date: result.date,
+            relevance_score: result.relevance_score
+        }));
+        
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `search-results-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleDateString();
+    }
+    
+    function updatePagination(pagination) {
+        const container = document.getElementById('paginationContainer');
+        const paginationEl = document.getElementById('pagination');
+        
+        if (!pagination || pagination.total_pages <= 1) {
+            container.style.display = 'none';
+            return;
+        }
+        
+        let html = '';
+        const currentPage = pagination.current_page;
+        const totalPages = pagination.total_pages;
+        
+        // Previous button
+        html += `
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
+            </li>
+        `;
+        
+        // Page numbers
+        for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+            html += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                </li>
+            `;
+        }
+        
+        // Next button
+        html += `
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
+            </li>
+        `;
+        
+        paginationEl.innerHTML = html;
+        container.style.display = 'flex';
+    }
+    
+    function changePage(page) {
+        currentPage = page;
+        executeSearch();
+    }
+</script>
+{% endblock %} 

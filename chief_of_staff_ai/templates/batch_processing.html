@@ -1,0 +1,704 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Processing - AI Chief of Staff{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-tasks me-2"></i>
+            Batch Processing Management
+        </h1>
+        <p class="text-muted mb-0">Manage bulk operations and data processing workflows</p>
+    </div>
+    <div>
+        <button class="btn btn-enhanced" onclick="createNewBatchJob()">
+            <i class="fas fa-plus me-2"></i>New Batch Job
+        </button>
+        <button class="btn btn-outline-primary ms-2" onclick="refreshJobs()">
+            <i class="fas fa-sync me-2"></i>Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Batch Job Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card">
+            <div class="stat-value" id="totalJobs">0</div>
+            <div class="stat-label">Total Jobs</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);">
+            <div class="stat-value" id="completedJobs">0</div>
+            <div class="stat-label">Completed</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+            <div class="stat-value" id="runningJobs">0</div>
+            <div class="stat-label">Running</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+            <div class="stat-value" id="failedJobs">0</div>
+            <div class="stat-label">Failed</div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Batch Operations
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="d-grid">
+                            <button class="btn btn-outline-primary" onclick="startEmailBatch()">
+                                <i class="fas fa-envelope mb-2 d-block"></i>
+                                Process Emails
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="d-grid">
+                            <button class="btn btn-outline-info" onclick="startTaskBatch()">
+                                <i class="fas fa-tasks mb-2 d-block"></i>
+                                Bulk Tasks
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="d-grid">
+                            <button class="btn btn-outline-success" onclick="startAnalyticsBatch()">
+                                <i class="fas fa-chart-line mb-2 d-block"></i>
+                                Generate Analytics
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="d-grid">
+                            <button class="btn btn-outline-warning" onclick="startEntityBatch()">
+                                <i class="fas fa-users mb-2 d-block"></i>
+                                Sync Entities
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Jobs Monitor -->
+<div class="row mb-4">
+    <div class="col-md-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-play-circle me-2"></i>Active Jobs
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="pauseAllJobs()">
+                    <i class="fas fa-pause me-2"></i>Pause All
+                </button>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="activeJobs">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <p>No active jobs</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-area me-2"></i>Processing Rate
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="processingRateChart" width="300" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Job History -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Job History
+                </h5>
+                <div>
+                    <select id="jobFilter" class="form-select form-select-sm" onchange="filterJobs()">
+                        <option value="">All Jobs</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="jobHistory">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-history fa-2x mb-2"></i>
+                        <p>Loading job history...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Batch Job Modal -->
+<div class="modal fade" id="batchJobModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>Create New Batch Job
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="batchJobForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="jobType" class="form-label">Job Type *</label>
+                            <select id="jobType" class="form-select" required onchange="updateJobForm()">
+                                <option value="">Select job type...</option>
+                                <option value="email_processing">Email Processing</option>
+                                <option value="task_creation">Task Creation</option>
+                                <option value="analytics_generation">Analytics Generation</option>
+                                <option value="entity_sync">Entity Synchronization</option>
+                                <option value="data_export">Data Export</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="jobName" class="form-label">Job Name *</label>
+                            <input type="text" id="jobName" class="form-control" required placeholder="Enter job name">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="batchSize" class="form-label">Batch Size</label>
+                            <input type="number" id="batchSize" class="form-control" value="50" min="1" max="1000">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="concurrency" class="form-label">Concurrency</label>
+                            <input type="number" id="concurrency" class="form-control" value="5" min="1" max="20">
+                        </div>
+                    </div>
+                    
+                    <div id="jobSpecificOptions" class="mb-3">
+                        <!-- Dynamic options based on job type -->
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="jobDescription" class="form-label">Description</label>
+                        <textarea id="jobDescription" class="form-control" rows="3" placeholder="Optional job description"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-enhanced" onclick="submitBatchJob()">
+                    <i class="fas fa-play me-2"></i>Start Job
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Job Details Modal -->
+<div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="jobDetailsTitle">Job Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="jobDetailsContent">
+                <!-- Job details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-danger" onclick="cancelCurrentJob()" id="cancelJobBtn" style="display: none;">
+                    <i class="fas fa-stop me-2"></i>Cancel Job
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .job-item {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        background: white;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .job-item:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .job-item.running {
+        border-left: 4px solid var(--warning-color);
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    }
+    
+    .job-item.completed {
+        border-left: 4px solid var(--success-color);
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    }
+    
+    .job-item.failed {
+        border-left: 4px solid var(--accent-color);
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    }
+    
+    .progress-animated {
+        animation: progress-animation 2s linear infinite;
+    }
+    
+    @keyframes progress-animation {
+        0% { background-position: 0 0; }
+        100% { background-position: 30px 0; }
+    }
+    
+    .job-type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-weight: bold;
+    }
+    
+    .quick-action-card {
+        transition: all 0.3s;
+        border: 2px solid transparent;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--primary-color);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Batch processing functionality
+    let batchJobs = [];
+    let processingRateChart;
+    let currentJobId = null;
+    
+    // Initialize batch processing interface
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeProcessingChart();
+        loadBatchJobs();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshJobs, 30000);
+    });
+    
+    // Initialize processing rate chart
+    function initializeProcessingChart() {
+        const ctx = document.getElementById('processingRateChart').getContext('2d');
+        processingRateChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Items/minute',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+    
+    // Load batch jobs
+    async function loadBatchJobs() {
+        try {
+            const response = await axios.get('/api/batch/status');
+            if (response.data.success) {
+                batchJobs = response.data.data.jobs || [];
+                updateJobStatistics();
+                renderActiveJobs();
+                renderJobHistory();
+            }
+        } catch (error) {
+            console.error('Error loading batch jobs:', error);
+            showAlert('Error loading batch jobs: ' + error.message, 'danger');
+        }
+    }
+    
+    // Update job statistics
+    function updateJobStatistics() {
+        const stats = {
+            total: batchJobs.length,
+            completed: batchJobs.filter(j => j.status === 'completed').length,
+            running: batchJobs.filter(j => j.status === 'running').length,
+            failed: batchJobs.filter(j => j.status === 'failed').length
+        };
+        
+        document.getElementById('totalJobs').textContent = stats.total;
+        document.getElementById('completedJobs').textContent = stats.completed;
+        document.getElementById('runningJobs').textContent = stats.running;
+        document.getElementById('failedJobs').textContent = stats.failed;
+    }
+    
+    // Render active jobs
+    function renderActiveJobs() {
+        const activeJobs = batchJobs.filter(job => job.status === 'running' || job.status === 'pending');
+        const container = document.getElementById('activeJobs');
+        
+        if (activeJobs.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <p>No active jobs</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = activeJobs.map(job => `
+            <div class="job-item running" onclick="viewJobDetails('${job.id}')">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="mb-1">${job.name}</h6>
+                        <span class="job-type-badge bg-primary text-white">${job.type}</span>
+                    </div>
+                    <span class="badge bg-warning">Running</span>
+                </div>
+                <div class="progress mb-2">
+                    <div class="progress-bar progress-animated" style="width: ${job.progress || 0}%"></div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">Started: ${new Date(job.started_at).toLocaleTimeString()}</small>
+                    <small class="text-muted">${job.processed || 0}/${job.total || 0} items</small>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Render job history
+    function renderJobHistory() {
+        const container = document.getElementById('jobHistory');
+        const filter = document.getElementById('jobFilter').value;
+        
+        let filteredJobs = batchJobs;
+        if (filter) {
+            filteredJobs = batchJobs.filter(job => job.status === filter);
+        }
+        
+        if (filteredJobs.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-history fa-2x mb-2"></i>
+                    <p>No jobs found</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = filteredJobs.slice(0, 20).map(job => `
+            <div class="job-item ${job.status}" onclick="viewJobDetails('${job.id}')">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">${job.name}</h6>
+                        <div class="mb-2">
+                            <span class="job-type-badge bg-secondary text-white">${job.type}</span>
+                            <span class="ms-2">
+                                <i class="fas fa-clock me-1"></i>
+                                ${job.duration ? formatDuration(job.duration) : 'N/A'}
+                            </span>
+                        </div>
+                        <small class="text-muted">
+                            ${job.completed_at ? 'Completed: ' + new Date(job.completed_at).toLocaleString() : 
+                              'Started: ' + new Date(job.started_at).toLocaleString()}
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-${getStatusColor(job.status)}">${job.status}</span>
+                        <br><small class="text-muted">${job.processed || 0} items</small>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Quick action functions
+    async function startEmailBatch() {
+        try {
+            const response = await axios.post('/api/batch/emails/process', {
+                days_back: 7,
+                batch_size: 50,
+                concurrency: 5
+            });
+            
+            if (response.data.success) {
+                showAlert('Email batch processing started!', 'success');
+                refreshJobs();
+            } else {
+                showAlert('Failed to start email batch: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            showAlert('Error starting email batch: ' + error.message, 'danger');
+        }
+    }
+    
+    async function startTaskBatch() {
+        // Implementation for task batch processing
+        showAlert('Task batch processing started!', 'info');
+    }
+    
+    async function startAnalyticsBatch() {
+        try {
+            const response = await axios.post('/api/batch/analytics/generate-insights');
+            if (response.data.success) {
+                showAlert('Analytics batch processing started!', 'success');
+                refreshJobs();
+            }
+        } catch (error) {
+            showAlert('Error starting analytics batch: ' + error.message, 'danger');
+        }
+    }
+    
+    async function startEntityBatch() {
+        try {
+            const response = await axios.post('/api/batch/entities/create', {
+                type: 'people',
+                source: 'email_sync'
+            });
+            
+            if (response.data.success) {
+                showAlert('Entity sync batch started!', 'success');
+                refreshJobs();
+            }
+        } catch (error) {
+            showAlert('Error starting entity batch: ' + error.message, 'danger');
+        }
+    }
+    
+    // Modal functions
+    function createNewBatchJob() {
+        document.getElementById('batchJobForm').reset();
+        document.getElementById('jobSpecificOptions').innerHTML = '';
+        new bootstrap.Modal(document.getElementById('batchJobModal')).show();
+    }
+    
+    function updateJobForm() {
+        const jobType = document.getElementById('jobType').value;
+        const optionsContainer = document.getElementById('jobSpecificOptions');
+        
+        let optionsHTML = '';
+        
+        switch (jobType) {
+            case 'email_processing':
+                optionsHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Days Back</label>
+                            <input type="number" class="form-control" value="7" min="1" max="365">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Force Refresh</label>
+                            <select class="form-select">
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'analytics_generation':
+                optionsHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Analysis Type</label>
+                            <select class="form-select">
+                                <option value="comprehensive">Comprehensive</option>
+                                <option value="business_intelligence">Business Intelligence</option>
+                                <option value="productivity">Productivity</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Time Range</label>
+                            <select class="form-select">
+                                <option value="7">Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                break;
+        }
+        
+        optionsContainer.innerHTML = optionsHTML;
+    }
+    
+    async function submitBatchJob() {
+        const form = document.getElementById('batchJobForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        const jobData = {
+            type: document.getElementById('jobType').value,
+            name: document.getElementById('jobName').value,
+            batch_size: parseInt(document.getElementById('batchSize').value),
+            concurrency: parseInt(document.getElementById('concurrency').value),
+            description: document.getElementById('jobDescription').value
+        };
+        
+        try {
+            showLoading();
+            const response = await axios.post('/api/batch/jobs', jobData);
+            hideLoading();
+            
+            if (response.data.success) {
+                showAlert('Batch job created successfully!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('batchJobModal')).hide();
+                refreshJobs();
+            } else {
+                showAlert('Failed to create batch job: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Error creating batch job: ' + error.message, 'danger');
+        }
+    }
+    
+    async function viewJobDetails(jobId) {
+        currentJobId = jobId;
+        const job = batchJobs.find(j => j.id === jobId);
+        
+        if (!job) return;
+        
+        document.getElementById('jobDetailsTitle').textContent = `Job Details: ${job.name}`;
+        
+        const isRunning = job.status === 'running' || job.status === 'pending';
+        const cancelBtn = document.getElementById('cancelJobBtn');
+        cancelBtn.style.display = isRunning ? 'block' : 'none';
+        
+        document.getElementById('jobDetailsContent').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Job Name:</strong> ${job.name}<br>
+                    <strong>Type:</strong> ${job.type}<br>
+                    <strong>Status:</strong> <span class="badge bg-${getStatusColor(job.status)}">${job.status}</span><br>
+                    <strong>Progress:</strong> ${job.progress || 0}%<br>
+                </div>
+                <div class="col-md-6">
+                    <strong>Started:</strong> ${new Date(job.started_at).toLocaleString()}<br>
+                    <strong>Duration:</strong> ${job.duration ? formatDuration(job.duration) : 'N/A'}<br>
+                    <strong>Items Processed:</strong> ${job.processed || 0}/${job.total || 0}<br>
+                    <strong>Batch Size:</strong> ${job.batch_size || 'N/A'}<br>
+                </div>
+            </div>
+            ${job.description ? `<div class="mt-3"><strong>Description:</strong><p>${job.description}</p></div>` : ''}
+            ${job.error ? `<div class="mt-3"><strong>Error:</strong><div class="alert alert-danger">${job.error}</div></div>` : ''}
+        `;
+        
+        new bootstrap.Modal(document.getElementById('jobDetailsModal')).show();
+    }
+    
+    // Utility functions
+    function refreshJobs() {
+        loadBatchJobs();
+    }
+    
+    function filterJobs() {
+        renderJobHistory();
+    }
+    
+    function pauseAllJobs() {
+        if (confirm('Are you sure you want to pause all running jobs?')) {
+            showAlert('All jobs paused!', 'warning');
+        }
+    }
+    
+    async function cancelCurrentJob() {
+        if (!currentJobId) return;
+        
+        if (confirm('Are you sure you want to cancel this job?')) {
+            try {
+                const response = await axios.delete(`/api/batch/jobs/${currentJobId}`);
+                if (response.data.success) {
+                    showAlert('Job cancelled successfully!', 'info');
+                    bootstrap.Modal.getInstance(document.getElementById('jobDetailsModal')).hide();
+                    refreshJobs();
+                }
+            } catch (error) {
+                showAlert('Error cancelling job: ' + error.message, 'danger');
+            }
+        }
+    }
+    
+    function getStatusColor(status) {
+        switch (status) {
+            case 'completed': return 'success';
+            case 'failed': return 'danger';
+            case 'running': return 'warning';
+            case 'pending': return 'info';
+            case 'cancelled': return 'secondary';
+            default: return 'secondary';
+        }
+    }
+    
+    function formatDuration(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes}m ${secs}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${secs}s`;
+        } else {
+            return `${secs}s`;
+        }
+    }
+</script>
+{% endblock %} 

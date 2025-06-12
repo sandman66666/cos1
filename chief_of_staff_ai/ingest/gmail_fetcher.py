@@ -13,6 +13,9 @@ from googleapiclient.errors import HttpError
 from auth.gmail_auth import gmail_auth
 from models.database import get_db_manager, Email
 from config.settings import settings
+from processors.realtime_processing import realtime_processor, EventType
+from processors.enhanced_ai_pipeline import enhanced_ai_processor
+from processors.unified_entity_engine import entity_engine, EntityContext
 
 logger = logging.getLogger(__name__)
 
@@ -28,125 +31,120 @@ class GmailFetcher:
         self, 
         user_email: str, 
         days_back: int = 7, 
-        limit: int = None,
+        limit: int = 50,
         force_refresh: bool = False
     ) -> Dict:
         """
-        Fetch recent emails for a user from their Gmail account - BUSINESS FOCUSED
-        Only fetches from important labels: INBOX, IMPORTANT, STARRED, CATEGORY_PRIMARY
-        Excludes promotional, social, updates, and forums to focus on real business communications
-        
-        Args:
-            user_email: Gmail address of the user
-            days_back: Number of days back to fetch emails
-            limit: Maximum number of emails to fetch
-            force_refresh: Whether to bypass database cache and fetch fresh data
-            
-        Returns:
-            Dictionary containing fetched emails and metadata
+        Fetch recent emails and process them through enhanced entity-centric pipeline
         """
         try:
-            # Get user from database
-            user = get_db_manager().get_user_by_email(user_email)
-            if not user:
-                return self._error_response(f"User {user_email} not found in database")
-            
-            # Check if we should use cached data
-            if not force_refresh:
-                cached_emails = get_db_manager().get_user_emails(user.id, limit or 50)
-                if cached_emails:
-                    logger.info(f"Using cached emails for {user_email}: {len(cached_emails)} emails")
-                    return {
-                        'success': True,
-                        'user_email': user_email,
-                        'emails': [email.to_dict() for email in cached_emails],
-                        'count': len(cached_emails),
-                        'source': 'database_cache',
-                        'fetched_at': datetime.utcnow().isoformat()
-                    }
-            
-            # Get valid credentials
-            credentials = gmail_auth.get_valid_credentials(user_email)
+            # Get Gmail credentials for user
+            credentials = gmail_auth.get_user_credentials(user_email)
             if not credentials:
-                return self._error_response(f"No valid credentials for {user_email}")
+                return {'success': False, 'error': 'User not authenticated'}
             
             # Build Gmail service
             service = build('gmail', 'v1', credentials=credentials)
             
-            # Calculate date range
+            # Calculate date filter
             since_date = datetime.utcnow() - timedelta(days=days_back)
+            query = f'after:{since_date.strftime("%Y/%m/%d")}'
             
-            # ENHANCED: Business-focused Gmail query - only important labels
-            # Focus on genuine business communications by including only:
-            # - INBOX (regular inbox emails)  
-            # - IMPORTANT (user-marked important emails)
-            # - STARRED (user-starred emails)
-            # - CATEGORY_PRIMARY (primary tab - most important emails)
-            # 
-            # Explicitly exclude noise:
-            # - CATEGORY_PROMOTIONS (promotional emails, newsletters)
-            # - CATEGORY_SOCIAL (social notifications) 
-            # - CATEGORY_UPDATES (automated updates)
-            # - CATEGORY_FORUMS (forum notifications)
-            # - SPAM and TRASH
+            logger.info(f"Fetching emails for {user_email} from last {days_back} days (limit: {limit})")
             
-            important_labels_query = (
-                f"after:{since_date.strftime('%Y/%m/%d')} "
-                f"(in:inbox OR label:important OR label:starred OR category:primary) "
-                f"-category:promotions -category:social -category:updates -category:forums "
-                f"-in:spam -in:trash"
-            )
+            # Get message list
+            results = service.users().messages().list(
+                userId='me',
+                q=query,
+                maxResults=limit
+            ).execute()
             
-            logger.info(f"Fetching BUSINESS-FOCUSED emails for {user_email} with enhanced query: {important_labels_query}")
+            messages = results.get('messages', [])
+            emails_fetched = 0
+            processed_emails = []
             
-            # Fetch email list with business-focused query
-            email_list = self._fetch_email_list(service, important_labels_query, limit)
-            if not email_list:
-                return {
-                    'success': True,
-                    'user_email': user_email,
-                    'emails': [],
-                    'count': 0,
-                    'source': 'gmail_api_business_focused',
-                    'fetched_at': datetime.utcnow().isoformat(),
-                    'message': 'No business emails found in the specified time range with important labels',
-                    'query_used': important_labels_query
-                }
+            # Get user database record for enhanced processing
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                logger.warning(f"User {user_email} not found in database")
+                return {'success': False, 'error': 'User not found in database'}
             
-            # Fetch full email content in batches
-            emails = self._fetch_emails_batch(service, email_list, user.id)
+            # Process each message
+            for message in messages:
+                try:
+                    # Get full message
+                    msg = service.users().messages().get(
+                        userId='me',
+                        id=message['id'],
+                        format='full'
+                    ).execute()
+                    
+                    # Extract email data
+                    email_data = self._extract_email_data(msg)
+                    
+                    if email_data:
+                        # Check if we already processed this email (avoid duplicates)
+                        if not force_refresh and self._is_email_processed(email_data['id'], user.id):
+                            logger.debug(f"Skipping already processed email: {email_data['id']}")
+                            continue
+                        
+                        # Enhanced processing: Send to real-time processor
+                        if realtime_processor.is_running:
+                            realtime_processor.process_new_email(email_data, user.id, priority=3)
+                            logger.debug(f"Sent email to real-time processor: {email_data.get('subject', 'No subject')}")
+                        else:
+                            # Fallback: Process directly through enhanced AI pipeline
+                            logger.info("Real-time processor not running, processing directly")
+                            result = enhanced_ai_processor.process_email_with_context(email_data, user.id)
+                            if result.success:
+                                logger.debug(f"Direct processing success: {result.entities_created}")
+                            else:
+                                logger.warning(f"Direct processing failed: {result.error}")
+                        
+                        processed_emails.append(email_data)
+                        emails_fetched += 1
+                        
+                        # Store basic email metadata for tracking
+                        self._store_email_metadata(email_data, user.id)
+                        
+                except Exception as e:
+                    logger.error(f"Error processing message {message['id']}: {str(e)}")
+                    continue
             
-            # Filter stats for logging
-            inbox_count = len([e for e in emails if 'INBOX' in e.get('processing_metadata', {}).get('gmail_labels', [])])
-            important_count = len([e for e in emails if 'IMPORTANT' in e.get('processing_metadata', {}).get('gmail_labels', [])])
-            starred_count = len([e for e in emails if 'STARRED' in e.get('processing_metadata', {}).get('gmail_labels', [])])
-            primary_count = len([e for e in emails if 'CATEGORY_PRIMARY' in e.get('processing_metadata', {}).get('gmail_labels', [])])
-            
-            logger.info(f"Successfully fetched {len(emails)} BUSINESS emails for {user_email} - "
-                       f"Inbox: {inbox_count}, Important: {important_count}, Starred: {starred_count}, Primary: {primary_count}")
-            
-            return {
+            # Generate summary with enhanced metrics
+            result = {
                 'success': True,
-                'user_email': user_email,
-                'emails': emails,
-                'count': len(emails),
-                'source': 'gmail_api_business_focused',
-                'fetched_at': datetime.utcnow().isoformat(),
-                'query_used': important_labels_query,
-                'days_back': days_back,
-                'filter_stats': {
-                    'inbox_emails': inbox_count,
-                    'important_emails': important_count, 
-                    'starred_emails': starred_count,
-                    'primary_category_emails': primary_count,
-                    'total_business_emails': len(emails)
+                'emails_fetched': emails_fetched,
+                'emails': processed_emails,
+                'user_id': user.id,
+                'enhanced_processing': True,
+                'real_time_processing': realtime_processor.is_running,
+                'processing_stats': {
+                    'total_messages_found': len(messages),
+                    'successfully_processed': emails_fetched,
+                    'skipped_duplicates': len(messages) - emails_fetched,
+                    'sent_to_real_time': emails_fetched if realtime_processor.is_running else 0
                 },
-                'filtering_approach': 'business_focused_labels_only'
+                'fetch_time': datetime.utcnow().isoformat()
             }
             
+            logger.info(f"Enhanced email fetch complete for {user_email}: {emails_fetched} emails processed")
+            
+            # Trigger proactive insights if we processed significant emails
+            if emails_fetched > 5 and realtime_processor.is_running:
+                realtime_processor.trigger_proactive_insights(user.id, priority=5)
+                logger.info("Triggered proactive insights generation")
+            
+            return result
+            
         except Exception as e:
-            logger.error(f"Failed to fetch business-focused emails for {user_email}: {str(e)}")
-            return self._error_response(str(e))
+            logger.error(f"Failed to fetch emails for {user_email}: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'emails_fetched': 0,
+                'emails': []
+            }
     
     def fetch_sent_emails(
         self, 
@@ -774,6 +772,135 @@ class GmailFetcher:
         except Exception as e:
             logger.error(f"Failed to get fetch stats for {user_email}: {str(e)}")
             return {'error': str(e)}
+
+    def _is_email_processed(self, gmail_id: str, user_id: int) -> bool:
+        """Check if email has already been processed"""
+        try:
+            from models.enhanced_models import Email
+            
+            with get_db_manager().get_session() as session:
+                existing = session.query(Email).filter(
+                    Email.user_id == user_id,
+                    Email.gmail_id == gmail_id
+                ).first()
+                
+                return existing is not None
+                
+        except Exception as e:
+            logger.debug(f"Error checking if email processed: {str(e)}")
+            return False
+    
+    def _store_email_metadata(self, email_data: Dict, user_id: int):
+        """Store basic email metadata for tracking purposes"""
+        try:
+            from models.enhanced_models import Email
+            
+            with get_db_manager().get_session() as session:
+                # Check if already exists
+                existing = session.query(Email).filter(
+                    Email.user_id == user_id,
+                    Email.gmail_id == email_data['id']
+                ).first()
+                
+                if not existing:
+                    email = Email(
+                        user_id=user_id,
+                        gmail_id=email_data['id'],
+                        subject=email_data.get('subject', ''),
+                        sender=email_data.get('sender', ''),
+                        sender_name=email_data.get('sender_name', ''),
+                        email_date=datetime.fromisoformat(email_data.get('email_date', datetime.utcnow().isoformat())),
+                        processed_at=datetime.utcnow(),
+                        processing_version='enhanced_v1'
+                    )
+                    
+                    session.add(email)
+                    session.commit()
+                    logger.debug(f"Stored email metadata: {email_data.get('subject', 'No subject')}")
+                
+        except Exception as e:
+            logger.warning(f"Failed to store email metadata: {str(e)}")
+
+    def process_emails_with_enhanced_intelligence(self, user_email: str, email_batch: List[Dict], 
+                                                enable_real_time: bool = True) -> Dict:
+        """
+        Process a batch of emails using enhanced entity-centric intelligence
+        This method demonstrates the full power of the new architecture
+        """
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            processing_results = {
+                'success': True,
+                'total_emails': len(email_batch),
+                'processed_emails': 0,
+                'entities_created': {'people': 0, 'topics': 0, 'tasks': 0, 'projects': 0},
+                'entities_updated': {'people': 0, 'topics': 0, 'tasks': 0, 'projects': 0},
+                'insights_generated': [],
+                'processing_method': 'real_time' if enable_real_time else 'direct',
+                'enhanced_features': True
+            }
+            
+            for email_data in email_batch:
+                try:
+                    if enable_real_time and realtime_processor.is_running:
+                        # Send to real-time processor
+                        realtime_processor.process_new_email(email_data, user.id, priority=2)
+                        processing_results['processed_emails'] += 1
+                    else:
+                        # Process directly through enhanced AI pipeline
+                        result = enhanced_ai_processor.process_email_with_context(email_data, user.id)
+                        
+                        if result.success:
+                            processing_results['processed_emails'] += 1
+                            
+                            # Aggregate entity statistics
+                            for entity_type in result.entities_created:
+                                processing_results['entities_created'][entity_type] += result.entities_created[entity_type]
+                            
+                            for entity_type in result.entities_updated:
+                                processing_results['entities_updated'][entity_type] += result.entities_updated[entity_type]
+                            
+                            processing_results['insights_generated'].extend(result.insights_generated)
+                        else:
+                            logger.warning(f"Email processing failed: {result.error}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to process email {email_data.get('id', 'unknown')}: {str(e)}")
+                    continue
+            
+            # Generate proactive insights after batch processing
+            if processing_results['processed_emails'] > 0:
+                if enable_real_time and realtime_processor.is_running:
+                    realtime_processor.trigger_proactive_insights(user.id, priority=4)
+                    processing_results['proactive_insights_triggered'] = True
+                else:
+                    # Generate insights directly
+                    insights = entity_engine.generate_proactive_insights(user.id)
+                    processing_results['proactive_insights'] = [
+                        {
+                            'type': insight.insight_type,
+                            'title': insight.title,
+                            'description': insight.description,
+                            'priority': insight.priority
+                        }
+                        for insight in insights
+                    ]
+            
+            logger.info(f"Enhanced batch processing complete: {processing_results['processed_emails']}/{processing_results['total_emails']} emails processed")
+            
+            return processing_results
+            
+        except Exception as e:
+            logger.error(f"Enhanced email processing failed: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'total_emails': len(email_batch),
+                'processed_emails': 0
+            }
 
 # Create global instance
 gmail_fetcher = GmailFetcher()

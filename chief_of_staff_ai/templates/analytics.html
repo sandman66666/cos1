@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard - AI Chief of Staff{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-chart-line me-2"></i>
+            Analytics Dashboard
+        </h1>
+        <p class="text-muted mb-0">Business intelligence and insights from your data</p>
+    </div>
+    <div>
+        <button class="btn btn-enhanced" onclick="generateInsights()">
+            <i class="fas fa-lightbulb me-2"></i>Generate Insights
+        </button>
+        <button class="btn btn-outline-primary ms-2" onclick="exportReport()">
+            <i class="fas fa-download me-2"></i>Export Report
+        </button>
+    </div>
+</div>
+
+<!-- Analytics Tabs -->
+<ul class="nav nav-tabs mb-4" id="analyticsTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+            <i class="fas fa-tachometer-alt me-2"></i>Overview
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="emails-tab" data-bs-toggle="tab" data-bs-target="#emails" type="button" role="tab">
+            <i class="fas fa-envelope me-2"></i>Email Analytics
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tasks-tab" data-bs-toggle="tab" data-bs-target="#tasks" type="button" role="tab">
+            <i class="fas fa-tasks me-2"></i>Task Analytics
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="people-tab" data-bs-toggle="tab" data-bs-target="#people" type="button" role="tab">
+            <i class="fas fa-users me-2"></i>People Analytics
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="topics-tab" data-bs-toggle="tab" data-bs-target="#topics" type="button" role="tab">
+            <i class="fas fa-tags me-2"></i>Topic Analytics
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="analyticsTabContent">
+    <!-- Overview Tab -->
+    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+        <!-- KPI Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalEmailsKPI">0</div>
+                    <div class="stat-label">Total Emails</div>
+                    <div class="stat-change text-success" id="emailsChange">+0%</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="stat-value" id="totalTasksKPI">0</div>
+                    <div class="stat-label">Total Tasks</div>
+                    <div class="stat-change text-success" id="tasksChange">+0%</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="stat-value" id="totalPeopleKPI">0</div>
+                    <div class="stat-label">People Network</div>
+                    <div class="stat-change text-success" id="peopleChange">+0%</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="stat-value" id="totalTopicsKPI">0</div>
+                    <div class="stat-label">Active Topics</div>
+                    <div class="stat-change text-success" id="topicsChange">+0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Activity Trend
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="activityTrendChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>Content Distribution
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="contentDistributionChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Insights -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>Recent Insights
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="overviewInsights">
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-brain fa-2x mb-2"></i>
+                                <p>Loading insights...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Analytics Tab -->
+    <div class="tab-pane fade" id="emails" role="tabpanel">
+        <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Email Volume Trends</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="emailVolumeChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Communication Health</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="communicationHealth">
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-heartbeat fa-2x mb-2"></i>
+                                <p>Loading health metrics...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Top Contacts</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="topContacts"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Analytics Tab -->
+    <div class="tab-pane fade" id="tasks" role="tabpanel">
+        <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Task Completion Trends</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="taskCompletionChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Productivity Metrics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="productivityMetrics"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- People Analytics Tab -->
+    <div class="tab-pane fade" id="people" role="tabpanel">
+        <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Network Growth</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="networkGrowthChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Relationship Insights</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="relationshipInsights"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Topics Analytics Tab -->
+    <div class="tab-pane fade" id="topics" role="tabpanel">
+        <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Topic Trends</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="topicTrendsChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Content Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="contentAnalysis"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-change {
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .analytics-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s;
+    }
+    
+    .analytics-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    }
+    
+    .insight-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-left: 4px solid var(--primary-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s;
+    }
+    
+    .insight-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metric-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .metric-item:last-child {
+        border-bottom: none;
+    }
+    
+    .nav-tabs .nav-link {
+        border-radius: 10px 10px 0 0;
+        border: none;
+        background: transparent;
+        color: var(--dark-bg);
+        transition: all 0.3s;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    }
+    
+    .nav-tabs .nav-link.active {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Analytics functionality
+    let charts = {};
+    let analyticsData = {};
+    
+    // Initialize analytics dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        loadOverviewData();
+        initializeCharts();
+        
+        // Tab change handlers
+        document.getElementById('emails-tab').addEventListener('click', () => loadEmailAnalytics());
+        document.getElementById('tasks-tab').addEventListener('click', () => loadTaskAnalytics());
+        document.getElementById('people-tab').addEventListener('click', () => loadPeopleAnalytics());
+        document.getElementById('topics-tab').addEventListener('click', () => loadTopicAnalytics());
+        
+        // Auto-refresh every 5 minutes
+        setInterval(refreshCurrentTab, 300000);
+    });
+    
+    // Load overview data
+    async function loadOverviewData() {
+        try {
+            showLoading();
+            const response = await axios.get('/api/analytics/insights/comprehensive');
+            hideLoading();
+            
+            if (response.data.success) {
+                analyticsData.overview = response.data.data;
+                updateOverviewKPIs();
+                updateOverviewCharts();
+                updateOverviewInsights();
+            } else {
+                showAlert('Failed to load analytics data: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Error loading analytics: ' + error.message, 'danger');
+        }
+    }
+    
+    // Update KPI cards
+    function updateOverviewKPIs() {
+        const data = analyticsData.overview;
+        if (!data) return;
+        
+        document.getElementById('totalEmailsKPI').textContent = data.total_emails || 0;
+        document.getElementById('totalTasksKPI').textContent = data.total_tasks || 0;
+        document.getElementById('totalPeopleKPI').textContent = data.total_people || 0;
+        document.getElementById('totalTopicsKPI').textContent = data.total_topics || 0;
+        
+        // Update change indicators
+        updateChangeIndicator('emailsChange', data.emails_change || 0);
+        updateChangeIndicator('tasksChange', data.tasks_change || 0);
+        updateChangeIndicator('peopleChange', data.people_change || 0);
+        updateChangeIndicator('topicsChange', data.topics_change || 0);
+    }
+    
+    function updateChangeIndicator(elementId, change) {
+        const element = document.getElementById(elementId);
+        const isPositive = change >= 0;
+        element.textContent = `${isPositive ? '+' : ''}${change}%`;
+        element.className = `stat-change ${isPositive ? 'text-success' : 'text-danger'}`;
+    }
+    
+    // Initialize charts
+    function initializeCharts() {
+        // Activity Trend Chart
+        const activityCtx = document.getElementById('activityTrendChart').getContext('2d');
+        charts.activityTrend = new Chart(activityCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Activity',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+        
+        // Content Distribution Chart
+        const contentCtx = document.getElementById('contentDistributionChart').getContext('2d');
+        charts.contentDistribution = new Chart(contentCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+    
+    // Update overview charts
+    function updateOverviewCharts() {
+        const data = analyticsData.overview;
+        if (!data) return;
+        
+        // Update activity trend
+        if (data.activity_trend) {
+            charts.activityTrend.data.labels = data.activity_trend.labels || [];
+            charts.activityTrend.data.datasets[0].data = data.activity_trend.data || [];
+            charts.activityTrend.update();
+        }
+        
+        // Update content distribution
+        if (data.content_distribution) {
+            charts.contentDistribution.data.labels = data.content_distribution.labels || [];
+            charts.contentDistribution.data.datasets[0].data = data.content_distribution.data || [];
+            charts.contentDistribution.update();
+        }
+    }
+    
+    // Update overview insights
+    function updateOverviewInsights() {
+        const data = analyticsData.overview;
+        const container = document.getElementById('overviewInsights');
+        
+        if (!data || !data.insights || data.insights.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-lightbulb fa-2x mb-2"></i>
+                    <p>No insights available. Generate insights to see analysis here.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = data.insights.slice(0, 5).map(insight => `
+            <div class="insight-card">
+                <h6 class="mb-2">${insight.title || 'Insight'}</h6>
+                <p class="mb-2">${insight.description || insight.content || 'No description available'}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-${getPriorityColor(insight.priority)}">${insight.priority || 'medium'}</span>
+                    <small class="text-muted">${insight.created_at ? new Date(insight.created_at).toLocaleDateString() : 'Recent'}</small>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Load email analytics
+    async function loadEmailAnalytics() {
+        try {
+            const response = await axios.get('/api/analytics/email/patterns');
+            if (response.data.success) {
+                analyticsData.emails = response.data.data;
+                updateEmailCharts();
+                updateCommunicationHealth();
+                updateTopContacts();
+            }
+        } catch (error) {
+            console.error('Error loading email analytics:', error);
+        }
+    }
+    
+    // Load task analytics
+    async function loadTaskAnalytics() {
+        try {
+            const response = await axios.get('/api/analytics/tasks/productivity');
+            if (response.data.success) {
+                analyticsData.tasks = response.data.data;
+                updateTaskCharts();
+                updateProductivityMetrics();
+            }
+        } catch (error) {
+            console.error('Error loading task analytics:', error);
+        }
+    }
+    
+    // Load people analytics
+    async function loadPeopleAnalytics() {
+        try {
+            const response = await axios.get('/api/analytics/relationships/network');
+            if (response.data.success) {
+                analyticsData.people = response.data.data;
+                updatePeopleCharts();
+                updateRelationshipInsights();
+            }
+        } catch (error) {
+            console.error('Error loading people analytics:', error);
+        }
+    }
+    
+    // Load topic analytics
+    async function loadTopicAnalytics() {
+        try {
+            const response = await axios.get('/api/analytics/topics/trends');
+            if (response.data.success) {
+                analyticsData.topics = response.data.data;
+                updateTopicCharts();
+                updateContentAnalysis();
+            }
+        } catch (error) {
+            console.error('Error loading topic analytics:', error);
+        }
+    }
+    
+    // Update various chart sections (simplified)
+    function updateEmailCharts() {
+        // Implementation for email-specific charts
+    }
+    
+    function updateTaskCharts() {
+        // Implementation for task-specific charts
+    }
+    
+    function updatePeopleCharts() {
+        // Implementation for people-specific charts
+    }
+    
+    function updateTopicCharts() {
+        // Implementation for topic-specific charts
+    }
+    
+    // Update metric sections
+    function updateCommunicationHealth() {
+        const container = document.getElementById('communicationHealth');
+        const data = analyticsData.emails;
+        
+        if (!data) {
+            container.innerHTML = '<p class="text-muted">No email data available</p>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="metric-item">
+                <span>Response Rate</span>
+                <span class="badge bg-success">${data.response_rate || 'N/A'}</span>
+            </div>
+            <div class="metric-item">
+                <span>Average Response Time</span>
+                <span class="badge bg-info">${data.avg_response_time || 'N/A'}</span>
+            </div>
+            <div class="metric-item">
+                <span>Email Frequency</span>
+                <span class="badge bg-primary">${data.email_frequency || 'N/A'}</span>
+            </div>
+        `;
+    }
+    
+    function updateTopContacts() {
+        const container = document.getElementById('topContacts');
+        const data = analyticsData.emails;
+        
+        if (!data || !data.top_contacts) {
+            container.innerHTML = '<p class="text-muted">No contact data available</p>';
+            return;
+        }
+        
+        container.innerHTML = data.top_contacts.slice(0, 5).map(contact => `
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div>
+                    <strong>${contact.name}</strong>
+                    <br><small class="text-muted">${contact.email}</small>
+                </div>
+                <span class="badge bg-primary">${contact.email_count} emails</span>
+            </div>
+        `).join('');
+    }
+    
+    function updateProductivityMetrics() {
+        const container = document.getElementById('productivityMetrics');
+        const data = analyticsData.tasks;
+        
+        if (!data) {
+            container.innerHTML = '<p class="text-muted">No task data available</p>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="metric-item">
+                <span>Completion Rate</span>
+                <span class="badge bg-success">${data.completion_rate || 'N/A'}</span>
+            </div>
+            <div class="metric-item">
+                <span>Average Time to Complete</span>
+                <span class="badge bg-info">${data.avg_completion_time || 'N/A'}</span>
+            </div>
+            <div class="metric-item">
+                <span>Tasks per Day</span>
+                <span class="badge bg-primary">${data.tasks_per_day || 'N/A'}</span>
+            </div>
+        `;
+    }
+    
+    function updateRelationshipInsights() {
+        const container = document.getElementById('relationshipInsights');
+        container.innerHTML = '<p class="text-muted">Loading relationship insights...</p>';
+    }
+    
+    function updateContentAnalysis() {
+        const container = document.getElementById('contentAnalysis');
+        container.innerHTML = '<p class="text-muted">Loading content analysis...</p>';
+    }
+    
+    // Utility functions
+    function getPriorityColor(priority) {
+        switch(priority) {
+            case 'high': return 'danger';
+            case 'medium': return 'warning';
+            case 'low': return 'info';
+            default: return 'secondary';
+        }
+    }
+    
+    function refreshCurrentTab() {
+        const activeTab = document.querySelector('.nav-link.active').id;
+        switch(activeTab) {
+            case 'overview-tab': loadOverviewData(); break;
+            case 'emails-tab': loadEmailAnalytics(); break;
+            case 'tasks-tab': loadTaskAnalytics(); break;
+            case 'people-tab': loadPeopleAnalytics(); break;
+            case 'topics-tab': loadTopicAnalytics(); break;
+        }
+    }
+    
+    // Generate insights
+    async function generateInsights() {
+        try {
+            showLoading();
+            const response = await axios.post('/api/analytics/insights/comprehensive');
+            hideLoading();
+            
+            if (response.data.success) {
+                showAlert('New insights generated successfully!', 'success');
+                loadOverviewData();
+            } else {
+                showAlert('Failed to generate insights: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Error generating insights: ' + error.message, 'danger');
+        }
+    }
+    
+    // Export report
+    function exportReport() {
+        showAlert('Export functionality coming soon!', 'info');
+    }
+</script>
+{% endblock %} 

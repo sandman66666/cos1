@@ -19,36 +19,92 @@
 </head>
 
 <body style="margin: 0; line-height: inherit;">
-    <div class="relative flex min-h-screen flex-col bg-[#111a22] group/design-root overflow-x-hidden" style='font-family: Inter, "Noto Sans", sans-serif;'>
-        
-        <!-- Navigation -->
+    <div class="relative flex size-full min-h-screen flex-col bg-[#101a23] dark group/design-root overflow-x-hidden" style='font-family: Inter, "Noto Sans", sans-serif;'>
         <div class="layout-container flex h-full grow flex-col">
-            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#314d68] px-10 py-3">
-                <div class="flex items-center gap-4 text-white">
-                    <div class="size-4">
-                        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_6_319)"><path fill-rule="evenodd" clip-rule="evenodd" d="M24 0L48 24L24 48L0 24L24 0Z" fill="currentColor"></path></g><defs><clipPath id="clip0_6_319"><rect width="48" height="48" fill="white"></rect></clipPath></defs></svg>
+            <div class="gap-1 px-6 flex flex-1 justify-center py-5">
+                
+                <!-- Left Sidebar -->
+                <div class="layout-content-container flex flex-col w-80">
+                    <div class="flex h-full min-h-[700px] flex-col justify-between bg-[#101a23] p-4">
+                        <div class="flex flex-col gap-4">
+                            <!-- Logo/Header -->
+                            <div class="flex gap-3">
+                                <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                                    🤖
+                                </div>
+                                <h1 class="text-white text-base font-medium leading-normal">AI Chief of Staff</h1>
+                            </div>
+                            
+                            <!-- Navigation Menu -->
+                            <div class="flex flex-col gap-2">
+                                <a href="/home" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0,1.14,1.14,0,0,0,.11.11l80,75.48A16,16,0,0,1,224,115.55Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Home</p>
+                                </a>
+                                
+                                <a href="/knowledge" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M224,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h64a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Knowledge</p>
+                                </a>
+                                
+                                <a href="/tasks" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M56,128a16,16,0,1,1-16-16A16,16,0,0,1,56,128ZM40,48A16,16,0,1,0,56,64,16,16,0,0,0,40,48Zm0,128a16,16,0,1,0,16,16A16,16,0,0,0,40,176Zm176-64H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V120A8,8,0,0,0,216,112Zm0-64H88a8,8,0,0,0-8,8V72a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V56A8,8,0,0,0,216,48Zm0,128H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V184A8,8,0,0,0,216,176Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Tasks</p>
+                                </a>
+                                
+                                <a href="/people" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">People</p>
+                                </a>
+                                
+                                <a href="/calendar" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-96-88v64a8,8,0,0,1-16,0V132.94l-4.42,2.22a8,8,0,0,1-7.16-14.32l16-8A8,8,0,0,1,112,120Zm59.16,30.45L152,176h16a8,8,0,0,1,0,16H136a8,8,0,0,1-6.4-12.8l28.78-38.37A8,8,0,1,0,145.07,132a8,8,0,1,1-13.85-8A24,24,0,0,1,176,140,23.76,23.76,0,0,1,171.16,150.45Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Calendar</p>
+                                </a>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 rounded-full bg-[#223649]">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.6,107.6,0,0,0-10.88-26.25a8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3.12-3.12l-2.64-23.72a8,8,0,0,0-3.93-6,107.89,107.89,0,0,0-26.25-10.87a8,8,0,0,0-7.06,1.49L130.16,40q-2.16-.06-4.32,0L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.48-3.12,3.12L40.48,70.03a8,8,0,0,0-6,3.93,107.89,107.89,0,0,0-10.87,26.25a8,8,0,0,0,1.49,7.06L40,125.84q-.06,2.16,0,4.32L25.11,148.8a8,8,0,0,0-1.48,7.06,107.6,107.6,0,0,0,10.88,26.25a8,8,0,0,0,6,3.93l23.72,2.64q1.48,1.56,3.12,3.12l2.64,23.72a8,8,0,0,0,3.93,6,107.89,107.89,0,0,0,26.25,10.87a8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.6,107.6,0,0,0,26.25-10.88a8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3.12-3.12L215.52,186a8,8,0,0,0,6-3.93,107.89,107.89,0,0,0,10.87-26.25a8,8,0,0,0-1.49-7.06ZM128,208a80,80,0,1,1,80-80A80.09,80.09,0,0,1,128,208Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Settings</p>
+                                </div>
+                                
+                                <a href="/logout" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M112,216a8,8,0,0,1-8,8H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32h56a8,8,0,0,1,0,16H48V208h56A8,8,0,0,1,112,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L188.69,112H104a8,8,0,0,0,0,16h84.69l-18.35,18.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,221.66,122.34Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Logout</p>
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                    <h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">AI Chief of Staff</h2>
                 </div>
                 
-                <div class="flex flex-1 justify-end gap-8">
-                    <div class="flex items-center gap-9">
-                        <a class="text-[#90aecb] text-sm font-medium leading-normal" href="/home">Home</a>
-                        <a class="text-[#90aecb] text-sm font-medium leading-normal" href="/tasks">Tasks</a>
-                        <a class="text-[#90aecb] text-sm font-medium leading-normal" href="/people">People</a>
-                        <a class="text-[#90aecb] text-sm font-medium leading-normal" href="/knowledge">Knowledge</a>
-                        <a class="text-white text-sm font-medium leading-normal border-b-2 border-[#0b80ee]" href="/settings">Settings</a>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#223649] text-white text-sm font-bold leading-normal tracking-[0.015em]" onclick="window.location.href='/logout'">
-                            <span class="truncate">Logout</span>
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Main Content -->
-            <div class="px-40 flex flex-1 justify-center py-5">
+                <!-- Main Content -->
                 <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
                     
                     <!-- Page Header -->
@@ -160,17 +216,17 @@
                                 
                                 <button 
                                     id="triggerSyncBtn"
-                                    onclick="triggerEmailSync()"
+                                    onclick="triggerUnifiedSync()"
                                     class="bg-[#0b80ee] text-white px-6 py-3 rounded font-medium hover:bg-blue-600 transition-colors"
                                 >
-                                    🚀 Start Email Sync
+                                    🚀 Start Email + Calendar Sync
                                 </button>
                                 
                                 <!-- Sync Progress -->
                                 <div id="syncProgress" class="hidden mt-4 p-4 bg-[#223649] rounded border border-[#314d68]">
                                     <div class="flex items-center gap-2 mb-2">
                                         <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-[#0b80ee]"></div>
-                                        <span class="text-white font-medium">Syncing emails...</span>
+                                        <span class="text-white font-medium">Syncing emails and calendar...</span>
                                     </div>
                                     <div id="syncStatus" class="text-[#90aecb] text-sm"></div>
                                 </div>
@@ -180,6 +236,145 @@
                                     <h5 class="text-white font-medium mb-2">✅ Sync Complete</h5>
                                     <div id="syncSummary" class="text-[#90aecb] text-sm"></div>
                                 </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Calendar Integration Settings -->
+                        <div class="bg-[#182734] rounded-lg border border-[#314d68] p-6">
+                            <h3 class="text-white text-xl font-bold mb-4">📅 Calendar Integration</h3>
+                            <p class="text-[#90aecb] text-sm mb-6">Sync your Google Calendar for attendee intelligence and free time analysis</p>
+                            
+                            <!-- Calendar Setup Status -->
+                            <div id="calendarStatus" class="mb-6 p-4 bg-[#223649] rounded border border-green-600">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <div id="calendarStatusIcon" class="text-xl">✅</div>
+                                    <div>
+                                        <div id="calendarStatusText" class="text-white font-medium">Calendar Integration Active</div>
+                                        <div id="calendarStatusDetail" class="text-[#90aecb] text-sm">Google Calendar integration is working. Use the unified sync to fetch calendar events.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Google Cloud Console Setup Instructions -->
+                            <div id="calendarSetupInstructions" class="hidden mb-6 p-4 bg-yellow-900/20 border border-yellow-600 rounded">
+                                <div class="flex items-start gap-3">
+                                    <div class="text-yellow-400 text-xl">⚠️</div>
+                                    <div>
+                                        <h4 class="text-yellow-400 font-semibold mb-2">Google Calendar API Setup Required</h4>
+                                        <p class="text-yellow-300 text-sm mb-3">
+                                            To enable calendar integration, you need to configure Google Calendar API in your Google Cloud Console:
+                                        </p>
+                                        <ol class="text-yellow-300 text-sm space-y-2 list-decimal list-inside">
+                                            <li>Go to <a href="https://console.cloud.google.com/" target="_blank" class="text-blue-400 underline">Google Cloud Console</a></li>
+                                            <li>Select your existing project (the same one used for Gmail)</li>
+                                            <li>Go to <strong>APIs & Services → Library</strong></li>
+                                            <li>Search for "Google Calendar API" and click <strong>Enable</strong></li>
+                                            <li>Go to <strong>APIs & Services → OAuth consent screen</strong></li>
+                                            <li>Under <strong>Scopes</strong>, click <strong>Add or Remove Scopes</strong></li>
+                                            <li>Add these scopes:
+                                                <ul class="ml-4 mt-1 space-y-1 list-disc list-inside">
+                                                    <li><code class="bg-gray-800 px-1 rounded">https://www.googleapis.com/auth/calendar.readonly</code></li>
+                                                    <li><code class="bg-gray-800 px-1 rounded">https://www.googleapis.com/auth/gmail.readonly</code> (if not already added)</li>
+                                                </ul>
+                                            </li>
+                                            <li>Save the changes</li>
+                                            <li>Re-authenticate using the <strong>Force Logout</strong> link below to refresh permissions</li>
+                                        </ol>
+                                        <div class="mt-4 flex gap-2">
+                                            <a href="https://console.cloud.google.com/" target="_blank" 
+                                               class="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors">
+                                                🔗 Open Google Cloud Console
+                                            </a>
+                                            <a href="/force-logout" 
+                                               class="inline-flex items-center px-3 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700 transition-colors">
+                                                🔄 Force Logout & Re-authenticate
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Calendar Sync Controls -->
+                            <div id="calendarSyncControls" class="">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <div>
+                                        <label class="block text-[#90aecb] text-sm font-medium mb-2">
+                                            📅 Days Forward
+                                        </label>
+                                        <input 
+                                            id="calendarDaysForward" 
+                                            type="number" 
+                                            min="1" 
+                                            max="90" 
+                                            value="14"
+                                            class="w-full p-3 bg-[#223649] text-white rounded border border-[#314d68] focus:outline-none focus:border-[#0b80ee]"
+                                            placeholder="e.g., 14"
+                                        >
+                                        <p class="text-[#90aecb] text-xs mt-1">Days ahead to sync calendar events (1-90)</p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-[#90aecb] text-sm font-medium mb-2">
+                                            📅 Days Back
+                                        </label>
+                                        <input 
+                                            id="calendarDaysBack" 
+                                            type="number" 
+                                            min="1" 
+                                            max="30" 
+                                            value="3"
+                                            class="w-full p-3 bg-[#223649] text-white rounded border border-[#314d68] focus:outline-none focus:border-[#0b80ee]"
+                                            placeholder="e.g., 3"
+                                        >
+                                        <p class="text-[#90aecb] text-xs mt-1">Days back to sync calendar events (1-30)</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-6">
+                                    <label class="flex items-center gap-3 cursor-pointer">
+                                        <input 
+                                            id="enableAttendeeIntelligence" 
+                                            type="checkbox" 
+                                            checked
+                                            class="w-5 h-5 text-[#0b80ee] bg-[#223649] border-[#314d68] rounded focus:ring-[#0b80ee] focus:ring-2"
+                                        >
+                                        <div>
+                                            <span class="text-white font-medium">🧠 Enable Attendee Intelligence</span>
+                                            <p class="text-[#90aecb] text-sm">Match meeting attendees with your contact database for business insights</p>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="mb-6">
+                                    <label class="flex items-center gap-3 cursor-pointer">
+                                        <input 
+                                            id="enableFreeTimeAnalysis" 
+                                            type="checkbox" 
+                                            checked
+                                            class="w-5 h-5 text-[#0b80ee] bg-[#223649] border-[#314d68] rounded focus:ring-[#0b80ee] focus:ring-2"
+                                        >
+                                        <div>
+                                            <span class="text-white font-medium">⏰ Enable Free Time Analysis</span>
+                                            <p class="text-[#90aecb] text-sm">AI recommendations for productive use of free time slots</p>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <button 
+                                    id="testCalendarBtn"
+                                    onclick="testCalendarAccess()"
+                                    class="bg-green-600 text-white px-6 py-3 rounded font-medium hover:bg-green-700 transition-colors mr-4"
+                                >
+                                    🔍 Test Calendar Access
+                                </button>
+                                
+                                <button 
+                                    id="syncCalendarBtn"
+                                    onclick="syncCalendarOnly()"
+                                    class="bg-purple-600 text-white px-6 py-3 rounded font-medium hover:bg-purple-700 transition-colors"
+                                >
+                                    📅 Sync Calendar Only
+                                </button>
                             </div>
                         </div>
                         
@@ -373,7 +568,7 @@
             }
         }
 
-        async function triggerEmailSync() {
+        async function triggerUnifiedSync() {
             const btn = document.getElementById('triggerSyncBtn');
             const progressDiv = document.getElementById('syncProgress');
             const resultsDiv = document.getElementById('syncResults');
@@ -386,7 +581,7 @@
             btn.disabled = true;
             progressDiv.classList.remove('hidden');
             resultsDiv.classList.add('hidden');
-            statusDiv.textContent = 'Initializing email sync...';
+            statusDiv.textContent = 'Initializing email and calendar sync...';
             
             try {
                 const syncParams = {
@@ -427,7 +622,7 @@
                     document.getElementById('syncSummary').innerHTML = summaryHtml;
                     resultsDiv.classList.remove('hidden');
                     
-                    showSuccess(`🎉 Successfully synced ${summary.emails_fetched} emails!`);
+                    showSuccess(`🎉 Successfully synced ${summary.emails_fetched} emails and ${summary.people_identified} people!`);
                 } else {
                     showError('Sync failed: ' + data.error);
                 }
@@ -435,7 +630,7 @@
             } catch (error) {
                 console.error('Error triggering sync:', error);
                 progressDiv.classList.add('hidden');
-                showError('Failed to trigger email sync');
+                showError('Failed to trigger email and calendar sync');
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -552,6 +747,101 @@
 
         function showError(message) {
             alert('❌ ' + message);
+        }
+
+        // Calendar integration functions
+        async function testCalendarAccess() {
+            const btn = document.getElementById('testCalendarBtn');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>Testing...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/fetch-calendar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        days_back: 1,
+                        days_forward: 7,
+                        limit: 5
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`✅ Calendar access successful! Found ${data.count || 0} events.`);
+                } else {
+                    showError(`❌ Calendar access failed: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Calendar test error:', error);
+                showError('❌ Calendar test failed. Check your Google Calendar API setup.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function syncCalendarOnly() {
+            const btn = document.getElementById('syncCalendarBtn');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>Syncing...';
+            btn.disabled = true;
+            
+            try {
+                const daysForward = parseInt(document.getElementById('calendarDaysForward').value) || 14;
+                const daysBack = parseInt(document.getElementById('calendarDaysBack').value) || 3;
+                
+                const response = await fetch('/api/fetch-calendar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        days_back: daysBack,
+                        days_forward: daysForward,
+                        force_refresh: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`🎉 Calendar sync complete! Synced ${data.count || 0} events.`);
+                    
+                    // Trigger free time analysis if enabled
+                    if (document.getElementById('enableFreeTimeAnalysis').checked) {
+                        const freeTimeResponse = await fetch('/api/free-time-analysis', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                days_forward: daysForward
+                            })
+                        });
+                        
+                        const freeTimeData = await freeTimeResponse.json();
+                        if (freeTimeData.success) {
+                            const freeSlots = freeTimeData.free_slots || [];
+                            showSuccess(`⏰ Found ${freeSlots.length} free time slots for productivity recommendations!`);
+                        }
+                    }
+                } else {
+                    showError(`❌ Calendar sync failed: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Calendar sync error:', error);
+                showError('❌ Calendar sync failed. Check your setup.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
     </script>
 </body>

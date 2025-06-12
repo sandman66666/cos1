@@ -12,6 +12,9 @@ from googleapiclient.errors import HttpError
 from auth.gmail_auth import gmail_auth
 from models.database import get_db_manager, Calendar
 from config.settings import settings
+from processors.realtime_processing import realtime_processor, EventType
+from processors.enhanced_ai_pipeline import enhanced_ai_processor
+from processors.unified_entity_engine import entity_engine, EntityContext
 
 logger = logging.getLogger(__name__)
 
@@ -1317,6 +1320,345 @@ class CalendarFetcher:
             
         except Exception as e:
             logger.error(f"Failed to process calendar attendees: {str(e)}")
+
+    def fetch_recent_events(self, user_email: str, days_ahead: int = 7, days_back: int = 1) -> Dict:
+        """
+        Fetch recent calendar events and process them through enhanced entity-centric pipeline
+        """
+        try:
+            # Get Calendar credentials
+            credentials = self.gmail_auth.get_user_credentials(user_email)
+            if not credentials:
+                return {'success': False, 'error': 'User not authenticated'}
+            
+            # Build Calendar service
+            service = build('calendar', 'v3', credentials=credentials)
+            
+            # Calculate time range
+            now = datetime.utcnow()
+            time_min = (now - timedelta(days=days_back)).isoformat() + 'Z'
+            time_max = (now + timedelta(days=days_ahead)).isoformat() + 'Z'
+            
+            logger.info(f"Fetching calendar events for {user_email} from {days_back} days back to {days_ahead} days ahead")
+            
+            # Get user database record for enhanced processing
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                logger.warning(f"User {user_email} not found in database")
+                return {'success': False, 'error': 'User not found in database'}
+            
+            # Fetch events from primary calendar
+            events_result = service.events().list(
+                calendarId='primary',
+                timeMin=time_min,
+                timeMax=time_max,
+                singleEvents=True,
+                orderBy='startTime'
+            ).execute()
+            
+            events = events_result.get('items', [])
+            events_processed = 0
+            processed_events = []
+            
+            # Process each event
+            for event in events:
+                try:
+                    # Extract event data
+                    event_data = self._extract_event_data(event)
+                    
+                    if event_data:
+                        # Check if we already processed this event (avoid duplicates)
+                        if not self._is_event_processed(event_data['id'], user.id):
+                            # Enhanced processing: Send to real-time processor
+                            if realtime_processor.is_running:
+                                realtime_processor.process_new_calendar_event(event_data, user.id, priority=4)
+                                logger.debug(f"Sent event to real-time processor: {event_data.get('title', 'No title')}")
+                            else:
+                                # Fallback: Process directly through enhanced AI pipeline
+                                logger.info("Real-time processor not running, processing directly")
+                                result = enhanced_ai_processor.enhance_calendar_event_with_intelligence(event_data, user.id)
+                                if result.success:
+                                    logger.debug(f"Direct event processing success: {result.entities_created}")
+                                else:
+                                    logger.warning(f"Direct event processing failed: {result.error}")
+                            
+                            # Store basic event metadata for tracking
+                            self._store_event_metadata(event_data, user.id)
+                            
+                            events_processed += 1
+                        
+                        processed_events.append(event_data)
+                        
+                except Exception as e:
+                    logger.error(f"Error processing event {event.get('id', 'unknown')}: {str(e)}")
+                    continue
+            
+            # Generate summary with enhanced metrics
+            result = {
+                'success': True,
+                'events_fetched': len(events),
+                'events_processed': events_processed,
+                'events': processed_events,
+                'user_id': user.id,
+                'enhanced_processing': True,
+                'real_time_processing': realtime_processor.is_running,
+                'processing_stats': {
+                    'total_events_found': len(events),
+                    'new_events_processed': events_processed,
+                    'existing_events_skipped': len(events) - events_processed,
+                    'sent_to_real_time': events_processed if realtime_processor.is_running else 0
+                },
+                'fetch_time': datetime.utcnow().isoformat()
+            }
+            
+            logger.info(f"Enhanced calendar fetch complete for {user_email}: {events_processed} new events processed")
+            
+            # Generate proactive insights if we have significant upcoming events
+            upcoming_important_events = [e for e in processed_events 
+                                       if e.get('start_time') and 
+                                       datetime.fromisoformat(e['start_time']) > now and
+                                       datetime.fromisoformat(e['start_time']) < now + timedelta(days=2)]
+            
+            if len(upcoming_important_events) > 2 and realtime_processor.is_running:
+                realtime_processor.trigger_proactive_insights(user.id, priority=3)
+                logger.info("Triggered proactive insights for upcoming meetings")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch calendar events for {user_email}: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'events_fetched': 0,
+                'events': []
+            }
+
+    def _is_event_processed(self, google_event_id: str, user_id: int) -> bool:
+        """Check if calendar event has already been processed"""
+        try:
+            from models.enhanced_models import CalendarEvent
+            
+            with get_db_manager().get_session() as session:
+                existing = session.query(CalendarEvent).filter(
+                    CalendarEvent.user_id == user_id,
+                    CalendarEvent.google_event_id == google_event_id
+                ).first()
+                
+                return existing is not None
+                
+        except Exception as e:
+            logger.debug(f"Error checking if event processed: {str(e)}")
+            return False
+    
+    def _store_event_metadata(self, event_data: Dict, user_id: int):
+        """Store basic event metadata for tracking purposes"""
+        try:
+            from models.enhanced_models import CalendarEvent
+            
+            with get_db_manager().get_session() as session:
+                # Check if already exists
+                existing = session.query(CalendarEvent).filter(
+                    CalendarEvent.user_id == user_id,
+                    CalendarEvent.google_event_id == event_data['id']
+                ).first()
+                
+                if not existing:
+                    event = CalendarEvent(
+                        user_id=user_id,
+                        google_event_id=event_data['id'],
+                        title=event_data.get('title', ''),
+                        description=event_data.get('description', ''),
+                        location=event_data.get('location', ''),
+                        start_time=datetime.fromisoformat(event_data.get('start_time', datetime.utcnow().isoformat())),
+                        end_time=datetime.fromisoformat(event_data.get('end_time', datetime.utcnow().isoformat())),
+                        created_at=datetime.utcnow()
+                    )
+                    
+                    session.add(event)
+                    session.commit()
+                    logger.debug(f"Stored event metadata: {event_data.get('title', 'No title')}")
+                
+        except Exception as e:
+            logger.warning(f"Failed to store event metadata: {str(e)}")
+
+    def process_events_with_enhanced_intelligence(self, user_email: str, event_batch: List[Dict], 
+                                                enable_real_time: bool = True) -> Dict:
+        """
+        Process a batch of calendar events using enhanced entity-centric intelligence
+        This demonstrates meeting preparation and attendee intelligence
+        """
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            processing_results = {
+                'success': True,
+                'total_events': len(event_batch),
+                'processed_events': 0,
+                'entities_created': {'tasks': 0, 'people': 0},
+                'entities_updated': {'events': 0, 'people': 0},
+                'prep_tasks_generated': 0,
+                'insights_generated': [],
+                'processing_method': 'real_time' if enable_real_time else 'direct',
+                'enhanced_features': True
+            }
+            
+            for event_data in event_batch:
+                try:
+                    if enable_real_time and realtime_processor.is_running:
+                        # Send to real-time processor
+                        realtime_processor.process_new_calendar_event(event_data, user.id, priority=3)
+                        processing_results['processed_events'] += 1
+                    else:
+                        # Process directly through enhanced AI pipeline
+                        result = enhanced_ai_processor.enhance_calendar_event_with_intelligence(event_data, user.id)
+                        
+                        if result.success:
+                            processing_results['processed_events'] += 1
+                            
+                            # Aggregate statistics
+                            for entity_type in result.entities_created:
+                                if entity_type in processing_results['entities_created']:
+                                    processing_results['entities_created'][entity_type] += result.entities_created[entity_type]
+                            
+                            for entity_type in result.entities_updated:
+                                if entity_type in processing_results['entities_updated']:
+                                    processing_results['entities_updated'][entity_type] += result.entities_updated[entity_type]
+                            
+                            processing_results['insights_generated'].extend(result.insights_generated)
+                        else:
+                            logger.warning(f"Event processing failed: {result.error}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to process event {event_data.get('id', 'unknown')}: {str(e)}")
+                    continue
+            
+            # Generate proactive insights for meeting preparation
+            if processing_results['processed_events'] > 0:
+                if enable_real_time and realtime_processor.is_running:
+                    realtime_processor.trigger_proactive_insights(user.id, priority=2)
+                    processing_results['proactive_insights_triggered'] = True
+                else:
+                    # Generate insights directly
+                    insights = entity_engine.generate_proactive_insights(user.id)
+                    meeting_prep_insights = [insight for insight in insights if insight.insight_type == 'meeting_prep']
+                    processing_results['meeting_prep_insights'] = [
+                        {
+                            'type': insight.insight_type,
+                            'title': insight.title,
+                            'description': insight.description,
+                            'priority': insight.priority
+                        }
+                        for insight in meeting_prep_insights
+                    ]
+            
+            logger.info(f"Enhanced calendar processing complete: {processing_results['processed_events']}/{processing_results['total_events']} events processed")
+            
+            return processing_results
+            
+        except Exception as e:
+            logger.error(f"Enhanced calendar processing failed: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'total_events': len(event_batch),
+                'processed_events': 0
+            }
+
+    def generate_meeting_preparation_tasks(self, user_email: str, days_ahead: int = 3) -> Dict:
+        """
+        Generate intelligent meeting preparation tasks for upcoming events
+        This showcases the enhanced meeting intelligence capabilities
+        """
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            # Get upcoming events
+            events_result = self.fetch_recent_events(user_email, days_ahead=days_ahead, days_back=0)
+            
+            if not events_result['success']:
+                return events_result
+            
+            upcoming_events = [e for e in events_result['events'] 
+                             if e.get('start_time') and 
+                             datetime.fromisoformat(e['start_time']) > datetime.utcnow()]
+            
+            prep_results = {
+                'success': True,
+                'upcoming_events': len(upcoming_events),
+                'prep_tasks_generated': 0,
+                'high_priority_meetings': 0,
+                'attendee_intelligence': {},
+                'enhanced_meeting_context': []
+            }
+            
+            for event_data in upcoming_events:
+                try:
+                    # Calculate meeting priority based on attendees, title, etc.
+                    attendee_count = len(event_data.get('attendees', []))
+                    has_external_attendees = any('@' in attendee and 
+                                                not attendee.endswith(user_email.split('@')[1])
+                                                for attendee in event_data.get('attendees', []))
+                    
+                    is_high_priority = (attendee_count > 3 or has_external_attendees or 
+                                      any(keyword in event_data.get('title', '').lower() 
+                                          for keyword in ['board', 'executive', 'quarterly', 'review', 'presentation']))
+                    
+                    if is_high_priority:
+                        prep_results['high_priority_meetings'] += 1
+                        
+                        # Create meeting preparation context
+                        context = EntityContext(
+                            source_type='calendar',
+                            source_id=event_data.get('id'),
+                            user_id=user.id,
+                            confidence=0.9
+                        )
+                        
+                        # Generate prep tasks using entity engine
+                        meeting_title = event_data.get('title', 'Meeting')
+                        prep_task_description = f"Prepare for '{meeting_title}' - review agenda, attendee backgrounds, and relevant documents"
+                        
+                        task = entity_engine.create_task_with_full_context(
+                            description=prep_task_description,
+                            assignee_email=None,  # User's own prep task
+                            topic_names=[meeting_title],
+                            context=context,
+                            priority='high'
+                        )
+                        
+                        if task:
+                            prep_results['prep_tasks_generated'] += 1
+                        
+                        # Store enhanced meeting context
+                        prep_results['enhanced_meeting_context'].append({
+                            'event_id': event_data.get('id'),
+                            'title': meeting_title,
+                            'start_time': event_data.get('start_time'),
+                            'attendee_count': attendee_count,
+                            'has_external_attendees': has_external_attendees,
+                            'prep_task_created': bool(task)
+                        })
+                
+                except Exception as e:
+                    logger.error(f"Failed to generate prep for event {event_data.get('id', 'unknown')}: {str(e)}")
+                    continue
+            
+            logger.info(f"Meeting preparation complete: {prep_results['prep_tasks_generated']} prep tasks generated for {prep_results['high_priority_meetings']} high-priority meetings")
+            
+            return prep_results
+            
+        except Exception as e:
+            logger.error(f"Meeting preparation generation failed: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'prep_tasks_generated': 0
+            }
 
 # Create global instance
 calendar_fetcher = CalendarFetcher() 

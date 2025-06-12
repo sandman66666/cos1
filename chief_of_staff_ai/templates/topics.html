@@ -1,0 +1,751 @@
+{% extends "base.html" %}
+
+{% block title %}Topics Management - AI Chief of Staff{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-tags me-2"></i>
+            Topics Management
+        </h1>
+        <p class="text-muted mb-0">Manage topics, themes, and strategic focus areas</p>
+    </div>
+    <div>
+        <button class="btn btn-enhanced" onclick="openAddTopicModal()">
+            <i class="fas fa-plus me-2"></i>Add Topic
+        </button>
+        <button class="btn btn-outline-info ms-2" onclick="discoverTopics()">
+            <i class="fas fa-search me-2"></i>Discover Topics
+        </button>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value" id="totalTopics">0</div>
+                    <div class="stat-label">Total Topics</div>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-tags fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value" id="strategicTopics">0</div>
+                    <div class="stat-label">Strategic Topics</div>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-star fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value" id="trendingTopics">0</div>
+                    <div class="stat-label">Trending</div>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-trending-up fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="stat-value" id="totalConnections">0</div>
+                    <div class="stat-label">Connections</div>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-project-diagram fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="searchTopics" class="form-label">Search Topics</label>
+                        <div class="input-group">
+                            <input type="text" id="searchTopics" class="form-control" placeholder="Search by name or description..." onkeyup="filterTopics()">
+                            <button class="btn btn-outline-primary" onclick="filterTopics()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="categoryFilter" class="form-label">Category</label>
+                        <select id="categoryFilter" class="form-select" onchange="filterTopics()">
+                            <option value="">All Categories</option>
+                            <option value="business">Business</option>
+                            <option value="technology">Technology</option>
+                            <option value="strategy">Strategy</option>
+                            <option value="project">Project</option>
+                            <option value="personal">Personal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="importanceFilter" class="form-label">Strategic Importance</label>
+                        <select id="importanceFilter" class="form-select" onchange="filterTopics()">
+                            <option value="">All Levels</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button class="btn btn-outline-secondary" onclick="clearTopicFilters()">
+                                <i class="fas fa-times me-2"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Topics List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Topics Directory
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleTopicView('grid')" id="topicGridBtn">
+                        <i class="fas fa-th"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggleTopicView('list')" id="topicListBtn">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="topicsContainer">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-tags fa-3x mb-3"></i>
+                        <p>Loading topics...</p>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                <nav aria-label="Topics pagination" id="topicPaginationContainer" style="display: none;">
+                    <ul class="pagination justify-content-center">
+                        <!-- Pagination will be inserted here -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Topic Modal -->
+<div class="modal fade" id="topicModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="topicModalTitle">
+                    <i class="fas fa-tag me-2"></i>Add New Topic
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="topicForm">
+                    <input type="hidden" id="topicId" value="">
+                    
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="topicName" class="form-label">Topic Name *</label>
+                            <input type="text" class="form-control" id="topicName" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="topicCategory" class="form-label">Category</label>
+                            <select class="form-select" id="topicCategory">
+                                <option value="business">Business</option>
+                                <option value="technology">Technology</option>
+                                <option value="strategy">Strategy</option>
+                                <option value="project">Project</option>
+                                <option value="personal">Personal</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="strategicImportance" class="form-label">Strategic Importance</label>
+                            <select class="form-select" id="strategicImportance">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="topicStatus" class="form-label">Status</label>
+                            <select class="form-select" id="topicStatus">
+                                <option value="active" selected>Active</option>
+                                <option value="monitoring">Monitoring</option>
+                                <option value="archived">Archived</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="topicDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="topicDescription" rows="3" placeholder="Describe this topic and its relevance..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="topicKeywords" class="form-label">Keywords (comma-separated)</label>
+                        <input type="text" class="form-control" id="topicKeywords" placeholder="AI, machine learning, automation">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-enhanced" onclick="saveTopic()">
+                    <i class="fas fa-save me-2"></i>Save Topic
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Topic Details Modal -->
+<div class="modal fade" id="topicDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="topicDetailsTitle">Topic Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="topicDetailsContent">
+                <!-- Topic details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-primary" onclick="editTopicFromDetails()">
+                    <i class="fas fa-edit me-2"></i>Edit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .topic-card {
+        transition: all 0.3s ease;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        position: relative;
+    }
+    
+    .topic-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary-color);
+    }
+    
+    .topic-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 0.75rem;
+    }
+    
+    .topic-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    .topic-list .topic-card {
+        margin-bottom: 0.5rem;
+    }
+    
+    .category-badge {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        margin: 0.1rem;
+        display: inline-block;
+    }
+    
+    .keyword-tag {
+        background: linear-gradient(45deg, #f093fb, #f5576c);
+        color: white;
+        padding: 0.2rem 0.4rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        margin: 0.1rem;
+        display: inline-block;
+    }
+    
+    .trend-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+    
+    .trend-up { background-color: #27ae60; }
+    .trend-down { background-color: #e74c3c; }
+    .trend-stable { background-color: #f39c12; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Topics management functionality
+    let currentTopics = [];
+    let filteredTopics = [];
+    let currentTopicView = 'grid';
+    let currentTopicPage = 1;
+    let topicsPerPage = 12;
+    let currentEditingTopic = null;
+    
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTopics();
+    });
+    
+    // Load topics from API
+    async function loadTopics() {
+        try {
+            showLoading();
+            const response = await axios.get('/api/entities/topics', {
+                params: {
+                    limit: 1000,
+                    include_relationships: true
+                }
+            });
+            
+            hideLoading();
+            
+            if (response.data.success) {
+                currentTopics = response.data.data.topics || [];
+                filteredTopics = [...currentTopics];
+                updateTopicStatistics();
+                renderTopics();
+            } else {
+                showAlert('Failed to load topics: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Error loading topics: ' + error.message, 'danger');
+        }
+    }
+    
+    // Update statistics
+    function updateTopicStatistics() {
+        document.getElementById('totalTopics').textContent = currentTopics.length;
+        
+        const strategicTopics = currentTopics.filter(t => t.strategic_importance >= 0.7).length;
+        document.getElementById('strategicTopics').textContent = strategicTopics;
+        
+        const trendingTopics = currentTopics.filter(t => t.trend_score > 0.6).length;
+        document.getElementById('trendingTopics').textContent = trendingTopics;
+        
+        const totalConnections = currentTopics.reduce((sum, t) => sum + (t.connection_count || 0), 0);
+        document.getElementById('totalConnections').textContent = totalConnections;
+    }
+    
+    // Filter topics
+    function filterTopics() {
+        const searchTerm = document.getElementById('searchTopics').value.toLowerCase();
+        const categoryFilter = document.getElementById('categoryFilter').value;
+        const importanceFilter = document.getElementById('importanceFilter').value;
+        
+        filteredTopics = currentTopics.filter(topic => {
+            const matchesSearch = !searchTerm || 
+                topic.name.toLowerCase().includes(searchTerm) ||
+                (topic.description && topic.description.toLowerCase().includes(searchTerm));
+            
+            const matchesCategory = !categoryFilter || topic.category === categoryFilter;
+            
+            let matchesImportance = true;
+            if (importanceFilter) {
+                const importance = topic.strategic_importance || 0;
+                switch (importanceFilter) {
+                    case 'high': matchesImportance = importance >= 0.7; break;
+                    case 'medium': matchesImportance = importance >= 0.3 && importance < 0.7; break;
+                    case 'low': matchesImportance = importance < 0.3; break;
+                }
+            }
+            
+            return matchesSearch && matchesCategory && matchesImportance;
+        });
+        
+        currentTopicPage = 1;
+        renderTopics();
+    }
+    
+    // Render topics
+    function renderTopics() {
+        const container = document.getElementById('topicsContainer');
+        const startIndex = (currentTopicPage - 1) * topicsPerPage;
+        const endIndex = startIndex + topicsPerPage;
+        const topicsToShow = filteredTopics.slice(startIndex, endIndex);
+        
+        if (topicsToShow.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-tags fa-3x mb-3"></i>
+                    <p>No topics found matching your criteria.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        if (currentTopicView === 'grid') {
+            container.className = 'topic-grid';
+            container.innerHTML = topicsToShow.map(topic => createTopicCard(topic)).join('');
+        } else {
+            container.className = 'topic-list';
+            container.innerHTML = topicsToShow.map(topic => createTopicListItem(topic)).join('');
+        }
+        
+        renderTopicPagination();
+    }
+    
+    // Create topic card
+    function createTopicCard(topic) {
+        const importanceColor = getImportanceColor(topic.strategic_importance);
+        const importanceText = getImportanceText(topic.strategic_importance);
+        const trendClass = getTrendClass(topic.trend_direction);
+        
+        return `
+            <div class="topic-card p-3 position-relative" onclick="viewTopicDetails(${topic.id})">
+                <span class="topic-badge badge bg-${importanceColor}">${importanceText}</span>
+                <div class="mb-3">
+                    <h6 class="mb-1">
+                        <span class="trend-indicator ${trendClass}"></span>
+                        ${topic.name}
+                    </h6>
+                    <span class="category-badge">${topic.category || 'General'}</span>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">${topic.description ? topic.description.substring(0, 100) + '...' : 'No description'}</small>
+                </div>
+                <div class="mb-2">
+                    ${topic.keywords ? topic.keywords.split(',').slice(0, 3).map(k => `<span class="keyword-tag">${k.trim()}</span>`).join('') : ''}
+                </div>
+                <div class="small text-muted">
+                    <i class="fas fa-project-diagram me-1"></i>${topic.connection_count || 0} connections
+                    <span class="ms-3">
+                        <i class="fas fa-clock me-1"></i>${topic.updated_at ? new Date(topic.updated_at).toLocaleDateString() : 'N/A'}
+                    </span>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Create topic list item
+    function createTopicListItem(topic) {
+        const importanceColor = getImportanceColor(topic.strategic_importance);
+        const importanceText = getImportanceText(topic.strategic_importance);
+        const trendClass = getTrendClass(topic.trend_direction);
+        
+        return `
+            <div class="topic-card p-3" onclick="viewTopicDetails(${topic.id})">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h6 class="mb-1">
+                            <span class="trend-indicator ${trendClass}"></span>
+                            ${topic.name}
+                        </h6>
+                        <div class="mb-1">
+                            <span class="category-badge">${topic.category || 'General'}</span>
+                        </div>
+                        <small class="text-muted">${topic.description ? topic.description.substring(0, 80) + '...' : 'No description'}</small>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="small">
+                            <i class="fas fa-project-diagram me-1"></i>${topic.connection_count || 0} connections<br>
+                            <i class="fas fa-clock me-1"></i>${topic.updated_at ? new Date(topic.updated_at).toLocaleDateString() : 'N/A'}
+                        </div>
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <span class="badge bg-${importanceColor}">${importanceText}</span>
+                    </div>
+                    <div class="col-md-1 text-end">
+                        <i class="fas fa-chevron-right text-muted"></i>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Utility functions
+    function getImportanceColor(level) {
+        if (level >= 0.7) return 'danger';
+        if (level >= 0.3) return 'warning';
+        return 'info';
+    }
+    
+    function getImportanceText(level) {
+        if (level >= 0.7) return 'High';
+        if (level >= 0.3) return 'Medium';
+        return 'Low';
+    }
+    
+    function getTrendClass(direction) {
+        switch(direction) {
+            case 'up': return 'trend-up';
+            case 'down': return 'trend-down';
+            default: return 'trend-stable';
+        }
+    }
+    
+    // Modal and action functions
+    function openAddTopicModal() {
+        currentEditingTopic = null;
+        document.getElementById('topicModalTitle').innerHTML = '<i class="fas fa-tag me-2"></i>Add New Topic';
+        document.getElementById('topicForm').reset();
+        document.getElementById('topicId').value = '';
+        new bootstrap.Modal(document.getElementById('topicModal')).show();
+    }
+    
+    async function saveTopic() {
+        const form = document.getElementById('topicForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        const topicData = {
+            name: document.getElementById('topicName').value,
+            category: document.getElementById('topicCategory').value,
+            strategic_importance: document.getElementById('strategicImportance').value,
+            status: document.getElementById('topicStatus').value,
+            description: document.getElementById('topicDescription').value,
+            keywords: document.getElementById('topicKeywords').value
+        };
+        
+        const topicId = document.getElementById('topicId').value;
+        
+        try {
+            showLoading();
+            let response;
+            
+            if (topicId) {
+                response = await axios.put(`/api/entities/topics/${topicId}`, topicData);
+            } else {
+                response = await axios.post('/api/entities/topics', topicData);
+            }
+            
+            hideLoading();
+            
+            if (response.data.success) {
+                showAlert(`Topic ${topicId ? 'updated' : 'created'} successfully!`, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('topicModal')).hide();
+                loadTopics();
+            } else {
+                showAlert(`Failed to ${topicId ? 'update' : 'create'} topic: ` + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert(`Error ${topicId ? 'updating' : 'creating'} topic: ` + error.message, 'danger');
+        }
+    }
+    
+    async function viewTopicDetails(topicId) {
+        try {
+            showLoading();
+            const response = await axios.get(`/api/entities/topics/${topicId}`, {
+                params: { include_relationships: true }
+            });
+            
+            hideLoading();
+            
+            if (response.data.success) {
+                const topic = response.data.data.topic;
+                currentEditingTopic = topic;
+                
+                document.getElementById('topicDetailsTitle').textContent = `Topic: ${topic.name}`;
+                document.getElementById('topicDetailsContent').innerHTML = createTopicDetailsHTML(topic);
+                new bootstrap.Modal(document.getElementById('topicDetailsModal')).show();
+            } else {
+                showAlert('Failed to load topic details: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Error loading topic details: ' + error.message, 'danger');
+        }
+    }
+    
+    function createTopicDetailsHTML(topic) {
+        const importanceColor = getImportanceColor(topic.strategic_importance);
+        const importanceText = getImportanceText(topic.strategic_importance);
+        
+        return `
+            <div class="row">
+                <div class="col-md-8">
+                    <h4>${topic.name}</h4>
+                    <div class="mb-3">
+                        <span class="category-badge">${topic.category || 'General'}</span>
+                        <span class="badge bg-${importanceColor} ms-2">${importanceText} Importance</span>
+                    </div>
+                    
+                    ${topic.description ? `<p class="mb-3">${topic.description}</p>` : ''}
+                    
+                    ${topic.keywords ? `
+                        <div class="mb-3">
+                            <strong>Keywords:</strong><br>
+                            ${topic.keywords.split(',').map(k => `<span class="keyword-tag">${k.trim()}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Status:</strong> ${topic.status || 'Active'}<br>
+                            <strong>Connections:</strong> ${topic.connection_count || 0}<br>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Created:</strong> ${topic.created_at ? new Date(topic.created_at).toLocaleDateString() : 'Unknown'}<br>
+                            <strong>Updated:</strong> ${topic.updated_at ? new Date(topic.updated_at).toLocaleDateString() : 'Unknown'}<br>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6>Topic Analytics</h6>
+                    <div class="border rounded p-3">
+                        <div class="mb-2">
+                            <strong>Trend Score:</strong> ${topic.trend_score ? (topic.trend_score * 100).toFixed(1) + '%' : 'N/A'}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Mentions:</strong> ${topic.mention_count || 0}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Related Tasks:</strong> ${topic.task_count || 0}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    function editTopicFromDetails() {
+        if (currentEditingTopic) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('topicDetailsModal'));
+            modal.hide();
+            editTopic(currentEditingTopic);
+        }
+    }
+    
+    function editTopic(topic) {
+        currentEditingTopic = topic;
+        document.getElementById('topicModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Topic';
+        
+        document.getElementById('topicId').value = topic.id;
+        document.getElementById('topicName').value = topic.name;
+        document.getElementById('topicCategory').value = topic.category || 'business';
+        document.getElementById('strategicImportance').value = topic.strategic_importance >= 0.7 ? 'high' : topic.strategic_importance >= 0.3 ? 'medium' : 'low';
+        document.getElementById('topicStatus').value = topic.status || 'active';
+        document.getElementById('topicDescription').value = topic.description || '';
+        document.getElementById('topicKeywords').value = topic.keywords || '';
+        
+        new bootstrap.Modal(document.getElementById('topicModal')).show();
+    }
+    
+    function toggleTopicView(view) {
+        currentTopicView = view;
+        document.getElementById('topicGridBtn').classList.toggle('btn-primary', view === 'grid');
+        document.getElementById('topicGridBtn').classList.toggle('btn-outline-secondary', view !== 'grid');
+        document.getElementById('topicListBtn').classList.toggle('btn-primary', view === 'list');
+        document.getElementById('topicListBtn').classList.toggle('btn-outline-secondary', view !== 'list');
+        renderTopics();
+    }
+    
+    function clearTopicFilters() {
+        document.getElementById('searchTopics').value = '';
+        document.getElementById('categoryFilter').value = '';
+        document.getElementById('importanceFilter').value = '';
+        filteredTopics = [...currentTopics];
+        currentTopicPage = 1;
+        renderTopics();
+    }
+    
+    async function discoverTopics() {
+        try {
+            showLoading();
+            const response = await axios.post('/api/analytics/topics/discover');
+            hideLoading();
+            
+            if (response.data.success) {
+                showAlert(`Discovered ${response.data.data.new_topics} new topics!`, 'success');
+                loadTopics();
+            } else {
+                showAlert('Topic discovery failed: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Error discovering topics: ' + error.message, 'danger');
+        }
+    }
+    
+    function renderTopicPagination() {
+        const totalPages = Math.ceil(filteredTopics.length / topicsPerPage);
+        const paginationContainer = document.getElementById('topicPaginationContainer');
+        
+        if (totalPages <= 1) {
+            paginationContainer.style.display = 'none';
+            return;
+        }
+        
+        paginationContainer.style.display = 'block';
+        const pagination = paginationContainer.querySelector('.pagination');
+        
+        let paginationHTML = '';
+        for (let i = 1; i <= totalPages; i++) {
+            paginationHTML += `
+                <li class="page-item ${i === currentTopicPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changeTopicPage(${i})">${i}</a>
+                </li>
+            `;
+        }
+        
+        pagination.innerHTML = paginationHTML;
+    }
+    
+    function changeTopicPage(page) {
+        const totalPages = Math.ceil(filteredTopics.length / topicsPerPage);
+        if (page >= 1 && page <= totalPages) {
+            currentTopicPage = page;
+            renderTopics();
+        }
+    }
+</script>
+{% endblock %} 

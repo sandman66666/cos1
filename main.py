@@ -12,7 +12,7 @@ This is the main web application that provides:
 import os
 import sys
 import logging
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 from flask import Flask, session, render_template, redirect, url_for, request, jsonify, make_response
 from flask_session import Session
 import tempfile
@@ -28,11 +28,12 @@ try:
     from config.settings import settings
     from auth.gmail_auth import gmail_auth
     from ingest.gmail_fetcher import gmail_fetcher
+    from ingest.calendar_fetcher import calendar_fetcher
     from processors.email_normalizer import email_normalizer
     from processors.task_extractor import task_extractor
     from processors.email_intelligence import email_intelligence
     from models.database import get_db_manager, Person, Project
-    from models.database import Task, Email, Topic
+    from models.database import Task, Email, Topic, Calendar
     import anthropic
 except ImportError as e:
     print(f"Failed to import AI Chief of Staff modules: {e}")
@@ -44,234 +45,328 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def get_strategic_business_insights(user_email: str) -> List[Dict]:
-    """Generate strategic business insights from user's data patterns"""
+    """
+    ENHANCED 360-CONTEXT STRATEGIC BUSINESS INTELLIGENCE
+    
+    Generate super relevant and actionable insights by cross-referencing:
+    - Email communications & AI analysis
+    - People relationships & interaction patterns
+    - Tasks & project management
+    - Calendar events & meeting intelligence
+    - Topic analysis & business themes
+    - Strategic decisions & opportunities
+    
+    Creates comprehensive business intelligence for informed decision-making
+    """
     try:
         db_user = get_db_manager().get_user_by_email(user_email)
         if not db_user:
             return []
         
-        insights = []
+        # COMPREHENSIVE DATA COLLECTION - 360-CONTEXT FOUNDATION
+        emails = get_db_manager().get_user_emails(db_user.id, limit=200)  # More comprehensive
+        people = get_db_manager().get_user_people(db_user.id, limit=100)
+        tasks = get_db_manager().get_user_tasks(db_user.id, limit=100)
+        projects = get_db_manager().get_user_projects(db_user.id, limit=50)
+        topics = get_db_manager().get_user_topics(db_user.id, limit=100)
+        calendar_events = get_db_manager().get_user_calendar_events(db_user.id, limit=100)
         
-        # Get recent data
-        emails = get_db_manager().get_user_emails(db_user.id, limit=100)
-        people = get_db_manager().get_user_people(db_user.id, limit=50)
-        tasks = get_db_manager().get_user_tasks(db_user.id, limit=50)
-        projects = get_db_manager().get_user_projects(db_user.id, limit=20)
-        topics = get_db_manager().get_user_topics(db_user.id, limit=50)
-        
-        # Filter quality data
-        analyzed_emails = [e for e in emails if e.ai_summary and len(e.ai_summary or '') > 10]
+        # QUALITY FILTERING WITH CROSS-REFERENCING
+        analyzed_emails = [e for e in emails if e.ai_summary and len(e.ai_summary or '') > 15]
         human_contacts = [p for p in people if p.name and not any(pattern in (p.email_address or '').lower() 
                                                                 for pattern in ['noreply', 'no-reply', 'automated'])]
         active_projects = [p for p in projects if p.status == 'active']
-        pending_tasks = [t for t in tasks if t.status in ['pending', 'open']]
-        strong_topics = [t for t in topics if t.strength and t.strength > 80]  # High-confidence topics
+        actionable_tasks = [t for t in tasks if t.status in ['pending', 'open'] and t.description and len(t.description.strip()) > 10]
+        strategic_topics = [t for t in topics if t.is_official or (t.email_count and t.email_count > 2)]
+        upcoming_meetings = [e for e in calendar_events if e.start_time and e.start_time > datetime.now(timezone.utc)]
         
-        # 1. BUSINESS RELATIONSHIP INTELLIGENCE - Enhanced
-        if human_contacts and analyzed_emails:
-            # Find key business relationships with rich context
-            relationship_insights = []
-            for person in human_contacts[:5]:  # Top 5 contacts
-                person_emails = [e for e in analyzed_emails if e.sender and person.email_address and 
-                               e.sender.lower() == person.email_address.lower()]
-                
-                if person_emails:
-                    latest_email = max(person_emails, key=lambda x: x.email_date or datetime.min)
-                    context = latest_email.ai_summary if latest_email.ai_summary else "Recent business communication"
-                    
-                    relationship_insights.append({
-                        'person': person.name,
-                        'company': person.company or 'Unknown company',
-                        'context': context[:100] + "..." if len(context) > 100 else context,
-                        'emails': len(person_emails),
-                        'latest': latest_email.email_date.strftime('%Y-%m-%d') if latest_email.email_date else 'Recently'
-                    })
+        # BUILD 360-CONTEXT RELATIONSHIP MAP
+        context_map = {
+            'email_to_people': {},  # Map emails to people involved
+            'people_to_projects': {},  # Map people to their projects
+            'projects_to_tasks': {},  # Map projects to related tasks
+            'topics_to_content': {},  # Map topics to related content
+            'calendar_to_people': {},  # Map meetings to attendees
+            'strategic_threads': []  # Connected business threads
+        }
+        
+        # POPULATE CROSS-REFERENCE MAP
+        for email in analyzed_emails:
+            if email.sender:
+                sender_person = next((p for p in human_contacts if p.email_address and p.email_address.lower() == email.sender.lower()), None)
+                if sender_person:
+                    if email.id not in context_map['email_to_people']:
+                        context_map['email_to_people'][email.id] = []
+                    context_map['email_to_people'][email.id].append(sender_person)
+        
+        for project in active_projects:
+            if project.stakeholders:
+                for stakeholder_email in project.stakeholders:
+                    stakeholder_person = next((p for p in human_contacts if p.email_address and p.email_address.lower() == stakeholder_email.lower()), None)
+                    if stakeholder_person:
+                        if stakeholder_person.id not in context_map['people_to_projects']:
+                            context_map['people_to_projects'][stakeholder_person.id] = []
+                        context_map['people_to_projects'][stakeholder_person.id].append(project)
+        
+        for task in actionable_tasks:
+            if hasattr(task, 'project_id') and task.project_id:
+                project = next((p for p in active_projects if p.id == task.project_id), None)
+                if project:
+                    if project.id not in context_map['projects_to_tasks']:
+                        context_map['projects_to_tasks'][project.id] = []
+                    context_map['projects_to_tasks'][project.id].append(task)
+        
+        insights = []
+        
+        # 1. CROSS-REFERENCED RELATIONSHIP INTELLIGENCE
+        for person in human_contacts[:5]:  # Top 5 contacts
+            person_emails = [e for e in analyzed_emails if e.sender and person.email_address and 
+                           e.sender.lower() == person.email_address.lower()]
+            person_projects = context_map['people_to_projects'].get(person.id, [])
+            person_meetings = [e for e in upcoming_meetings if e.attendees and 
+                             any(att.get('email', '').lower() == person.email_address.lower() for att in e.attendees)]
             
-            if relationship_insights:
-                top_relationship = relationship_insights[0]
-                insights.append({
-                    'type': 'relationship_intelligence',
-                    'title': f'Key Business Relationship: {top_relationship["person"]}',
-                    'description': f'{top_relationship["emails"]} active communications with {top_relationship["person"]} at {top_relationship["company"]}. Latest: {top_relationship["context"]}',
-                    'details': f'Last contact: {top_relationship["latest"]}. Consider scheduling follow-up to maintain this valuable business relationship.',
-                    'action': f'Reach out to {top_relationship["person"]} to continue your {top_relationship["company"]} discussions',
-                    'priority': 'high',
-                    'icon': '🤝'
-                })
-        
-        # 2. STRATEGIC TOPIC INTELLIGENCE - Enhanced
-        if strong_topics:
-            for topic in strong_topics[:2]:  # Top 2 strong topics
-                topic_emails = [e for e in analyzed_emails if e.topics and topic.name in e.topics]
-                topic_people = list(set([e.sender_name or e.sender.split('@')[0] for e in topic_emails if e.sender]))
+            if person_emails and len(person_emails) >= 3:  # Significant relationship
+                latest_email = max(person_emails, key=lambda x: x.email_date or datetime.min)
                 
-                latest_email = max(topic_emails, key=lambda x: x.email_date or datetime.min) if topic_emails else None
+                # Build comprehensive context
+                context_elements = []
+                if person_projects:
+                    context_elements.append(f"Active on {len(person_projects)} projects: {', '.join([p.name for p in person_projects[:2]])}")
+                if person_meetings:
+                    next_meeting = min(person_meetings, key=lambda x: x.start_time)
+                    context_elements.append(f"Upcoming meeting: {next_meeting.title}")
+                if latest_email.key_insights and isinstance(latest_email.key_insights, dict):
+                    recent_decisions = latest_email.key_insights.get('key_decisions', [])
+                    if recent_decisions:
+                        context_elements.append(f"Recent decision: {recent_decisions[0][:60]}...")
+                
+                full_context = "; ".join(context_elements) if context_elements else latest_email.ai_summary[:100]
                 
                 insights.append({
-                    'type': 'strategic_topic',
-                    'title': f'Strategic Focus: {topic.name.title()}',
-                    'description': f'High-value topic with {len(topic_emails)} related communications involving {len(topic_people)} people. {topic.strength}% confidence level.',
-                    'details': f'Latest activity: {latest_email.ai_summary[:80] + "..." if latest_email and latest_email.ai_summary else "Recent discussions"}. Key participants: {", ".join(topic_people[:3])}.',
-                    'action': f'Consider deepening your {topic.name} strategy - this appears to be a significant business opportunity',
+                    'type': 'relationship_intelligence_360',
+                    'title': f'Strategic Relationship: {person.name}',
+                    'description': f'{len(person_emails)} communications, {len(person_projects)} shared projects, {len(person_meetings)} upcoming meetings',
+                    'details': f'360-Context: {full_context}',
+                    'action': f'Review comprehensive relationship status with {person.name} - {person.company or "Unknown company"}',
                     'priority': 'high',
-                    'icon': '🎯'
+                    'icon': '🤝',
+                    'data_sources': ['emails', 'projects', 'calendar'],
+                    'cross_references': len(context_elements)
                 })
         
-        # 3. FOLLOW-UP OPPORTUNITIES - Enhanced  
-        follow_up_candidates = []
-        for email in analyzed_emails[-20:]:  # Recent 20 emails
-            if (email.ai_summary and 
-                any(keyword in email.ai_summary.lower() for keyword in ['follow', 'next', 'meeting', 'discuss', 'connect', 'update']) and
-                email.sender and email.sender != user_email):
+        # 2. PROJECT-TASK-PEOPLE SYNTHESIS
+        for project in active_projects[:3]:
+            project_tasks = context_map['projects_to_tasks'].get(project.id, [])
+            project_people = context_map['people_to_projects']
+            project_stakeholders = [p for p_id, projs in project_people.items() if project in projs 
+                                  for p in human_contacts if p.id == p_id]
+            
+            # Find related emails mentioning this project
+            project_emails = [e for e in analyzed_emails if project.name.lower() in (e.ai_summary or '').lower() or 
+                            project.name.lower() in (e.subject or '').lower()]
+            
+            if project_tasks or project_stakeholders or project_emails:
+                context_strength = len(project_tasks) + len(project_stakeholders) + len(project_emails)
                 
-                follow_up_candidates.append({
-                    'sender': email.sender_name or email.sender.split('@')[0],
-                    'subject': email.subject or 'Follow-up needed',
-                    'summary': email.ai_summary,
-                    'date': email.email_date.strftime('%Y-%m-%d') if email.email_date else 'Recent'
+                insights.append({
+                    'type': 'project_intelligence_360',
+                    'title': f'Active Project: {project.name}',
+                    'description': f'{len(project_tasks)} pending tasks, {len(project_stakeholders)} stakeholders, {len(project_emails)} related communications',
+                    'details': f'Project Status: {project.status}. Recent activity across emails, tasks, and team coordination.',
+                    'action': f'Review {project.name} progress and coordinate with {len(project_stakeholders)} stakeholders',
+                    'priority': 'high' if context_strength > 5 else 'medium',
+                    'icon': '📋',
+                    'data_sources': ['projects', 'tasks', 'people', 'emails'],
+                    'cross_references': context_strength
                 })
         
-        if follow_up_candidates:
-            candidate = follow_up_candidates[0]
-            insights.append({
-                'type': 'follow_up_opportunity',
-                'title': f'Follow-up Opportunity: {candidate["sender"]}',
-                'description': f'Recent communication suggests next steps needed. Subject: "{candidate["subject"]}"',
-                'details': f'{candidate["summary"][:120] + "..." if len(candidate["summary"]) > 120 else candidate["summary"]}',
-                'action': f'Schedule follow-up with {candidate["sender"]} to advance this discussion',
-                'priority': 'medium',
-                'icon': '📅'
-            })
+        # 3. TOPIC-DRIVEN BUSINESS INTELLIGENCE
+        for topic in strategic_topics[:3]:
+            topic_emails = [e for e in analyzed_emails if e.topics and topic.name in e.topics]
+            topic_people = list(set([e.sender_name or e.sender.split('@')[0] for e in topic_emails 
+                                   if e.sender and e.sender_name]))
+            topic_projects = [p for p in active_projects if p.key_topics and topic.name in p.key_topics]
+            topic_tasks = [t for t in actionable_tasks if topic.name.lower() in (t.description or '').lower()]
+            
+            if topic_emails and len(topic_emails) >= 2:
+                latest_activity = max(topic_emails, key=lambda x: x.email_date or datetime.min)
+                
+                # Extract strategic insights for this topic
+                topic_decisions = []
+                topic_opportunities = []
+                for email in topic_emails:
+                    if email.key_insights and isinstance(email.key_insights, dict):
+                        topic_decisions.extend(email.key_insights.get('key_decisions', []))
+                        topic_opportunities.extend(email.key_insights.get('strategic_opportunities', []))
+                
+                comprehensive_context = f"Active across {len(topic_emails)} communications, {len(topic_people)} people, {len(topic_projects)} projects, {len(topic_tasks)} tasks"
+                if topic_decisions:
+                    comprehensive_context += f". Recent decision: {topic_decisions[0][:60]}..."
+                
+                insights.append({
+                    'type': 'topic_intelligence_360',
+                    'title': f'Strategic Topic: {topic.name}',
+                    'description': comprehensive_context,
+                    'details': f'Latest activity: {latest_activity.ai_summary[:100] if latest_activity.ai_summary else "Recent discussions"}',
+                    'action': f'Deep dive into {topic.name} strategy - significant cross-functional activity detected',
+                    'priority': 'high',
+                    'icon': '🎯',
+                    'data_sources': ['topics', 'emails', 'people', 'projects', 'tasks'],
+                    'cross_references': len(topic_emails) + len(topic_projects) + len(topic_tasks)
+                })
         
-        # 4. BUSINESS INTELLIGENCE FROM EMAIL CONTENT - Enhanced
-        business_decisions = []
-        opportunities = []
-        challenges = []
+        # 4. CALENDAR-DRIVEN ACTION INTELLIGENCE
+        high_value_meetings = [m for m in upcoming_meetings if m.attendees and len(m.attendees) >= 3]
+        for meeting in high_value_meetings[:2]:
+            meeting_attendees = [att.get('email') for att in meeting.attendees if att.get('email')]
+            known_attendees = [p for p in human_contacts if p.email_address in meeting_attendees]
+            
+            # Find email history with these attendees
+            attendee_emails = []
+            for attendee in known_attendees:
+                person_emails = [e for e in analyzed_emails if e.sender and attendee.email_address and 
+                               e.sender.lower() == attendee.email_address.lower()]
+                attendee_emails.extend(person_emails)
+            
+            # Find related projects
+            meeting_projects = []
+            for attendee in known_attendees:
+                attendee_projects = context_map['people_to_projects'].get(attendee.id, [])
+                meeting_projects.extend(attendee_projects)
+            
+            if attendee_emails or meeting_projects:
+                context_richness = len(attendee_emails) + len(meeting_projects)
+                
+                # Fix timezone comparison issue
+                meeting_start_time = meeting.start_time
+                if meeting_start_time and not hasattr(meeting_start_time, 'tzinfo'):
+                    # If it's offset-naive, assume UTC
+                    meeting_start_time = meeting_start_time.replace(tzinfo=timezone.utc)
+                elif meeting_start_time and meeting_start_time.tzinfo is None:
+                    meeting_start_time = meeting_start_time.replace(tzinfo=timezone.utc)
+                
+                insights.append({
+                    'type': 'meeting_intelligence_360',
+                    'title': f'Strategic Meeting: {meeting.title}',
+                    'description': f'{len(known_attendees)} known attendees, {len(attendee_emails)} related communications, {len(set(meeting_projects))} connected projects',
+                    'details': f'Meeting Date: {meeting_start_time.strftime("%Y-%m-%d %H:%M") if meeting_start_time else "TBD"}. Rich context available for preparation.',
+                    'action': f'Prepare comprehensive brief for {meeting.title} using relationship and project intelligence',
+                    'priority': 'high',
+                    'icon': '📅',
+                    'data_sources': ['calendar', 'people', 'emails', 'projects'],
+                    'cross_references': context_richness
+                })
         
-        for email in analyzed_emails[-30:]:  # Recent 30 emails
+        # 5. STRATEGIC DECISION & OPPORTUNITY SYNTHESIS
+        all_decisions = []
+        all_opportunities = []
+        decision_makers = {}
+        
+        for email in analyzed_emails[-50:]:  # Recent 50 emails
             if email.key_insights and isinstance(email.key_insights, dict):
-                insights_data = email.key_insights
+                decisions = email.key_insights.get('key_decisions', [])
+                opportunities = email.key_insights.get('strategic_opportunities', [])
                 
-                decisions = insights_data.get('key_decisions', [])
                 for decision in decisions:
-                    if len(decision) > 20:  # Substantial decisions only
-                        business_decisions.append({
+                    if len(decision) > 30:  # Substantial decisions
+                        decision_person = next((p for p in human_contacts if p.email_address and 
+                                              p.email_address.lower() == email.sender.lower()), None)
+                        all_decisions.append({
                             'decision': decision,
-                            'source': email.sender_name or email.sender.split('@')[0],
-                            'date': email.email_date.strftime('%Y-%m-%d') if email.email_date else 'Recent'
+                            'person': decision_person,
+                            'email_date': email.email_date,
+                            'context': email.ai_summary
                         })
+                        
+                        if decision_person:
+                            decision_makers[decision_person.name] = decision_makers.get(decision_person.name, 0) + 1
                 
-                opps = insights_data.get('strategic_opportunities', [])
-                for opp in opps:
-                    if len(opp) > 20:
-                        opportunities.append({
+                for opp in opportunities:
+                    if len(opp) > 30:
+                        all_opportunities.append({
                             'opportunity': opp,
                             'source': email.sender_name or email.sender.split('@')[0],
-                            'date': email.email_date.strftime('%Y-%m-%d') if email.email_date else 'Recent'
+                            'email_date': email.email_date,
+                            'context': email.ai_summary
                         })
         
-        if business_decisions:
-            decision = business_decisions[0]
-            insights.append({
-                'type': 'strategic_decision',
-                'title': 'Strategic Decision Tracked',
-                'description': f'Important business decision identified from {decision["source"]}',
-                'details': f'Decision: {decision["decision"][:150] + "..." if len(decision["decision"]) > 150 else decision["decision"]}',
-                'action': 'Review decision implementation and track outcomes',
-                'priority': 'high',
-                'icon': '⚡'
-            })
-        
-        if opportunities:
-            opportunity = opportunities[0]
-            insights.append({
-                'type': 'business_opportunity',
-                'title': 'Business Opportunity Identified',
-                'description': f'Potential opportunity discussed with {opportunity["source"]}',
-                'details': f'Opportunity: {opportunity["opportunity"][:150] + "..." if len(opportunity["opportunity"]) > 150 else opportunity["opportunity"]}',
-                'action': 'Evaluate this opportunity and develop action plan',
-                'priority': 'medium',
-                'icon': '💡'
-            })
-        
-        # 5. ENGAGEMENT INSIGHTS - Enhanced
-        if human_contacts and analyzed_emails:
-            recent_new_contacts = []
-            for person in human_contacts:
-                person_emails = [e for e in analyzed_emails if e.sender and person.email_address and 
-                               e.sender.lower() == person.email_address.lower()]
-                if len(person_emails) <= 3 and len(person_emails) > 0:  # New relationship
-                    latest = max(person_emails, key=lambda x: x.email_date or datetime.min)
-                    recent_new_contacts.append({
-                        'name': person.name,
-                        'company': person.company or 'Unknown company',
-                        'context': latest.ai_summary[:80] + "..." if latest.ai_summary else "New business contact",
-                        'emails': len(person_emails)
-                    })
+        if all_decisions:
+            top_decision = max(all_decisions, key=lambda x: x['email_date'] or datetime.min)
+            key_decision_maker = max(decision_makers.items(), key=lambda x: x[1])[0] if decision_makers else "Team"
             
-            if recent_new_contacts:
-                contact = recent_new_contacts[0]
-                insights.append({
-                    'type': 'new_relationship',
-                    'title': f'New Business Connection: {contact["name"]}',
-                    'description': f'Early-stage relationship with {contact["name"]} at {contact["company"]} ({contact["emails"]} interactions)',
-                    'details': f'Recent context: {contact["context"]}',
-                    'action': f'Nurture this new relationship with {contact["name"]} - potential for business value',
-                    'priority': 'medium',
-                    'icon': '🌟'
-                })
-        
-        # 6. PRODUCTIVITY INSIGHTS - Enhanced with specifics
-        if analyzed_emails:
             insights.append({
-                'type': 'productivity_intelligence',
-                'title': 'AI Business Intelligence Summary',
-                'description': f'Analyzed {len(analyzed_emails)} business communications, identified {len(human_contacts)} contacts across {len(strong_topics)} high-value topics',
-                'details': f'Key topics: {", ".join([t.name for t in strong_topics[:3]])}. Your AI Chief of Staff is building comprehensive business knowledge.',
-                'action': 'Review insights above and take recommended actions to advance your business relationships',
-                'priority': 'low',
-                'icon': '🧠'
+                'type': 'strategic_decision_360',
+                'title': f'Strategic Decision Tracking',
+                'description': f'{len(all_decisions)} recent decisions identified, {key_decision_maker} driving {decision_makers.get(key_decision_maker, 1)} decisions',
+                'details': f'Latest: {top_decision["decision"][:120]}...',
+                'action': f'Review decision implementation and coordinate with {key_decision_maker}',
+                'priority': 'high',
+                'icon': '⚡',
+                'data_sources': ['emails', 'people', 'insights'],
+                'cross_references': len(decision_makers)
             })
         
-        # If no meaningful insights, provide specific guidance
-        if not insights:
-            if analyzed_emails:
-                insights.append({
-                    'type': 'guidance',
-                    'title': 'Business Intelligence Ready',
-                    'description': f'Found {len(analyzed_emails)} analyzed emails but no clear action items detected',
-                    'details': 'Your communications appear to be primarily informational. The AI is tracking relationships and topics.',
-                    'action': 'Continue processing emails to build more comprehensive business intelligence',
-                    'priority': 'medium',
-                    'icon': '📊'
-                })
-            else:
-                insights.append({
-                    'type': 'guidance',
-                    'title': 'Building Your Business Intelligence',
-                    'description': 'Process emails to unlock strategic insights about relationships and opportunities',
-                    'details': 'Your AI Chief of Staff will analyze communication patterns, extract tasks, and identify business opportunities.',
-                    'action': 'Use "Process Emails" to start building your comprehensive business knowledge base',
-                    'priority': 'medium',
-                    'icon': '🚀'
-                })
+        if all_opportunities:
+            top_opportunity = max(all_opportunities, key=lambda x: x['email_date'] or datetime.min)
+            
+            insights.append({
+                'type': 'strategic_opportunity_360',
+                'title': f'Business Opportunity Intelligence',
+                'description': f'{len(all_opportunities)} opportunities identified across recent communications',
+                'details': f'Latest: {top_opportunity["opportunity"][:120]}...',
+                'action': f'Evaluate opportunity pipeline and develop action plans with {top_opportunity["source"]}',
+                'priority': 'medium',
+                'icon': '💡',
+                'data_sources': ['emails', 'insights', 'people'],
+                'cross_references': len(set([o["source"] for o in all_opportunities]))
+            })
         
-        # Sort by priority and limit
+        # 6. COMPREHENSIVE BUSINESS INTELLIGENCE SUMMARY
+        insights.append({
+            'type': 'comprehensive_intelligence_360',
+            'title': '360-Context Business Intelligence Status',
+            'description': f'Comprehensive analysis: {len(analyzed_emails)} emails, {len(human_contacts)} contacts, {len(active_projects)} projects, {len(actionable_tasks)} tasks, {len(strategic_topics)} topics, {len(upcoming_meetings)} meetings',
+            'details': f'Cross-referenced {sum([i.get("cross_references", 0) for i in insights])} data connections. Your business intelligence ecosystem is actively building comprehensive knowledge.',
+            'action': 'Review 360-context insights above for strategic decision-making',
+            'priority': 'low',
+            'icon': '🧠',
+            'data_sources': ['emails', 'people', 'projects', 'tasks', 'topics', 'calendar'],
+            'cross_references': len(context_map)
+        })
+        
+        # FALLBACK GUIDANCE IF NO DATA
+        if not insights or len(insights) <= 1:
+            insights = [{
+                'type': 'guidance_360',
+                'title': 'Building 360-Context Intelligence',
+                'description': 'Process more emails and calendar events to unlock comprehensive business insights',
+                'details': 'Your AI Chief of Staff will cross-reference communications, relationships, projects, and meetings for strategic intelligence.',
+                'action': 'Use "Process Emails" to build your comprehensive 360-context business knowledge base',
+                'priority': 'medium',
+                'icon': '🚀',
+                'data_sources': ['system'],
+                'cross_references': 0
+            }]
+        
+        # Sort by priority and cross-reference strength
         priority_order = {'high': 0, 'medium': 1, 'low': 2}
-        insights.sort(key=lambda x: priority_order.get(x['priority'], 2))
+        insights.sort(key=lambda x: (priority_order.get(x['priority'], 2), -x.get('cross_references', 0)))
         
-        return insights[:5]  # Return top 5 insights
+        return insights[:6]  # Top 6 most strategic insights
         
     except Exception as e:
-        logger.error(f"Error generating strategic insights: {str(e)}")
+        logger.error(f"Error generating 360-context strategic insights: {str(e)}")
         return [{
             'type': 'error',
-            'title': 'Insights Processing Error',
-            'description': f'Error analyzing your business data: {str(e)[:100]}',
-            'details': 'Please try processing emails again or check your data',
-            'action': 'Process your emails again to rebuild business intelligence',
+            'title': '360-Context Analysis Error',
+            'description': f'Error in comprehensive business intelligence: {str(e)[:100]}',
+            'details': 'Please try processing emails and calendar again',
+            'action': 'Rebuild your 360-context business intelligence',
             'priority': 'medium',
-            'icon': '⚠️'
+            'icon': '⚠️',
+            'data_sources': ['error'],
+            'cross_references': 0
         }]
 
 def create_app():
@@ -370,6 +465,16 @@ def create_app():
         if not user:
             return redirect('/login')
         return render_template('knowledge.html')
+    
+    @app.route('/calendar')
+    def calendar_page():
+        """Calendar management page"""
+        user_email = session.get('user_email')
+        
+        if not user_email:
+            return redirect(url_for('login'))
+        
+        return render_template('calendar.html')
     
     @app.route('/settings')
     def settings_page():
@@ -609,7 +714,7 @@ def create_app():
     
     @app.route('/api/trigger-email-sync', methods=['POST'])
     def api_trigger_email_sync():
-        """UNIFIED EMAIL PROCESSING - Single trigger from Settings page that does everything"""
+        """UNIFIED EMAIL AND CALENDAR PROCESSING - Single trigger that does everything including calendar sync"""
         user = get_current_user()
         if not user:
             return jsonify({'error': 'Not authenticated'}), 401
@@ -628,7 +733,7 @@ def create_app():
             if days_back < 1 or days_back > 365:
                 return jsonify({'error': 'days_back must be between 1 and 365'}), 400
             
-            logger.info(f"🚀 Starting unified email processing for {user_email}: {max_emails} emails, {days_back} days back")
+            logger.info(f"🚀 Starting unified email + calendar processing for {user_email}: {max_emails} emails, {days_back} days back")
             
             # Clear any existing cache to ensure fresh processing
             from chief_of_staff_ai.strategic_intelligence.strategic_intelligence_cache import strategic_intelligence_cache
@@ -653,22 +758,115 @@ def create_app():
             emails_fetched = fetch_result.get('count', 0)
             logger.info(f"✅ Fetched {emails_fetched} emails from Gmail")
             
-            # STEP 2: Normalize emails for better quality
-            logger.info("🔧 Step 2: Normalizing emails...")
+            # STEP 2: Fetch calendar events (NEW!)
+            logger.info("📅 Step 2: Syncing calendar from Google Calendar...")
+            calendar_result = calendar_fetcher.fetch_calendar_events(
+                user_email=user_email,
+                days_back=3,
+                days_forward=14,
+                force_refresh=force_refresh
+            )
+            
+            calendar_events_fetched = 0
+            prep_tasks_created = 0
+            
+            if calendar_result.get('success'):
+                calendar_events_fetched = calendar_result.get('count', 0)
+                logger.info(f"✅ Synced {calendar_events_fetched} calendar events")
+                
+                # AUTOMATIC 360-CONTEXT PREP TASK CREATION (NEW AUGMENTATION FEATURE!)
+                if calendar_result.get('events'):
+                    logger.info("🧠 Step 2b: Creating 360-context meeting preparation tasks...")
+                    events_for_tasks = []
+                    for event_dict in calendar_result['events']:
+                        try:
+                            if isinstance(event_dict, dict):
+                                # Already a dict, use as-is
+                                events_for_tasks.append(event_dict)
+                            elif hasattr(event_dict, 'to_dict') and callable(getattr(event_dict, 'to_dict')):
+                                # Has a to_dict method, use it (for Calendar objects)
+                                event_as_dict = event_dict.to_dict()
+                                events_for_tasks.append(event_as_dict)
+                            else:
+                                # Manual conversion for Calendar database objects
+                                event_as_dict = {
+                                    'event_id': getattr(event_dict, 'event_id', None),
+                                    'title': getattr(event_dict, 'title', 'Untitled Event'),
+                                    'description': getattr(event_dict, 'description', ''),
+                                    'start_time': getattr(event_dict, 'start_time', None),
+                                    'end_time': getattr(event_dict, 'end_time', None),
+                                    'location': getattr(event_dict, 'location', ''),
+                                    'attendees': getattr(event_dict, 'attendees', []),
+                                    'calendar_id': getattr(event_dict, 'calendar_id', ''),
+                                    'created_at': getattr(event_dict, 'created_at', None)
+                                }
+                                
+                                # Ensure attendees is a list, not a string
+                                if isinstance(event_as_dict['attendees'], str):
+                                    try:
+                                        import json
+                                        event_as_dict['attendees'] = json.loads(event_as_dict['attendees'])
+                                    except:
+                                        event_as_dict['attendees'] = []
+                                elif not isinstance(event_as_dict['attendees'], list):
+                                    event_as_dict['attendees'] = []
+                                
+                                # Convert datetime objects to isoformat strings if needed
+                                for time_field in ['start_time', 'end_time']:
+                                    if event_as_dict[time_field] and hasattr(event_as_dict[time_field], 'isoformat'):
+                                        event_as_dict[time_field] = event_as_dict[time_field].isoformat()
+                                
+                                events_for_tasks.append(event_as_dict)
+                                
+                        except Exception as convert_error:
+                            logger.error(f"Failed to convert event to dict: {str(convert_error)}")
+                            logger.error(f"Event type: {type(event_dict)}")
+                            # Continue with next event instead of failing completely
+                            continue
+                    
+                    if events_for_tasks:
+                        try:
+                            logger.info(f"Processing {len(events_for_tasks)} events for meeting prep tasks...")
+                            prep_tasks_result = calendar_fetcher.create_meeting_prep_tasks(user.id, events_for_tasks)
+                            prep_tasks_created = prep_tasks_result.get('prep_tasks_created', 0)
+                            logger.info(f"🎯 Created {prep_tasks_created} intelligent meeting prep tasks using 360-context analysis")
+                        except Exception as prep_error:
+                            logger.error(f"Meeting prep task creation failed: {str(prep_error)}")
+                            prep_tasks_created = 0
+                    else:
+                        logger.warning("No valid events available for meeting prep task creation")
+                        prep_tasks_created = 0
+            else:
+                logger.warning(f"📅 Calendar sync failed: {calendar_result.get('error', 'Unknown error')}")
+            
+            # STEP 3: Normalize emails for better quality
+            logger.info("🔧 Step 3: Normalizing emails...")
             normalize_result = email_normalizer.normalize_user_emails(user_email, limit=max_emails)
             emails_normalized = normalize_result.get('processed', 0)
             logger.info(f"✅ Normalized {emails_normalized} emails")
             
-            # STEP 3: Process with AI to extract people, tasks, projects, insights
-            logger.info("🤖 Step 3: Processing emails with AI intelligence...")
+            # STEP 4: Process with AI to extract people, tasks, projects, insights
+            logger.info("🤖 Step 4: Processing emails with AI intelligence...")
             intelligence_result = email_intelligence.process_user_emails_intelligently(
                 user_email=user_email,
                 limit=max_emails,
                 force_refresh=force_refresh
             )
             
-            # STEP 4: Get final counts from database
-            logger.info("📊 Step 4: Calculating final results...")
+            # STEP 5: Analyze calendar free time (NEW!)
+            logger.info("⏰ Step 5: Analyzing calendar free time...")
+            free_time_analysis = calendar_fetcher.fetch_free_time_analysis(
+                user_email=user_email,
+                days_forward=7
+            )
+            
+            free_time_slots = 0
+            if free_time_analysis.get('success'):
+                free_time_slots = len(free_time_analysis.get('free_slots', []))
+                logger.info(f"✅ Found {free_time_slots} free time slots")
+            
+            # STEP 6: Get final counts from database
+            logger.info("📊 Step 6: Calculating final results...")
             db_user = get_db_manager().get_user_by_email(user_email)
             
             if db_user:
@@ -677,6 +875,7 @@ def create_app():
                 all_people = get_db_manager().get_user_people(db_user.id)
                 all_tasks = get_db_manager().get_user_tasks(db_user.id)
                 all_projects = get_db_manager().get_user_projects(db_user.id)
+                all_calendar_events = get_db_manager().get_user_calendar_events(db_user.id)
                 
                 # Filter for meaningful data
                 analyzed_emails = [e for e in all_emails if e.ai_summary and len(e.ai_summary.strip()) > 10]
@@ -689,20 +888,26 @@ def create_app():
                 
                 logger.info(f"✅ Final Results:")
                 logger.info(f"   📧 {len(analyzed_emails)} emails with AI analysis")
+                logger.info(f"   📅 {len(all_calendar_events)} calendar events synced")
                 logger.info(f"   👥 {len(real_people)} real people extracted")
                 logger.info(f"   ✅ {len(real_tasks)} actionable tasks created")
                 logger.info(f"   📋 {len(active_projects)} active projects identified")
                 logger.info(f"   🧠 {len(strategic_insights)} business insights generated")
+                logger.info(f"   ⏰ {free_time_slots} free time slots analyzed")
+                logger.info(f"   🎯 {prep_tasks_created} intelligent meeting prep tasks (360-context)")
                 
-                # Success response with comprehensive data
+                # Enhanced success response with calendar data
                 return jsonify({
                     'success': True,
-                    'message': f'Successfully processed {emails_fetched} emails and populated all data!',
+                    'message': f'Successfully processed {emails_fetched} emails and {calendar_events_fetched} calendar events!',
                     'processing_stages': {
                         'emails_fetched': emails_fetched,
+                        'calendar_events_fetched': calendar_events_fetched,
                         'emails_normalized': emails_normalized,
                         'emails_analyzed': len(analyzed_emails),
-                        'ai_processing_success': intelligence_result.get('success', False)
+                        'ai_processing_success': intelligence_result.get('success', False),
+                        'free_time_slots_found': free_time_slots,
+                        'prep_tasks_created': prep_tasks_created
                     },
                     'database_populated': {
                         'total_emails': len(all_emails),
@@ -710,21 +915,27 @@ def create_app():
                         'people_extracted': len(real_people),
                         'tasks_created': len(real_tasks),
                         'projects_identified': len(active_projects),
-                        'insights_generated': len(strategic_insights)
+                        'insights_generated': len(strategic_insights),
+                        'calendar_events': len(all_calendar_events),
+                        'free_time_slots': free_time_slots
                     },
                     'data_ready': {
                         'people_tab': len(real_people) > 0,
                         'tasks_tab': len(real_tasks) > 0,
+                        'calendar_tab': len(all_calendar_events) > 0,
                         'insights_tab': len(strategic_insights) > 0,
-                        'all_tabs_populated': len(real_people) > 0 and len(real_tasks) > 0 and len(strategic_insights) > 0
+                        'all_tabs_populated': len(real_people) > 0 and len(real_tasks) > 0 and len(strategic_insights) > 0 and len(all_calendar_events) > 0
                     },
                     'results': {
                         'fetch': fetch_result,
                         'normalize': normalize_result,
-                        'intelligence': intelligence_result
+                        'intelligence': intelligence_result,
+                        'calendar': calendar_result,
+                        'free_time': free_time_analysis
                     },
                     'summary': {
                         'emails_fetched': emails_fetched,
+                        'calendar_events_fetched': calendar_events_fetched,
                         'emails_normalized': emails_normalized,
                         'emails_analyzed': intelligence_result.get('processed_emails', len(analyzed_emails)),
                         'insights_extracted': intelligence_result.get('insights_extracted', len(strategic_insights)),
@@ -733,15 +944,20 @@ def create_app():
                         'tasks_created': intelligence_result.get('tasks_created', len(real_tasks)),
                         'total_emails': len(all_emails),
                         'total_tasks': len(real_tasks),
-                        'total_people': len(real_people)
+                        'total_people': len(real_people),
+                        'total_calendar_events': len(all_calendar_events),
+                        'free_time_slots': free_time_slots
                     },
                     'next_steps': [
                         f"✅ {len(real_people)} people are now available in the People tab",
                         f"✅ {len(real_tasks)} tasks are now available in the Tasks tab", 
+                        f"✅ {len(all_calendar_events)} calendar events are now available in the Calendar tab",
+                        f"✅ {free_time_slots} free time slots identified for productivity",
                         f"✅ {len(strategic_insights)} insights are now available on the Home tab",
+                        f"🎯 {prep_tasks_created} intelligent meeting prep tasks created with 360-context analysis",
                         "✅ All data is now populated and ready to use!"
-                    ] if len(real_people) > 0 else [
-                        "ℹ️ No meaningful data found - try processing more emails or check your Gmail connection"
+                    ] if len(real_people) > 0 or len(all_calendar_events) > 0 else [
+                        "ℹ️ No meaningful data found - try processing more emails or check your Gmail/Calendar connection"
                     ]
                 })
             else:
@@ -752,13 +968,13 @@ def create_app():
                 }), 500
             
         except Exception as e:
-            logger.error(f"❌ Unified email processing error: {str(e)}")
+            logger.error(f"❌ Unified email + calendar processing error: {str(e)}")
             return jsonify({
                 'success': False,
-                'error': f'Email processing failed: {str(e)}',
+                'error': f'Processing failed: {str(e)}',
                 'stage': 'processing'
             }), 500
-
+    
     @app.route('/api/process-emails', methods=['POST'])
     def api_process_emails():
         """DEPRECATED: Redirect to unified trigger-email-sync endpoint"""
@@ -1051,25 +1267,26 @@ Remember: This knowledge base represents their actual business communications an
             
             if user:
                 # Get email count
-                emails = get_db_manager().get_user_emails(user.id, limit=1000)
-                stats['emails_count'] = len(emails)
-                if emails:
-                    stats['last_fetch'] = max([email.processed_at for email in emails]).isoformat()
+                emails = get_db_manager().get_user_emails(user.id, limit=1)
+                stats['emails_count'] = len(get_db_manager().get_user_emails(user.id, limit=1000))
                 
-                # Get task count
-                tasks = get_db_manager().get_user_tasks(user.id)
-                stats['tasks_count'] = len(tasks)
+                # Get task count  
+                stats['tasks_count'] = len(get_db_manager().get_user_tasks(user.id, limit=1000))
+                
+                # Get last fetch time (approximate from most recent email)
+                if emails:
+                    stats['last_fetch'] = emails[0].processed_at.isoformat() if emails[0].processed_at else None
             
             return jsonify({
-                'user_email': user_email,
-                'gmail_status': gmail_status,
-                'processing_stats': stats,
-                'claude_available': claude_client is not None
+                'status': 'authenticated' if gmail_status['authenticated'] else 'not_authenticated',
+                'gmail_access': gmail_status['gmail_access'],
+                'user_stats': stats,
+                'gmail_status': gmail_status
             })
             
         except Exception as e:
-            logger.error(f"Status API error: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            logger.error(f"Status check failed: {str(e)}")
+            return jsonify({'error': f'Status check failed: {str(e)}'}), 500
     
     @app.route('/api/emails', methods=['GET'])
     def api_get_emails():
@@ -1128,7 +1345,7 @@ Remember: This knowledge base represents their actual business communications an
                     tasks_data.append({
                         'id': task.id,
                         'description': task.description,
-                        'details': task.notes or '',
+                        'details': task.source_text or '',  # Use source_text instead of notes
                         'priority': task.priority or 'medium',
                         'status': task.status or 'pending',
                         'category': task.category or 'general',
@@ -1136,7 +1353,7 @@ Remember: This knowledge base represents their actual business communications an
                         'assignee': task.assignee or user_email,
                         'due_date': task.due_date.isoformat() if task.due_date else None,
                         'created_at': task.created_at.isoformat() if task.created_at else None,
-                        'source_email_subject': task.source_email_subject,
+                        'source_email_subject': getattr(task, 'source_email_subject', None),  # Use getattr with fallback
                         'task_type': 'real_task',
                         'data_source': 'real_database'
                     })
@@ -1949,7 +2166,7 @@ Remember: This knowledge base represents their actual business communications an
                         'confidence': t.confidence,
                         'source_text': t.source_text,
                         'context': getattr(t, 'context', None),
-                        'notes': getattr(t, 'notes', None),
+                        'notes': getattr(t, 'notes', t.source_text),  # Use source_text as fallback for notes
                         'created_at': t.created_at.isoformat() if t.created_at else None,
                         'completed_at': t.completed_at.isoformat() if t.completed_at else None,
                         'source_email_subject': getattr(t, 'source_email_subject', None)
@@ -2006,6 +2223,183 @@ Remember: This knowledge base represents their actual business communications an
             logger.error(f"Knowledge base download error: {str(e)}")
             return jsonify({'error': f'Download failed: {str(e)}'}), 500
 
+    @app.route('/api/fetch-calendar', methods=['POST'])
+    def api_fetch_calendar():
+        """API endpoint to fetch calendar events and create prep tasks"""
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        
+        try:
+            data = request.get_json() or {}
+            days_back = data.get('days_back', 3)
+            days_forward = data.get('days_forward', 14)
+            force_refresh = data.get('force_refresh', False)
+            create_prep_tasks = data.get('create_prep_tasks', False)
+            
+            # Get user from database
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return jsonify({'success': False, 'error': 'User not found'}), 404
+            
+            # Fetch calendar events
+            logger.info(f"Fetching calendar events for {user_email}")
+            calendar_result = calendar_fetcher.fetch_calendar_events(
+                user_email, 
+                days_back=days_back, 
+                days_forward=days_forward,
+                force_refresh=force_refresh
+            )
+            
+            prep_tasks_result = {'prep_tasks_created': 0, 'tasks': []}
+            
+            # Create meeting preparation tasks if requested
+            if create_prep_tasks and calendar_result['success'] and calendar_result.get('events'):
+                logger.info(f"Creating meeting prep tasks for {user_email}")
+                # Convert event dicts to proper format for task creation
+                events_for_tasks = []
+                for event_dict in calendar_result['events']:
+                    if isinstance(event_dict, dict):
+                        events_for_tasks.append(event_dict)
+                    else:
+                        # Convert database object to dict if needed
+                        events_for_tasks.append(event_dict.to_dict() if hasattr(event_dict, 'to_dict') else event_dict.__dict__)
+                
+                prep_tasks_result = calendar_fetcher.create_meeting_prep_tasks(user.id, events_for_tasks)
+            
+            # Combine results
+            result = {
+                'success': calendar_result['success'],
+                'user_email': user_email,
+                'count': calendar_result.get('count', 0),
+                'events': calendar_result.get('events', []),
+                'source': calendar_result.get('source', 'unknown'),
+                'fetched_at': calendar_result.get('fetched_at'),
+                'calendars_processed': calendar_result.get('calendars_processed', 0),
+                'prep_tasks_created': prep_tasks_result.get('prep_tasks_created', 0),
+                'prep_tasks': prep_tasks_result.get('tasks', [])
+            }
+            
+            if not calendar_result['success']:
+                result['error'] = calendar_result.get('error', 'Unknown error')
+            
+            return jsonify(result)
+        
+        except Exception as e:
+            logger.error(f"Calendar fetch error for {user_email}: {str(e)}")
+            return jsonify({
+                'success': False, 
+                'error': f"Calendar fetch failed: {str(e)}",
+                'prep_tasks_created': 0
+            }), 500
+
+    @app.route('/api/calendar-events')
+    def api_get_calendar_events():
+        """API endpoint to get calendar events"""
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        
+        try:
+            days_forward = request.args.get('days_forward', 14, type=int)
+            limit = request.args.get('limit', 50, type=int)
+            
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return jsonify({'success': False, 'error': 'User not found'}), 404
+            
+            # Get events from database
+            from datetime import datetime, timedelta, timezone
+            now = datetime.now(timezone.utc)
+            start_date = now
+            end_date = now + timedelta(days=days_forward)
+            
+            events = get_db_manager().get_user_calendar_events(user.id, start_date, end_date, limit)
+            
+            # Convert to dict format and check for prep tasks using existing methods
+            events_data = []
+            all_user_tasks = get_db_manager().get_user_tasks(user.id)
+            prep_tasks = [task for task in all_user_tasks if task.category == 'meeting_preparation']
+            
+            for event in events:
+                event_dict = event.to_dict()
+                
+                # Check if this event has associated prep tasks by matching event title or other criteria
+                related_prep_tasks = [task for task in prep_tasks if 
+                                    event.title and task.description and 
+                                    (event.title.lower() in task.description.lower() or 
+                                     any(word in task.description.lower() for word in event.title.lower().split() if len(word) > 3))]
+                
+                event_dict['has_prep_tasks'] = len(related_prep_tasks) > 0
+                event_dict['prep_tasks_count'] = len(related_prep_tasks)
+                
+                events_data.append(event_dict)
+            
+            return jsonify({
+                'success': True,
+                'events': events_data,
+                'count': len(events_data)
+            })
+        
+        except Exception as e:
+            logger.error(f"Get calendar events error for {user_email}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/meeting-prep-tasks')
+    def api_get_meeting_prep_tasks():
+        """API endpoint to get meeting preparation tasks"""
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return jsonify({'success': False, 'error': 'User not found'}), 404
+            
+            # Get prep tasks that are not completed (use existing method with category filter)
+            all_tasks = get_db_manager().get_user_tasks(user.id)
+            prep_tasks = [task for task in all_tasks if 
+                         task.category == 'meeting_preparation' and 
+                         task.status in ['pending', 'open']]
+            
+            return jsonify({
+                'success': True,
+                'tasks': [task.to_dict() for task in prep_tasks],
+                'count': len(prep_tasks)
+            })
+        
+        except Exception as e:
+            logger.error(f"Get meeting prep tasks error for {user_email}: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/free-time-analysis', methods=['POST'])
+    def api_free_time_analysis():
+        """API endpoint to analyze free time in calendar"""
+        user_email = session.get('user_email')
+        if not user_email:
+            return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+        
+        try:
+            data = request.get_json() or {}
+            days_forward = data.get('days_forward', 7)
+            
+            # Get free time analysis
+            result = calendar_fetcher.fetch_free_time_analysis(
+                user_email=user_email,
+                days_forward=days_forward
+            )
+            
+            return jsonify(result)
+        
+        except Exception as e:
+            logger.error(f"Free time analysis error for {user_email}: {str(e)}")
+            return jsonify({
+                'success': False, 
+                'error': f"Free time analysis failed: {str(e)}",
+                'free_slots': []
+            }), 500
+    
     # Error handlers
     @app.errorhandler(404)
     def not_found_error(error):
@@ -2047,13 +2441,14 @@ if __name__ == '__main__':
         
         print("🚀 Starting AI Chief of Staff Web Application")
         print(f"📧 Gmail integration: {'✓ Configured' if settings.GOOGLE_CLIENT_ID else '✗ Missing'}")
+        print(f"📅 Calendar integration: {'✓ Enabled' if 'https://www.googleapis.com/auth/calendar.readonly' in settings.GMAIL_SCOPES else '✗ Missing'}")
         print(f"🤖 Claude integration: {'✓ Configured' if settings.ANTHROPIC_API_KEY else '✗ Missing'}")
         print(f"🌐 Server: http://localhost:{settings.PORT}")
         print("\nTo get started:")
         print("1. Go to the URL above")
         print("2. Click 'Sign in with Google'")
-        print("3. Grant Gmail access permissions")
-        print("4. Start processing your emails!")
+        print("3. Grant Gmail and Calendar access permissions")
+        print("4. Start processing your emails and calendar!")
         
         app.run(
             host=settings.HOST,

@@ -1,0 +1,803 @@
+{% extends "base.html" %}
+
+{% block title %}Profile & Settings - AI Chief of Staff{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">
+            <i class="fas fa-user-cog me-2"></i>
+            Profile & Settings
+        </h1>
+        <p class="text-muted mb-0">Manage your account, preferences, and system settings</p>
+    </div>
+    <div>
+        <button class="btn btn-enhanced" onclick="saveAllSettings()">
+            <i class="fas fa-save me-2"></i>Save All Changes
+        </button>
+    </div>
+</div>
+
+<!-- Profile Overview -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="profile-avatar mb-3">
+                    <i class="fas fa-user-circle fa-5x text-primary"></i>
+                </div>
+                <h5 class="card-title" id="userDisplayName">{{ user_email or 'User' }}</h5>
+                <p class="card-text text-muted" id="userEmail">{{ user_email }}</p>
+                <div class="mb-3">
+                    <span class="badge bg-success">Active</span>
+                    <span class="badge bg-info ms-1">API {{ api_version }}</span>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" onclick="changePassword()">
+                    <i class="fas fa-key me-2"></i>Change Password
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Account Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-primary" id="totalEmails">0</div>
+                            <small class="text-muted">Emails Processed</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-success" id="totalTasks">0</div>
+                            <small class="text-muted">Tasks Created</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-info" id="totalPeople">0</div>
+                            <small class="text-muted">People Managed</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="text-center">
+                            <div class="h4 text-warning" id="totalTopics">0</div>
+                            <small class="text-muted">Topics Tracked</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Tabs -->
+<ul class="nav nav-tabs mb-4" id="settingsTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab">
+            <i class="fas fa-cog me-2"></i>General
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications" type="button" role="tab">
+            <i class="fas fa-bell me-2"></i>Notifications
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="processing-tab" data-bs-toggle="tab" data-bs-target="#processing" type="button" role="tab">
+            <i class="fas fa-microchip me-2"></i>Processing
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">
+            <i class="fas fa-shield-alt me-2"></i>Security
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="api-tab" data-bs-toggle="tab" data-bs-target="#api" type="button" role="tab">
+            <i class="fas fa-code me-2"></i>API & Integrations
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="settingsTabContent">
+    <!-- General Settings -->
+    <div class="tab-pane fade show active" id="general" role="tabpanel">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Personal Preferences</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="displayName" class="form-label">Display Name</label>
+                            <input type="text" class="form-control" id="displayName" placeholder="Enter your display name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="timezone" class="form-label">Timezone</label>
+                            <select class="form-select" id="timezone">
+                                <option value="UTC">UTC (GMT+0)</option>
+                                <option value="America/New_York">Eastern (GMT-5)</option>
+                                <option value="America/Chicago">Central (GMT-6)</option>
+                                <option value="America/Denver">Mountain (GMT-7)</option>
+                                <option value="America/Los_Angeles">Pacific (GMT-8)</option>
+                                <option value="Europe/London">London (GMT+0)</option>
+                                <option value="Europe/Paris">Paris (GMT+1)</option>
+                                <option value="Asia/Tokyo">Tokyo (GMT+9)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="language" class="form-label">Language</label>
+                            <select class="form-select" id="language">
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="ja">Japanese</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Dashboard Preferences</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="defaultTaskView" class="form-label">Default Task View</label>
+                            <select class="form-select" id="defaultTaskView">
+                                <option value="list">List View</option>
+                                <option value="kanban">Kanban Board</option>
+                                <option value="calendar">Calendar View</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="showWelcomeMessage">
+                                <label class="form-check-label" for="showWelcomeMessage">
+                                    Show welcome message on dashboard
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoRefreshData">
+                                <label class="form-check-label" for="autoRefreshData">
+                                    Auto-refresh data every 5 minutes
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Settings -->
+    <div class="tab-pane fade" id="notifications" role="tabpanel">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Email Notifications</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="emailDigest" checked>
+                                <label class="form-check-label" for="emailDigest">
+                                    Daily digest emails
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="taskReminders">
+                                <label class="form-check-label" for="taskReminders">
+                                    Task due date reminders
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="insightAlerts">
+                                <label class="form-check-label" for="insightAlerts">
+                                    New insight alerts
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Real-time Notifications</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="browserNotifications" checked>
+                                <label class="form-check-label" for="browserNotifications">
+                                    Browser notifications
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="processingUpdates">
+                                <label class="form-check-label" for="processingUpdates">
+                                    Processing status updates
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notificationFrequency" class="form-label">Update Frequency</label>
+                            <select class="form-select" id="notificationFrequency">
+                                <option value="immediate">Immediate</option>
+                                <option value="5min">Every 5 minutes</option>
+                                <option value="15min">Every 15 minutes</option>
+                                <option value="hourly">Hourly</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Settings -->
+    <div class="tab-pane fade" id="processing" role="tabpanel">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Email Processing</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="emailBatchSize" class="form-label">Batch Size</label>
+                            <input type="number" class="form-control" id="emailBatchSize" value="50" min="10" max="200">
+                        </div>
+                        <div class="mb-3">
+                            <label for="autoProcessingInterval" class="form-label">Auto-processing Interval (hours)</label>
+                            <select class="form-select" id="autoProcessingInterval">
+                                <option value="1">Every hour</option>
+                                <option value="4">Every 4 hours</option>
+                                <option value="12">Every 12 hours</option>
+                                <option value="24">Daily</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="smartProcessing" checked>
+                                <label class="form-check-label" for="smartProcessing">
+                                    Smart processing (AI-enhanced)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">AI & Analytics</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="insightGeneration" class="form-label">Insight Generation</label>
+                            <select class="form-select" id="insightGeneration">
+                                <option value="aggressive">Aggressive (More insights)</option>
+                                <option value="balanced">Balanced</option>
+                                <option value="conservative">Conservative (Fewer insights)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoEntityDetection" checked>
+                                <label class="form-check-label" for="autoEntityDetection">
+                                    Automatic entity detection
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="relationshipMapping">
+                                <label class="form-check-label" for="relationshipMapping">
+                                    Automatic relationship mapping
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Settings -->
+    <div class="tab-pane fade" id="security" role="tabpanel">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Authentication</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Current Session</label>
+                            <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                                <div>
+                                    <small><strong>Active since:</strong> <span id="sessionStart">Loading...</span></small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" onclick="terminateSession()">
+                                    <i class="fas fa-sign-out-alt me-1"></i>Logout
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="rememberSession">
+                                <label class="form-check-label" for="rememberSession">
+                                    Remember session for 30 days
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Data Privacy</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="dataRetention" checked>
+                                <label class="form-check-label" for="dataRetention">
+                                    Enable data retention (90 days)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="analyticsTracking">
+                                <label class="form-check-label" for="analyticsTracking">
+                                    Allow usage analytics
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <button class="btn btn-outline-danger btn-sm" onclick="exportData()">
+                                <i class="fas fa-download me-2"></i>Export My Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API & Integrations -->
+    <div class="tab-pane fade" id="api" role="tabpanel">
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">API Keys</h6>
+                        <button class="btn btn-sm btn-enhanced" onclick="generateApiKey()">
+                            <i class="fas fa-plus me-1"></i>Generate
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="apiKeysList">
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-key fa-2x mb-2"></i>
+                                <p>No API keys generated</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Connected Services</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Gmail</strong>
+                                    <br><small class="text-success">Connected</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>Claude AI</strong>
+                                    <br><small class="text-success">Connected</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-key me-2"></i>Change Password
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="passwordForm">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="currentPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-enhanced" onclick="updatePassword()">
+                    <i class="fas fa-save me-2"></i>Update Password
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-avatar {
+        margin-bottom: 1rem;
+    }
+    
+    .settings-card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .api-key-item {
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+    }
+    
+    .nav-tabs .nav-link {
+        border: none;
+        color: var(--dark-bg);
+        transition: all 0.3s;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    }
+    
+    .nav-tabs .nav-link.active {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Profile and settings functionality
+    let userSettings = {};
+    
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadUserSettings();
+        loadUserStats();
+        loadApiKeys();
+        updateSessionInfo();
+    });
+    
+    // Load user settings
+    async function loadUserSettings() {
+        try {
+            const response = await axios.get('/api/auth/profile');
+            if (response.data.success) {
+                const profile = response.data.data;
+                userSettings = profile.settings || {};
+                populateSettingsForm();
+            }
+        } catch (error) {
+            console.error('Error loading user settings:', error);
+        }
+    }
+    
+    // Load user statistics
+    async function loadUserStats() {
+        try {
+            const response = await axios.get('/api/entities/analytics/overview');
+            if (response.data.success) {
+                const stats = response.data.data;
+                document.getElementById('totalEmails').textContent = stats.total_emails || 0;
+                document.getElementById('totalTasks').textContent = stats.total_tasks || 0;
+                document.getElementById('totalPeople').textContent = stats.total_people || 0;
+                document.getElementById('totalTopics').textContent = stats.total_topics || 0;
+            }
+        } catch (error) {
+            console.error('Error loading user stats:', error);
+        }
+    }
+    
+    // Populate settings form
+    function populateSettingsForm() {
+        // General settings
+        document.getElementById('displayName').value = userSettings.display_name || '';
+        document.getElementById('timezone').value = userSettings.timezone || 'UTC';
+        document.getElementById('language').value = userSettings.language || 'en';
+        document.getElementById('defaultTaskView').value = userSettings.default_task_view || 'list';
+        
+        // Checkboxes
+        document.getElementById('showWelcomeMessage').checked = userSettings.show_welcome !== false;
+        document.getElementById('autoRefreshData').checked = userSettings.auto_refresh !== false;
+        document.getElementById('emailDigest').checked = userSettings.email_digest !== false;
+        document.getElementById('taskReminders').checked = userSettings.task_reminders !== false;
+        document.getElementById('insightAlerts').checked = userSettings.insight_alerts !== false;
+        document.getElementById('browserNotifications').checked = userSettings.browser_notifications !== false;
+        document.getElementById('processingUpdates').checked = userSettings.processing_updates !== false;
+        document.getElementById('smartProcessing').checked = userSettings.smart_processing !== false;
+        document.getElementById('autoEntityDetection').checked = userSettings.auto_entity_detection !== false;
+        document.getElementById('relationshipMapping').checked = userSettings.relationship_mapping !== false;
+        document.getElementById('rememberSession').checked = userSettings.remember_session !== false;
+        document.getElementById('dataRetention').checked = userSettings.data_retention !== false;
+        document.getElementById('analyticsTracking').checked = userSettings.analytics_tracking !== false;
+        
+        // Other settings
+        document.getElementById('notificationFrequency').value = userSettings.notification_frequency || 'immediate';
+        document.getElementById('emailBatchSize').value = userSettings.email_batch_size || 50;
+        document.getElementById('autoProcessingInterval').value = userSettings.auto_processing_interval || 4;
+        document.getElementById('insightGeneration').value = userSettings.insight_generation || 'balanced';
+    }
+    
+    // Save all settings
+    async function saveAllSettings() {
+        const settings = {
+            display_name: document.getElementById('displayName').value,
+            timezone: document.getElementById('timezone').value,
+            language: document.getElementById('language').value,
+            default_task_view: document.getElementById('defaultTaskView').value,
+            show_welcome: document.getElementById('showWelcomeMessage').checked,
+            auto_refresh: document.getElementById('autoRefreshData').checked,
+            email_digest: document.getElementById('emailDigest').checked,
+            task_reminders: document.getElementById('taskReminders').checked,
+            insight_alerts: document.getElementById('insightAlerts').checked,
+            browser_notifications: document.getElementById('browserNotifications').checked,
+            processing_updates: document.getElementById('processingUpdates').checked,
+            notification_frequency: document.getElementById('notificationFrequency').value,
+            email_batch_size: parseInt(document.getElementById('emailBatchSize').value),
+            auto_processing_interval: parseInt(document.getElementById('autoProcessingInterval').value),
+            smart_processing: document.getElementById('smartProcessing').checked,
+            insight_generation: document.getElementById('insightGeneration').value,
+            auto_entity_detection: document.getElementById('autoEntityDetection').checked,
+            relationship_mapping: document.getElementById('relationshipMapping').checked,
+            remember_session: document.getElementById('rememberSession').checked,
+            data_retention: document.getElementById('dataRetention').checked,
+            analytics_tracking: document.getElementById('analyticsTracking').checked
+        };
+        
+        try {
+            showLoading();
+            const response = await axios.put('/api/auth/profile', { settings });
+            hideLoading();
+            
+            if (response.data.success) {
+                showAlert('Settings saved successfully!', 'success');
+                userSettings = settings;
+            } else {
+                showAlert('Failed to save settings: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Error saving settings: ' + error.message, 'danger');
+        }
+    }
+    
+    // Change password functionality
+    function changePassword() {
+        new bootstrap.Modal(document.getElementById('passwordModal')).show();
+    }
+    
+    async function updatePassword() {
+        const form = document.getElementById('passwordForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        
+        if (newPassword !== confirmPassword) {
+            showAlert('New passwords do not match!', 'danger');
+            return;
+        }
+        
+        try {
+            showLoading();
+            const response = await axios.post('/api/auth/change-password', {
+                current_password: currentPassword,
+                new_password: newPassword
+            });
+            
+            hideLoading();
+            
+            if (response.data.success) {
+                showAlert('Password updated successfully!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('passwordModal')).hide();
+                form.reset();
+            } else {
+                showAlert('Failed to update password: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Error updating password: ' + error.message, 'danger');
+        }
+    }
+    
+    // API key management
+    async function loadApiKeys() {
+        try {
+            const response = await axios.get('/api/auth/api-keys');
+            if (response.data.success) {
+                const keys = response.data.data.api_keys || [];
+                renderApiKeys(keys);
+            }
+        } catch (error) {
+            console.error('Error loading API keys:', error);
+        }
+    }
+    
+    function renderApiKeys(keys) {
+        const container = document.getElementById('apiKeysList');
+        
+        if (keys.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-key fa-2x mb-2"></i>
+                    <p>No API keys generated</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = keys.map(key => `
+            <div class="api-key-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${key.name}</strong>
+                        <br><small class="text-muted">Created: ${new Date(key.created_at).toLocaleDateString()}</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="revokeApiKey('${key.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    async function generateApiKey() {
+        const name = prompt('Enter a name for this API key:');
+        if (!name) return;
+        
+        try {
+            const response = await axios.post('/api/auth/api-keys', { name });
+            if (response.data.success) {
+                showAlert('API key generated successfully!', 'success');
+                loadApiKeys();
+            } else {
+                showAlert('Failed to generate API key: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            showAlert('Error generating API key: ' + error.message, 'danger');
+        }
+    }
+    
+    async function revokeApiKey(keyId) {
+        if (!confirm('Are you sure you want to revoke this API key?')) return;
+        
+        try {
+            const response = await axios.delete(`/api/auth/api-keys/${keyId}`);
+            if (response.data.success) {
+                showAlert('API key revoked successfully!', 'success');
+                loadApiKeys();
+            } else {
+                showAlert('Failed to revoke API key: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            showAlert('Error revoking API key: ' + error.message, 'danger');
+        }
+    }
+    
+    // Session management
+    function updateSessionInfo() {
+        // Mock session start time - in real implementation, get from server
+        const sessionStart = new Date(Date.now() - 3600000); // 1 hour ago
+        document.getElementById('sessionStart').textContent = sessionStart.toLocaleString();
+    }
+    
+    function terminateSession() {
+        if (confirm('Are you sure you want to logout?')) {
+            window.location.href = '/logout';
+        }
+    }
+    
+    // Data export
+    async function exportData() {
+        if (!confirm('This will export all your data. Continue?')) return;
+        
+        try {
+            showLoading();
+            const response = await axios.get('/api/auth/export-data');
+            hideLoading();
+            
+            if (response.data.success) {
+                // Create download
+                const blob = new Blob([JSON.stringify(response.data.data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `user-data-export-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                showAlert('Data exported successfully!', 'success');
+            } else {
+                showAlert('Failed to export data: ' + response.data.error, 'danger');
+            }
+        } catch (error) {
+            hideLoading();
+            showAlert('Error exporting data: ' + error.message, 'danger');
+        }
+    }
+</script>
+{% endblock %} 

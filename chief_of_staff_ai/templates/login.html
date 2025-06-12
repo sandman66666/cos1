@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Login - AI Chief of Staff{% endblock %}
+
+{% block content %}
+<div class="card shadow-lg border-0">
+    <div class="card-body p-5">
+        <div class="text-center mb-4">
+            <i class="fas fa-brain fa-3x text-primary mb-3"></i>
+            <h2 class="card-title text-primary">AI Chief of Staff</h2>
+            <p class="text-muted">Enhanced Entity-Centric Intelligence Platform</p>
+            {% if api_version %}
+            <span class="badge bg-primary">API {{ api_version }}</span>
+            {% endif %}
+        </div>
+
+        <!-- Features Overview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5 class="text-center mb-3">What's New in Enhanced Platform</h5>
+                <div class="row text-center">
+                    <div class="col-md-6 mb-3">
+                        <div class="feature-card p-3 border rounded">
+                            <i class="fas fa-users fa-2x text-success mb-2"></i>
+                            <h6>Entity Management</h6>
+                            <small class="text-muted">People, topics, and relationship tracking</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="feature-card p-3 border rounded">
+                            <i class="fas fa-bolt fa-2x text-warning mb-2"></i>
+                            <h6>Real-time Processing</h6>
+                            <small class="text-muted">Live insights and instant notifications</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="feature-card p-3 border rounded">
+                            <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                            <h6>Advanced Analytics</h6>
+                            <small class="text-muted">Business intelligence and patterns</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="feature-card p-3 border rounded">
+                            <i class="fas fa-rocket fa-2x text-purple mb-2"></i>
+                            <h6>Batch Processing</h6>
+                            <small class="text-muted">High-volume operations</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Section -->
+        <div class="text-center">
+            <h5 class="mb-3">Connect with Google</h5>
+            <p class="text-muted mb-4">Sign in to access your enhanced AI Chief of Staff dashboard</p>
+            
+            <a href="{{ url_for('auth_google') }}" class="btn btn-enhanced btn-lg w-100 mb-3">
+                <i class="fab fa-google me-2"></i>
+                Sign in with Google
+            </a>
+            
+            <div class="row mt-4">
+                <div class="col-md-6 mb-2">
+                    <div class="d-flex align-items-center text-muted">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        <small>Secure OAuth 2.0</small>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <div class="d-flex align-items-center text-muted">
+                        <i class="fas fa-lock me-2"></i>
+                        <small>Gmail Access Only</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- API Information Footer -->
+    <div class="card-footer bg-light text-center">
+        <small class="text-muted">
+            <i class="fas fa-code me-1"></i>
+            Enhanced with 8 API modules | 59+ endpoints | Real-time WebSocket
+        </small>
+        <br>
+        <small class="text-muted">
+            <a href="/api/docs/" target="_blank" class="text-decoration-none">
+                <i class="fas fa-book me-1"></i>API Documentation
+            </a>
+            |
+            <a href="/api/versions" target="_blank" class="text-decoration-none">
+                <i class="fas fa-code-branch me-1"></i>API Versions
+            </a>
+        </small>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-3">
+                <h6 class="card-title mb-3">
+                    <i class="fas fa-server me-2"></i>System Status
+                </h6>
+                <div id="systemStatus" class="row">
+                    <div class="col-md-3 col-6 mb-2">
+                        <div class="d-flex align-items-center">
+                            <span id="apiStatus" class="badge bg-secondary me-2">
+                                <i class="fas fa-circle"></i>
+                            </span>
+                            <small>API Server</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6 mb-2">
+                        <div class="d-flex align-items-center">
+                            <span id="databaseStatus" class="badge bg-secondary me-2">
+                                <i class="fas fa-circle"></i>
+                            </span>
+                            <small>Database</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6 mb-2">
+                        <div class="d-flex align-items-center">
+                            <span id="authStatus" class="badge bg-secondary me-2">
+                                <i class="fas fa-circle"></i>
+                            </span>
+                            <small>Google Auth</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6 mb-2">
+                        <div class="d-flex align-items-center">
+                            <span id="aiStatus" class="badge bg-secondary me-2">
+                                <i class="fas fa-circle"></i>
+                            </span>
+                            <small>AI Engine</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .feature-card {
+        transition: all 0.3s;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .text-purple {
+        color: #6f42c1 !important;
+    }
+    
+    .card {
+        border-radius: 15px;
+    }
+    
+    .btn-enhanced {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn-enhanced::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+    
+    .btn-enhanced:hover::before {
+        left: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Check system status on login page
+    async function checkSystemStatus() {
+        try {
+            const response = await axios.get('/api/status');
+            const status = response.data;
+            
+            // Update status indicators
+            updateStatusBadge('apiStatus', true, 'success');
+            updateStatusBadge('databaseStatus', status.database_connected, status.database_connected ? 'success' : 'danger');
+            updateStatusBadge('authStatus', status.gmail_auth_available, status.gmail_auth_available ? 'success' : 'warning');
+            updateStatusBadge('aiStatus', status.claude_available, status.claude_available ? 'success' : 'warning');
+            
+        } catch (error) {
+            console.error('Status check failed:', error);
+            // Mark all as unknown/error
+            updateStatusBadge('apiStatus', false, 'danger');
+            updateStatusBadge('databaseStatus', false, 'secondary');
+            updateStatusBadge('authStatus', false, 'secondary');
+            updateStatusBadge('aiStatus', false, 'secondary');
+        }
+    }
+    
+    function updateStatusBadge(elementId, isOnline, statusClass) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.className = `badge bg-${statusClass} me-2`;
+            element.innerHTML = `<i class="fas fa-${isOnline ? 'check-circle' : 'times-circle'}"></i>`;
+        }
+    }
+    
+    // Show loading during authentication
+    const authLink = document.querySelector('a[href*="auth_google"]');
+    if (authLink) {
+        authLink.addEventListener('click', function() {
+            showLoading();
+        });
+    }
+    
+    // Check status on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        checkSystemStatus();
+        
+        // Refresh status every 30 seconds
+        setInterval(checkSystemStatus, 30000);
+    });
+</script>
+{% endblock %} 

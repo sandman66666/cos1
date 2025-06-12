@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar - AI Chief of Staff</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'" href="https://fonts.googleapis.com/css2?display=swap&family=Inter%3Awght%40400%3B500%3B700%3B900&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Inter, "Noto Sans", sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #101a23; }
+        ::-webkit-scrollbar-thumb { background: #223649; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #314d68; }
+        .text-secondary { color: #90aecb; }
+        .bg-card { background-color: #223649; }
+        .bg-primary { background-color: #0b80ee; }
+        .border-dark { border-color: #314d68; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .loading { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .calendar-event { transition: all 0.2s ease; }
+        .calendar-event:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(11, 128, 238, 0.2); }
+        .attendee-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0b80ee, #90aecb); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px; }
+        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #0b80ee; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .free-time-slot { background: linear-gradient(135deg, #10b981, #34d399); border-left: 4px solid #059669; }
+    </style>
+</head>
+<body class="bg-[#101a23] text-white min-h-screen">
+    <div class="relative flex size-full min-h-screen flex-col bg-[#101a23] dark group/design-root overflow-x-hidden">
+        <div class="layout-container flex h-full grow flex-col">
+            <div class="gap-1 px-6 flex flex-1 justify-center py-5">
+                
+                <!-- Left Sidebar -->
+                <div class="layout-content-container flex flex-col w-80">
+                    <div class="flex h-full min-h-[700px] flex-col justify-between bg-[#101a23] p-4">
+                        <div class="flex flex-col gap-4">
+                            <!-- Logo/Header -->
+                            <div class="flex gap-3 items-center">
+                                <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                                    🤖
+                                </div>
+                                <h1 class="text-white text-base font-medium leading-normal">AI Chief of Staff</h1>
+                            </div>
+                            
+                            <!-- Navigation Menu -->
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="window.location.href='/home'">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0,1.14,1.14,0,0,0,.11.11l80,75.48A16,16,0,0,1,224,115.55Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Home</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="window.location.href='/knowledge'">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M224,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h64a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Knowledge</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="window.location.href='/tasks'">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M56,128a16,16,0,1,1-16-16A16,16,0,0,1,56,128ZM40,48A16,16,0,1,0,56,64,16,16,0,0,0,40,48Zm0,128a16,16,0,1,0,16,16A16,16,0,0,0,40,176Zm176-64H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V120A8,8,0,0,0,216,112Zm0-64H88a8,8,0,0,0-8,8V72a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V56A8,8,0,0,0,216,48Zm0,128H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V184A8,8,0,0,0,216,176Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Tasks</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="window.location.href='/people'">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">People</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 rounded-full bg-[#223649]" id="nav-calendar">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-96-88v64a8,8,0,0,1-16,0V132.94l-4.42,2.22a8,8,0,0,1-7.16-14.32l16-8A8,8,0,0,1,112,120Zm59.16,30.45L152,176h16a8,8,0,0,1,0,16H136a8,8,0,0,1-6.4-12.8l28.78-38.37A8,8,0,1,0,145.07,132a8,8,0,1,1-13.85-8A24,24,0,0,1,176,140,23.76,23.76,0,0,1,171.16,150.45Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Calendar</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="window.location.href='/settings'">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.6,107.6,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3.12-3.12l-2.64-23.72a8,8,0,0,0-3.93-6,107.89,107.89,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40q-2.16-.06-4.32,0L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.48-3.12,3.12L40.48,70.03a8,8,0,0,0-6,3.93,107.89,107.89,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84q-.06,2.16,0,4.32L25.11,148.8a8,8,0,0,0-1.48,7.06,107.6,107.6,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.48,1.56,3.12,3.12l2.64,23.72a8,8,0,0,0,3.93,6,107.89,107.89,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.6,107.6,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3.12-3.12L215.52,186a8,8,0,0,0,6-3.93,107.89,107.89,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06ZM128,208a80,80,0,1,1,80-80A80.09,80.09,0,0,1,128,208Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Settings</p>
+                                </div>
+                                
+                                <div class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors" onclick="window.location.href='/logout'">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M112,216a8,8,0,0,1-8,8H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32h56a8,8,0,0,1,0,16H48V208h56A8,8,0,0,1,112,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L188.69,112H104a8,8,0,0,0,0,16h84.69l-18.35,18.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,221.66,122.34Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Logout</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- User Info -->
+                        <div class="flex flex-col gap-3">
+                            <div class="bg-[#223649] rounded-xl p-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full size-8 flex items-center justify-center text-white text-sm font-bold">
+                                        S
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-white text-sm font-medium truncate">Calendar Manager</p>
+                                        <p class="text-secondary text-xs">Smart Scheduling</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Calendar Content -->
+                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+                    <div class="px-4 py-6">
+                        <h1 class="text-3xl font-bold text-white mb-2">📅 Smart Calendar</h1>
+                        <p class="text-[#90aecb] text-lg mb-8">Intelligent calendar management with attendee insights and automatic prep task creation</p>
+
+                        <!-- Calendar Stats -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-[#223649] p-6 rounded-lg border border-[#314d68]">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium text-[#90aecb]">Calendar Events</h3>
+                                    <span class="text-2xl">📅</span>
+                                </div>
+                                <p class="text-2xl font-bold text-white" id="totalEvents">0</p>
+                                <p class="text-xs text-[#90aecb] mt-1">Synced events</p>
+                            </div>
+
+                            <div class="bg-[#223649] p-6 rounded-lg border border-[#314d68]">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium text-[#90aecb]">Auto-Generated Tasks</h3>
+                                    <span class="text-2xl">📋</span>
+                                </div>
+                                <p class="text-2xl font-bold text-white" id="prepTasks">0</p>
+                                <p class="text-xs text-[#90aecb] mt-1">Meeting prep tasks</p>
+                            </div>
+
+                            <div class="bg-[#223649] p-6 rounded-lg border border-[#314d68]">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium text-[#90aecb]">Meeting Contacts</h3>
+                                    <span class="text-2xl">👥</span>
+                                </div>
+                                <p class="text-2xl font-bold text-white" id="totalContacts">0</p>
+                                <p class="text-xs text-[#90aecb] mt-1">Unique attendees</p>
+                            </div>
+                        </div>
+
+                        <!-- Calendar Events and Meeting Prep Tasks -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Calendar Events -->
+                            <div class="bg-[#223649] rounded-lg border border-[#314d68] p-6">
+                                <div class="flex items-center justify-between mb-6">
+                                    <h2 class="text-xl font-semibold text-white">📅 Upcoming Events</h2>
+                                    <select id="timeRangeFilter" class="bg-[#1a365d] text-white border border-[#314d68] rounded px-3 py-1 text-sm" onchange="loadCalendarEvents()">
+                                        <option value="7">Next 7 days</option>
+                                        <option value="14" selected>Next 14 days</option>
+                                        <option value="30">Next 30 days</option>
+                                    </select>
+                                </div>
+                                
+                                <div id="calendarEventsLoading" class="text-center py-8 hidden">
+                                    <div class="loading-spinner mx-auto mb-3"></div>
+                                    <p class="text-[#90aecb]">Loading calendar events...</p>
+                                </div>
+                                
+                                <div id="calendarEventsContainer" class="space-y-4 max-h-96 overflow-y-auto">
+                                    <!-- Calendar events will be loaded here -->
+                                </div>
+                                
+                                <div id="noCalendarEvents" class="text-center py-8 text-[#90aecb] hidden">
+                                    <p class="text-lg mb-2">📅</p>
+                                    <p>No calendar events found</p>
+                                    <p class="text-sm mt-1">Sync your calendar to see events here</p>
+                                </div>
+                                
+                                <!-- 360-Context Augmentation Feature Button -->
+                                <div class="mt-6 pt-4 border-t border-[#314d68]">
+                                    <div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 p-4 rounded-lg border border-purple-600/50">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div>
+                                                <h4 class="text-white font-semibold text-sm">🎯 360-Context Meeting Augmentation</h4>
+                                                <p class="text-purple-300 text-xs">Create intelligent prep tasks using your complete business intelligence</p>
+                                            </div>
+                                            <span class="text-xs bg-purple-600 text-white px-2 py-1 rounded-full">NEW</span>
+                                        </div>
+                                        <button 
+                                            id="create360PrepTasks"
+                                            onclick="create360ContextPrepTasks()"
+                                            class="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded font-medium hover:from-purple-700 hover:to-blue-700 transition-all text-sm"
+                                        >
+                                            🧠 Generate Smart Prep Tasks
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Auto-Generated Meeting Prep Tasks -->
+                            <div class="bg-[#223649] rounded-lg border border-[#314d68] p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h2 class="text-xl font-semibold text-white">📋 Smart Meeting Prep Tasks</h2>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-xs bg-green-600 text-white px-2 py-1 rounded">🤖 AI-Powered</span>
+                                        <span class="text-xs bg-purple-600 text-white px-2 py-1 rounded">360-Context</span>
+                                    </div>
+                                </div>
+                                
+                                <div id="prepTasksLoading" class="text-center py-8 hidden">
+                                    <div class="loading-spinner mx-auto mb-3"></div>
+                                    <p class="text-[#90aecb]">Generating prep tasks...</p>
+                                </div>
+                                
+                                <div id="prepTasksContainer" class="space-y-3 max-h-96 overflow-y-auto">
+                                    <!-- Prep tasks will be loaded here -->
+                                </div>
+                                
+                                <div id="noPrepTasks" class="text-center py-8 text-[#90aecb] hidden">
+                                    <p class="text-lg mb-2">📋</p>
+                                    <p>No prep tasks generated yet</p>
+                                    <p class="text-sm mt-1">Sync calendar to automatically create meeting preparation tasks</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize calendar on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCalendarEvents();
+            loadCalendarStats();
+            loadPrepTasks();
+        });
+
+        async function loadCalendarEvents() {
+            const container = document.getElementById('calendarEventsContainer');
+            const loading = document.getElementById('calendarEventsLoading');
+            const noEvents = document.getElementById('noCalendarEvents');
+            const timeRange = document.getElementById('timeRangeFilter').value;
+            
+            loading.classList.remove('hidden');
+            container.innerHTML = '';
+            noEvents.classList.add('hidden');
+            
+            try {
+                const response = await fetch(`/api/calendar-events?days_forward=${timeRange}&limit=50`);
+                const data = await response.json();
+                
+                if (data.success && data.events.length > 0) {
+                    data.events.forEach(event => {
+                        container.appendChild(createEventElement(event));
+                    });
+                    document.getElementById('totalEvents').textContent = data.events.length;
+                } else {
+                    noEvents.classList.remove('hidden');
+                    document.getElementById('totalEvents').textContent = '0';
+                }
+            } catch (error) {
+                console.error('Failed to load calendar events:', error);
+                noEvents.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function createEventElement(event) {
+            const div = document.createElement('div');
+            div.className = 'calendar-event bg-[#1a365d] p-4 rounded-lg border border-[#314d68] cursor-pointer';
+            div.onclick = () => showEventDetails(event);
+            
+            const startTime = event.start_time ? new Date(event.start_time).toLocaleString() : 'No time set';
+            const duration = event.end_time && event.start_time ? 
+                Math.round((new Date(event.end_time) - new Date(event.start_time)) / (1000 * 60)) + ' min' : '';
+            
+            // Create attendee avatars
+            let attendeesHtml = '';
+            if (event.attendees && event.attendees.length > 0) {
+                const visibleAttendees = event.attendees.slice(0, 3);
+                attendeesHtml = visibleAttendees.map(attendee => {
+                    const initials = attendee.name ? attendee.name.split(' ').map(n => n[0]).join('').toUpperCase() : 
+                                   attendee.email ? attendee.email[0].toUpperCase() : '?';
+                    return `<div class="attendee-avatar" title="${attendee.name || attendee.email}">${initials}</div>`;
+                }).join('');
+                
+                if (event.attendees.length > 3) {
+                    attendeesHtml += `<div class="attendee-avatar">+${event.attendees.length - 3}</div>`;
+                }
+            }
+            
+            // Indicate if prep tasks were created
+            const prepTaskBadge = event.has_prep_tasks ? 
+                '<span class="text-xs bg-green-600 text-white px-2 py-1 rounded">📋 Prep Tasks</span>' : '';
+            
+            div.innerHTML = `
+                <div class="flex items-start justify-between mb-2">
+                    <h3 class="text-white font-medium flex-1 mr-3">${event.title || 'Untitled Event'}</h3>
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="text-xs text-[#90aecb] whitespace-nowrap">${duration}</span>
+                        ${prepTaskBadge}
+                    </div>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <div class="text-[#90aecb]">
+                        <div class="flex items-center space-x-1 mb-1">
+                            <span>📅</span>
+                            <span>${startTime}</span>
+                        </div>
+                        ${event.location ? `<div class="flex items-center space-x-1"><span>📍</span><span>${event.location}</span></div>` : ''}
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        ${attendeesHtml}
+                    </div>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        async function loadPrepTasks() {
+            const container = document.getElementById('prepTasksContainer');
+            const loading = document.getElementById('prepTasksLoading');
+            const noTasks = document.getElementById('noPrepTasks');
+            
+            loading.classList.remove('hidden');
+            container.innerHTML = '';
+            noTasks.classList.add('hidden');
+            
+            try {
+                const response = await fetch('/api/meeting-prep-tasks');
+                const data = await response.json();
+                
+                if (data.success && data.tasks && data.tasks.length > 0) {
+                    data.tasks.forEach(task => {
+                        container.appendChild(createPrepTaskElement(task));
+                    });
+                    document.getElementById('prepTasks').textContent = data.tasks.length;
+                } else {
+                    noTasks.classList.remove('hidden');
+                    document.getElementById('prepTasks').textContent = '0';
+                }
+            } catch (error) {
+                console.error('Failed to load prep tasks:', error);
+                noTasks.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function createPrepTaskElement(task) {
+            const div = document.createElement('div');
+            div.className = 'bg-[#1a365d] p-3 rounded-lg border border-[#314d68] border-l-4 border-l-green-500';
+            
+            const priorityColor = {
+                'high': 'text-red-400',
+                'medium': 'text-yellow-400',
+                'low': 'text-green-400'
+            };
+            
+            // Determine if this is a 360-context task
+            const is360Context = task.extractor_version && task.extractor_version.includes('360_context');
+            const intelligenceSource = task.intelligence_source || 'calendar';
+            const contextLevel = task.context_level || 'standard';
+            
+            // Create intelligence badge
+            let intelligenceBadge = '';
+            if (is360Context) {
+                const badgeColors = {
+                    'relationship_intelligence': 'bg-blue-600',
+                    'project_intelligence': 'bg-purple-600',
+                    'decision_intelligence': 'bg-orange-600',
+                    'topic_intelligence': 'bg-teal-600',
+                    'strategic_intelligence': 'bg-red-600',
+                    'standard': 'bg-gray-600'
+                };
+                const badgeColor = badgeColors[contextLevel] || 'bg-gray-600';
+                intelligenceBadge = `<span class="text-xs ${badgeColor} text-white px-2 py-1 rounded-full mr-1">🧠 ${contextLevel.replace('_', ' ')}</span>`;
+            }
+            
+            // Create business context tooltip if available
+            let businessContextHtml = '';
+            if (task.business_context && task.business_context.trim()) {
+                businessContextHtml = `
+                    <div class="text-xs text-blue-300 mt-1 italic" title="Business Intelligence Context">
+                        💡 Context: ${task.business_context.substring(0, 80)}${task.business_context.length > 80 ? '...' : ''}
+                    </div>
+                `;
+            }
+            
+            div.innerHTML = `
+                <div class="flex items-start justify-between mb-2">
+                    <h4 class="text-white font-medium text-sm">${task.description}</h4>
+                    <span class="text-xs px-2 py-1 rounded ${priorityColor[task.priority] || 'text-gray-400'}">${task.priority}</span>
+                </div>
+                <div class="text-xs text-[#90aecb] mb-2">
+                    📅 For: ${task.meeting_title}
+                </div>
+                ${task.due_date ? `<div class="text-xs text-yellow-400">⏰ Due: ${new Date(task.due_date).toLocaleDateString()}</div>` : ''}
+                ${businessContextHtml}
+                <div class="flex items-center justify-between mt-3">
+                    <div class="flex items-center space-x-1">
+                        ${intelligenceBadge}
+                        <span class="text-xs text-green-400">${is360Context ? '🎯 360-Context' : '🤖 Auto-generated'}</span>
+                    </div>
+                    <button onclick="markTaskComplete(${task.id})" class="text-xs bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded">✓ Complete</button>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        async function loadCalendarStats() {
+            try {
+                const response = await fetch('/api/calendar-events?limit=100');
+                const data = await response.json();
+                
+                if (data.success && data.events) {
+                    // Count unique attendees
+                    const uniqueAttendees = new Set();
+                    data.events.forEach(event => {
+                        if (event.attendees && event.attendees.length > 0) {
+                            event.attendees.forEach(attendee => {
+                                if (attendee.email) {
+                                    uniqueAttendees.add(attendee.email);
+                                }
+                            });
+                        }
+                    });
+                    
+                    document.getElementById('totalContacts').textContent = uniqueAttendees.size;
+                }
+            } catch (error) {
+                console.error('Failed to load calendar stats:', error);
+            }
+        }
+
+        async function markTaskComplete(taskId) {
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'completed' })
+                });
+                
+                if (response.ok) {
+                    loadPrepTasks(); // Reload tasks
+                    showSuccess('✅ Task marked as complete!');
+                } else {
+                    showError('❌ Failed to update task');
+                }
+            } catch (error) {
+                console.error('Failed to mark task complete:', error);
+                showError('❌ Network error');
+            }
+        }
+
+        function showEventDetails(event) {
+            alert(`Event: ${event.title}\nTime: ${new Date(event.start_time).toLocaleString()}\nAttendees: ${event.attendees?.length || 0}\n\n${event.description || 'No description'}`);
+        }
+
+        function showSuccess(message) {
+            alert(message);
+        }
+
+        function showError(message) {
+            alert(message);
+        }
+
+        async function analyzeFreeTime() {
+            // Placeholder for free time analysis
+            alert('🚀 Free time analysis feature coming soon!');
+        }
+
+        async function create360ContextPrepTasks() {
+            const btn = document.getElementById('create360PrepTasks');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<div class="loading-spinner inline-block mr-2"></div>Analyzing...';
+            btn.disabled = true;
+            
+            try {
+                // First get current calendar events
+                const eventsResponse = await fetch('/api/calendar-events?days_forward=30&limit=50');
+                const eventsData = await eventsResponse.json();
+                
+                if (!eventsData.success || !eventsData.events || eventsData.events.length === 0) {
+                    showError('No calendar events found. Please sync your calendar first.');
+                    return;
+                }
+                
+                btn.innerHTML = '<div class="loading-spinner inline-block mr-2"></div>Creating 360-Context Tasks...';
+                
+                // Create prep tasks with 360-context analysis
+                const prepResponse = await fetch('/api/fetch-calendar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        days_back: 3,
+                        days_forward: 30,
+                        create_prep_tasks: true,
+                        force_refresh: false
+                    })
+                });
+                
+                const prepData = await prepResponse.json();
+                
+                if (prepData.success) {
+                    const tasksCreated = prepData.prep_tasks_created || 0;
+                    
+                    if (tasksCreated > 0) {
+                        showSuccess(`🎯 Successfully created ${tasksCreated} intelligent meeting prep tasks using 360-context business analysis!`);
+                        
+                        // Reload prep tasks to show the new ones
+                        loadPrepTasks();
+                        
+                        // Also refresh calendar events to show prep task badges
+                        loadCalendarEvents();
+                        
+                        // Update stats
+                        document.getElementById('prepTasks').textContent = tasksCreated;
+                        
+                    } else {
+                        showSuccess('🤖 360-context analysis complete. No prep tasks needed for current meetings or tasks already exist.');
+                    }
+                } else {
+                    showError(`Failed to create 360-context prep tasks: ${prepData.error || 'Unknown error'}`);
+                }
+                
+            } catch (error) {
+                console.error('360-context prep task creation error:', error);
+                showError('Failed to create intelligent prep tasks. Please try again.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html> 

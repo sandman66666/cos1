@@ -11,6 +11,14 @@ from sqlalchemy.types import TypeDecorator
 
 from config.settings import settings
 
+# Import enhanced models for entity-centric intelligence
+from models.enhanced_models import (
+    Topic as EnhancedTopic, Person as EnhancedPerson, Task as EnhancedTask, 
+    Email as EnhancedEmail, CalendarEvent, Project as EnhancedProject,
+    EntityRelationship, IntelligenceInsight,
+    person_topic_association, task_topic_association, event_topic_association
+)
+
 logger = logging.getLogger(__name__)
 
 # Base class for all models
@@ -1653,6 +1661,163 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to update calendar AI analysis: {str(e)}")
             return False
+
+    # ===== ENHANCED ENTITY-CENTRIC INTELLIGENCE METHODS =====
+    
+    def get_user_topics_with_intelligence(self, user_id: int, limit: int = None) -> List[EnhancedTopic]:
+        """Get topics with relationship intelligence"""
+        with self.get_session() as session:
+            query = session.query(EnhancedTopic).filter(EnhancedTopic.user_id == user_id)
+            query = query.order_by(EnhancedTopic.strategic_importance.desc(), EnhancedTopic.total_mentions.desc())
+            if limit:
+                query = query.limit(limit)
+            return query.all()
+    
+    def get_entity_relationships(self, user_id: int, entity_type: str = None) -> List[EntityRelationship]:
+        """Get entity relationships for network analysis"""
+        with self.get_session() as session:
+            query = session.query(EntityRelationship).filter(EntityRelationship.user_id == user_id)
+            if entity_type:
+                query = query.filter(
+                    (EntityRelationship.entity_type_a == entity_type) | 
+                    (EntityRelationship.entity_type_b == entity_type)
+                )
+            return query.order_by(EntityRelationship.strength.desc()).all()
+    
+    def get_intelligence_insights(self, user_id: int, status: str = None) -> List[IntelligenceInsight]:
+        """Get proactive intelligence insights"""
+        with self.get_session() as session:
+            query = session.query(IntelligenceInsight).filter(IntelligenceInsight.user_id == user_id)
+            if status:
+                query = query.filter(IntelligenceInsight.status == status)
+            return query.order_by(IntelligenceInsight.priority.desc(), IntelligenceInsight.created_at.desc()).all()
+    
+    def create_enhanced_topic(self, user_id: int, topic_data: Dict) -> EnhancedTopic:
+        """Create enhanced topic with intelligence accumulation"""
+        with self.get_session() as session:
+            topic = EnhancedTopic(
+                user_id=user_id,
+                **topic_data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(topic)
+            session.commit()
+            session.refresh(topic)
+            return topic
+    
+    def create_enhanced_person(self, user_id: int, person_data: Dict) -> EnhancedPerson:
+        """Create enhanced person with relationship intelligence"""
+        with self.get_session() as session:
+            person = EnhancedPerson(
+                user_id=user_id,
+                **person_data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(person)
+            session.commit()
+            session.refresh(person)
+            return person
+    
+    def create_enhanced_task(self, user_id: int, task_data: Dict) -> EnhancedTask:
+        """Create enhanced task with full context"""
+        with self.get_session() as session:
+            task = EnhancedTask(
+                user_id=user_id,
+                **task_data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(task)
+            session.commit()
+            session.refresh(task)
+            return task
+    
+    def create_entity_relationship(self, user_id: int, relationship_data: Dict) -> EntityRelationship:
+        """Create entity relationship for network intelligence"""
+        with self.get_session() as session:
+            relationship = EntityRelationship(
+                user_id=user_id,
+                **relationship_data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(relationship)
+            session.commit()
+            session.refresh(relationship)
+            return relationship
+    
+    def create_intelligence_insight(self, user_id: int, insight_data: Dict) -> IntelligenceInsight:
+        """Create proactive intelligence insight"""
+        with self.get_session() as session:
+            insight = IntelligenceInsight(
+                user_id=user_id,
+                **insight_data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(insight)
+            session.commit()
+            session.refresh(insight)
+            return insight
+    
+    def save_enhanced_email(self, user_id: int, email_data: Dict) -> EnhancedEmail:
+        """Save enhanced email with intelligence focus"""
+        with self.get_session() as session:
+            # Check if email already exists
+            existing_email = session.query(EnhancedEmail).filter(
+                EnhancedEmail.user_id == user_id,
+                EnhancedEmail.gmail_id == email_data.get('gmail_id')
+            ).first()
+            
+            if existing_email:
+                # Update existing email
+                for key, value in email_data.items():
+                    if hasattr(existing_email, key) and value is not None:
+                        setattr(existing_email, key, value)
+                return existing_email
+            
+            # Create new enhanced email
+            email = EnhancedEmail(
+                user_id=user_id,
+                **email_data,
+                created_at=datetime.utcnow()
+            )
+            session.add(email)
+            session.commit()
+            session.refresh(email)
+            return email
+    
+    def save_calendar_event_enhanced(self, user_id: int, event_data: Dict) -> CalendarEvent:
+        """Save calendar event with business intelligence"""
+        with self.get_session() as session:
+            # Check if event already exists
+            existing_event = session.query(CalendarEvent).filter(
+                CalendarEvent.user_id == user_id,
+                CalendarEvent.google_event_id == event_data.get('google_event_id')
+            ).first()
+            
+            if existing_event:
+                # Update existing event
+                for key, value in event_data.items():
+                    if hasattr(existing_event, key) and value is not None:
+                        setattr(existing_event, key, value)
+                existing_event.updated_at = datetime.utcnow()
+                session.commit()
+                return existing_event
+            
+            # Create new enhanced calendar event
+            event = CalendarEvent(
+                user_id=user_id,
+                **event_data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            session.add(event)
+            session.commit()
+            session.refresh(event)
+            return event
 
 # Global database manager instance - Initialize lazily
 _db_manager = None

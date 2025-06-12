@@ -1,0 +1,292 @@
+# Enhanced Database Models for Entity-Centric Intelligence
+
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, ForeignKey, Table, JSON
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+from datetime import datetime
+
+Base = declarative_base()
+
+# Association Tables for Many-to-Many Relationships
+person_topic_association = Table(
+    'person_topics',
+    Base.metadata,
+    Column('person_id', Integer, ForeignKey('people.id')),
+    Column('topic_id', Integer, ForeignKey('topics.id')),
+    Column('affinity_score', Float, default=0.5),  # How connected this person is to this topic
+    Column('created_at', DateTime, default=datetime.utcnow),
+    Column('last_interaction', DateTime, default=datetime.utcnow)
+)
+
+task_topic_association = Table(
+    'task_topics',
+    Base.metadata,
+    Column('task_id', Integer, ForeignKey('tasks.id')),
+    Column('topic_id', Integer, ForeignKey('topics.id')),
+    Column('relevance_score', Float, default=0.5),
+    Column('created_at', DateTime, default=datetime.utcnow)
+)
+
+event_topic_association = Table(
+    'event_topics', 
+    Base.metadata,
+    Column('event_id', Integer, ForeignKey('calendar_events.id')),
+    Column('topic_id', Integer, ForeignKey('topics.id')),
+    Column('relevance_score', Float, default=0.5),
+    Column('created_at', DateTime, default=datetime.utcnow)
+)
+
+class Topic(Base):
+    """Topics as the central brain - persistent memory containers"""
+    __tablename__ = 'topics'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    name = Column(String(200), nullable=False)
+    description = Column(Text)
+    keywords = Column(Text)  # Comma-separated for now, can be normalized later
+    is_official = Column(Boolean, default=False)
+    confidence_score = Column(Float, default=0.5)
+    
+    # Intelligence accumulation fields
+    total_mentions = Column(Integer, default=0)
+    last_mentioned = Column(DateTime)
+    intelligence_summary = Column(Text)  # AI-generated summary of what we know about this topic
+    strategic_importance = Column(Float, default=0.5)  # How important this topic is to the user
+    
+    # Topic evolution tracking
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    version = Column(Integer, default=1)  # Track topic evolution
+    
+    # Relationships - Topics as the central hub
+    people = relationship("Person", secondary=person_topic_association, back_populates="topics")
+    tasks = relationship("Task", secondary=task_topic_association, back_populates="topics")
+    events = relationship("CalendarEvent", secondary=event_topic_association, back_populates="topics")
+    
+    # Direct content relationships
+    emails = relationship("Email", back_populates="primary_topic")
+    projects = relationship("Project", back_populates="primary_topic")
+
+class Person(Base):
+    """Enhanced Person model with relationship intelligence"""
+    __tablename__ = 'people'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    name = Column(String(200), nullable=False)
+    email_address = Column(String(255))
+    phone = Column(String(50))
+    company = Column(String(200))
+    title = Column(String(200))
+    
+    # Relationship intelligence
+    relationship_type = Column(String(100))  # colleague, client, partner, etc.
+    importance_level = Column(Float, default=0.5)
+    communication_frequency = Column(String(50))  # daily, weekly, monthly, etc.
+    last_contact = Column(DateTime)
+    total_interactions = Column(Integer, default=0)
+    
+    # Professional context (extracted from signatures, etc.)
+    linkedin_url = Column(String(255))
+    bio = Column(Text)
+    professional_story = Column(Text)  # AI-generated summary of professional relationship
+    
+    # Intelligence accumulation
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    topics = relationship("Topic", secondary=person_topic_association, back_populates="people")
+    tasks_assigned = relationship("Task", foreign_keys="Task.assignee_id", back_populates="assignee")
+    tasks_mentioned = relationship("Task", foreign_keys="Task.mentioned_person_id", back_populates="mentioned_person")
+
+class Task(Base):
+    """Enhanced Task model with full context"""
+    __tablename__ = 'tasks'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    description = Column(Text, nullable=False)
+    context_story = Column(Text)  # WHY this task exists - the narrative context
+    
+    # Assignments and ownership
+    assignee_id = Column(Integer, ForeignKey('people.id'))
+    mentioned_person_id = Column(Integer, ForeignKey('people.id'))  # Person mentioned in task
+    
+    # Task metadata
+    priority = Column(String(20), default='medium')
+    status = Column(String(20), default='pending')
+    category = Column(String(100))
+    confidence = Column(Float, default=0.8)
+    
+    # Source tracking
+    source_email_id = Column(Integer, ForeignKey('emails.id'))
+    source_event_id = Column(Integer, ForeignKey('calendar_events.id'))
+    
+    # Temporal information
+    due_date = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = Column(DateTime)
+    
+    # Relationships
+    topics = relationship("Topic", secondary=task_topic_association, back_populates="tasks")
+    assignee = relationship("Person", foreign_keys=[assignee_id], back_populates="tasks_assigned")
+    mentioned_person = relationship("Person", foreign_keys=[mentioned_person_id], back_populates="tasks_mentioned")
+    source_email = relationship("Email", back_populates="generated_tasks")
+
+class Email(Base):
+    """Streamlined Email model focused on intelligence, not storage"""
+    __tablename__ = 'emails'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    gmail_id = Column(String(255), unique=True, nullable=False)
+    
+    # Essential metadata only
+    subject = Column(String(500))
+    sender = Column(String(255))
+    sender_name = Column(String(255))
+    recipient_emails = Column(Text)  # JSON array of recipients
+    email_date = Column(DateTime)
+    
+    # Intelligence fields
+    ai_summary = Column(Text)  # Concise summary for display
+    business_category = Column(String(100))  # meeting, project, decision, etc.
+    sentiment = Column(String(50))
+    urgency_score = Column(Float, default=0.5)
+    strategic_importance = Column(Float, default=0.5)
+    
+    # Content storage strategy: metadata in DB, content in blob storage
+    content_hash = Column(String(64))  # SHA-256 of content for deduplication
+    blob_storage_key = Column(String(255))  # Reference to external content storage
+    
+    # Primary topic assignment (Topics as brain concept)
+    primary_topic_id = Column(Integer, ForeignKey('topics.id'))
+    
+    # Processing metadata
+    processed_at = Column(DateTime)
+    processing_version = Column(String(50))
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    primary_topic = relationship("Topic", back_populates="emails")
+    generated_tasks = relationship("Task", back_populates="source_email")
+
+class CalendarEvent(Base):
+    """Enhanced Calendar model with business intelligence"""
+    __tablename__ = 'calendar_events'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    google_event_id = Column(String(255), unique=True, nullable=False)
+    
+    # Event basics
+    title = Column(String(500))
+    description = Column(Text)
+    location = Column(String(500))
+    start_time = Column(DateTime)
+    end_time = Column(DateTime)
+    
+    # Business intelligence
+    business_context = Column(Text)  # AI-generated context about meeting purpose
+    attendee_intelligence = Column(Text)  # Summary of known attendees and relationships
+    preparation_priority = Column(Float, default=0.5)  # How important prep is for this meeting
+    
+    # Meeting outcome tracking
+    outcome_summary = Column(Text)  # Post-meeting AI analysis
+    follow_up_needed = Column(Boolean, default=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    topics = relationship("Topic", secondary=event_topic_association, back_populates="events")
+
+class Project(Base):
+    """Projects as coherent business initiatives"""
+    __tablename__ = 'projects'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    name = Column(String(200), nullable=False)
+    description = Column(Text)
+    status = Column(String(50), default='active')
+    priority = Column(String(20), default='medium')
+    
+    # Project intelligence
+    stakeholder_summary = Column(Text)  # AI summary of key people involved
+    objective = Column(Text)
+    current_phase = Column(String(100))
+    challenges = Column(Text)
+    opportunities = Column(Text)
+    
+    # Primary topic assignment
+    primary_topic_id = Column(Integer, ForeignKey('topics.id'))
+    
+    # Timeline
+    start_date = Column(DateTime)
+    target_completion = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    primary_topic = relationship("Topic", back_populates="projects")
+
+class EntityRelationship(Base):
+    """Track relationships between any entities for advanced intelligence"""
+    __tablename__ = 'entity_relationships'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    
+    # Generic entity references
+    entity_type_a = Column(String(50), nullable=False)  # person, topic, project, etc.
+    entity_id_a = Column(Integer, nullable=False)
+    entity_type_b = Column(String(50), nullable=False)
+    entity_id_b = Column(Integer, nullable=False)
+    
+    # Relationship metadata
+    relationship_type = Column(String(100))  # collaborates_on, leads, discusses, etc.
+    strength = Column(Float, default=0.5)  # How strong this relationship is
+    frequency = Column(String(50))  # How often they interact
+    
+    # Intelligence context
+    context_summary = Column(Text)  # AI summary of this relationship
+    last_interaction = Column(DateTime)
+    total_interactions = Column(Integer, default=1)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class IntelligenceInsight(Base):
+    """Capture proactive insights generated by the system"""
+    __tablename__ = 'intelligence_insights'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    
+    # Insight metadata
+    insight_type = Column(String(100), nullable=False)  # relationship_alert, opportunity, decision_needed
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    priority = Column(String(20), default='medium')
+    confidence = Column(Float, default=0.8)
+    
+    # Entity connections
+    related_entity_type = Column(String(50))  # What entity triggered this insight
+    related_entity_id = Column(Integer)
+    
+    # User interaction
+    status = Column(String(50), default='new')  # new, viewed, acted_on, dismissed
+    user_feedback = Column(String(50))  # helpful, not_helpful, etc.
+    
+    # Temporal
+    expires_at = Column(DateTime)  # Some insights are time-sensitive
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+# Migration strategy: Create these tables alongside existing ones,
+# then populate with data transformation scripts 
