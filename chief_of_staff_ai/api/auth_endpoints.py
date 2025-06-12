@@ -18,8 +18,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'chief_of_staff_ai'))
 
-from models.database import get_db_manager
-from models.enhanced_models import User, UserSession, ApiKey
+from models.database import User, UserSession, ApiKey, get_db_manager
 from config.settings import settings
 
 logger = logging.getLogger(__name__)

@@ -146,16 +146,6 @@ class Email(Base):
     has_errors = Column(Boolean, default=False)
     error_message = Column(Text)
     
-    # Enhanced intelligence fields (from migration)
-    recipient_emails = Column(JSONType)  # List of recipient emails for analysis
-    business_category = Column(String(100))  # Business context category
-    sentiment = Column(Float)  # Alternative sentiment field
-    strategic_importance = Column(Float, default=0.5)  # Strategic importance score
-    content_hash = Column(String(255))  # Hash for duplicate detection
-    blob_storage_key = Column(String(255))  # Key for large content storage
-    primary_topic_id = Column(Integer, ForeignKey('topics.id'))  # Primary topic
-    processing_version = Column(String(50))  # Processing version used
-    
     # Relationships
     user = relationship("User", back_populates="emails")
     tasks = relationship("Task", back_populates="email", cascade="all, delete-orphan")
@@ -227,9 +217,6 @@ class Task(Base):
     status = Column(String(20), default='pending', index=True)  # pending, in_progress, completed, cancelled
     completed_at = Column(DateTime)
     
-    # Enhanced intelligence fields (needed for entity engine compatibility)
-    topics = Column(JSONType, default=lambda: [])  # List of related topic IDs
-    
     # Extraction metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -269,8 +256,7 @@ class Task(Base):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'extractor_version': self.extractor_version,
-            'model_used': self.model_used,
-            'topics': self.topics
+            'model_used': self.model_used
         }
 
 class Person(Base):
@@ -314,15 +300,6 @@ class Person(Base):
     last_interaction = Column(DateTime, default=datetime.utcnow)
     total_emails = Column(Integer, default=0)
     
-    # Enhanced intelligence fields (from migration)
-    phone = Column(String(50))  # Phone number
-    last_contact = Column(DateTime)  # Last contact timestamp
-    total_interactions = Column(Integer, default=0)  # Total interaction count
-    linkedin_url = Column(String(500))  # LinkedIn profile URL
-    bio = Column(Text)  # Professional bio
-    professional_story = Column(Text)  # Professional story/background
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # Last update timestamp
-    
     # AI processing metadata
     knowledge_confidence = Column(Float, default=0.5)  # Confidence in extracted data
     last_updated_by_ai = Column(DateTime)
@@ -332,9 +309,6 @@ class Person(Base):
     is_trusted_contact = Column(Boolean, default=False, index=True)
     engagement_score = Column(Float, default=0.0)
     bidirectional_topics = Column(JSONType)  # Topics with back-and-forth discussion
-    
-    # Timestamps (created_at field needed for entity engine compatibility)
-    created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     user = relationship("User", back_populates="people")
@@ -380,8 +354,7 @@ class Person(Base):
             'ai_version': self.ai_version,
             'is_trusted_contact': self.is_trusted_contact,
             'engagement_score': self.engagement_score,
-            'bidirectional_topics': self.bidirectional_topics,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'bidirectional_topics': self.bidirectional_topics
         }
 
 class Project(Base):
@@ -493,13 +466,6 @@ class Topic(Base):
     keywords = Column(Text)  # JSON string of keywords for matching (changed from JSONType for compatibility)
     email_count = Column(Integer, default=0)  # Number of emails with this topic
     
-    # Enhanced intelligence fields (added from migration)
-    total_mentions = Column(Integer, default=0)
-    last_mentioned = Column(DateTime)
-    intelligence_summary = Column(Text)
-    strategic_importance = Column(Float, default=0.5)
-    version = Column(Integer, default=1)
-    
     # Usage tracking
     last_used = Column(DateTime)
     usage_frequency = Column(Float)
@@ -543,12 +509,7 @@ class Topic(Base):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'ai_version': self.ai_version,
             'parent_topic_id': self.parent_topic_id,
-            'last_used': self.last_used.isoformat() if self.last_used else None,
-            'total_mentions': self.total_mentions,
-            'last_mentioned': self.last_mentioned.isoformat() if self.last_mentioned else None,
-            'intelligence_summary': self.intelligence_summary,
-            'strategic_importance': self.strategic_importance,
-            'version': self.version
+            'last_used': self.last_used.isoformat() if self.last_used else None
         }
 
 class TrustedContact(Base):
@@ -914,41 +875,6 @@ class Calendar(Base):
             'ical_uid': self.ical_uid,
             'sequence': self.sequence
         }
-
-class UserSession(Base):
-    """User session model for authentication tracking"""
-    __tablename__ = 'user_sessions'
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
-    session_token = Column(String(255), unique=True, nullable=False)
-    refresh_token = Column(String(255), unique=True)
-    expires_at = Column(DateTime, nullable=False)
-    last_activity = Column(DateTime, default=datetime.utcnow)
-    is_active = Column(Boolean, default=True)
-    user_agent = Column(Text)
-    ip_address = Column(String(45))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    user = relationship("User", backref="sessions")
-
-class ApiKey(Base):
-    """API key model for API authentication"""
-    __tablename__ = 'api_keys'
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
-    name = Column(String(255), nullable=False)
-    key_hash = Column(String(255), unique=True, nullable=False)
-    is_active = Column(Boolean, default=True)
-    last_used = Column(DateTime)
-    permissions = Column(JSONType)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime)
-    
-    # Relationships
-    user = relationship("User", backref="api_keys")
 
 class DatabaseManager:
     """Database manager for handling connections and sessions"""

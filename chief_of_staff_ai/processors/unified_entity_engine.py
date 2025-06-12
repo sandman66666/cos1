@@ -11,9 +11,11 @@ from dataclasses import dataclass
 import re
 
 from models.database import get_db_manager
-from models.enhanced_models import (
-    Topic, Person, Task, Email, CalendarEvent, Project, 
-    EntityRelationship, IntelligenceInsight
+from config.settings import settings
+from models.database import (
+    Topic, Person, Task, Email, CalendarEvent, Project,
+    EntityRelationship, IntelligenceInsight, 
+    person_topic_association, task_topic_association, event_topic_association
 )
 
 logger = logging.getLogger(__name__)
@@ -170,10 +172,12 @@ class UnifiedEntityEngine:
                 
                 # Link to topics
                 if topic_names:
+                    topic_ids = []
                     for topic_name in topic_names:
                         topic = self.create_or_update_topic(topic_name, context=context)
                         if topic:
-                            task.topics.append(topic)
+                            topic_ids.append(topic.id)
+                    task.topics = topic_ids  # Store as JSON list of topic IDs
                 
                 # Link to source
                 if context.source_type == 'email' and context.source_id:
@@ -354,7 +358,7 @@ class UnifiedEntityEngine:
         important_people = session.query(Person).filter(
             Person.user_id == user_id,
             Person.importance_level > 0.7,
-            Person.last_contact < datetime.utcnow() - timedelta(days=14)
+            Person.last_interaction < datetime.utcnow() - timedelta(days=14)
         ).limit(5).all()
         
         for person in important_people:
@@ -362,7 +366,7 @@ class UnifiedEntityEngine:
                 user_id=user_id,
                 insight_type='relationship_alert',
                 title=f"Haven't connected with {person.name} recently",
-                description=f"Last contact was {person.last_contact.strftime('%Y-%m-%d') if person.last_contact else 'unknown'}. "
+                description=f"Last contact was {person.last_interaction.strftime('%Y-%m-%d') if person.last_interaction else 'unknown'}. "
                            f"Consider reaching out about relevant topics.",
                 priority='medium',
                 confidence=0.8,
@@ -470,7 +474,7 @@ class UnifiedEntityEngine:
         
         # Update interaction tracking
         person.total_interactions += 1
-        person.last_contact = datetime.utcnow()
+        person.last_interaction = datetime.utcnow()
         person.updated_at = datetime.utcnow()
         updated = True
         
@@ -512,7 +516,7 @@ class UnifiedEntityEngine:
         # Set initial importance based on context
         person.importance_level = context.confidence * 0.6  # Scale down initial importance
         person.total_interactions = 1
-        person.last_contact = datetime.utcnow()
+        person.last_interaction = datetime.utcnow()
     
     def _augment_topic_intelligence(self, topic: Topic, description: str, keywords: List[str], 
                                    context: EntityContext, session: Session) -> bool:

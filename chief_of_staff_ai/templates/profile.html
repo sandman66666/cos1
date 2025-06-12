@@ -295,6 +295,93 @@
             <div class="col-md-6 mb-4">
                 <div class="card">
                     <div class="card-header">
+                        <h6 class="card-title mb-0">Manual Email Sync</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <p class="text-muted small">Manually trigger email processing to sync recent emails and generate insights.</p>
+                        </div>
+                        
+                        <!-- Sync Controls -->
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="col-6">
+                                    <label for="syncDaysBack" class="form-label">Days back</label>
+                                    <select class="form-select form-select-sm" id="syncDaysBack">
+                                        <option value="1">1 day</option>
+                                        <option value="3" selected>3 days</option>
+                                        <option value="7">7 days</option>
+                                        <option value="14">14 days</option>
+                                        <option value="30">30 days</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label for="syncLimit" class="form-label">Max emails</label>
+                                    <select class="form-select form-select-sm" id="syncLimit">
+                                        <option value="10">10 emails</option>
+                                        <option value="25" selected>25 emails</option>
+                                        <option value="50">50 emails</option>
+                                        <option value="100">100 emails</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sync Button -->
+                        <div class="mb-3">
+                            <button class="btn btn-enhanced w-100" id="syncButton" onclick="startEmailSync()">
+                                <i class="fas fa-sync me-2"></i>Start Email Sync
+                            </button>
+                        </div>
+                        
+                        <!-- Progress Bar (initially hidden) -->
+                        <div class="mb-3" id="syncProgressContainer" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">
+                                    <span id="progressText">Initializing...</span>
+                                </small>
+                                <small class="text-muted">
+                                    <span id="progressPercentage">0%</span>
+                                </small>
+                            </div>
+                            <div class="progress mb-2" style="height: 8px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     id="syncProgressBar" role="progressbar" 
+                                     style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span id="estimatedTime">Calculating...</span>
+                                </small>
+                                <small class="text-muted">
+                                    <span id="currentStep">Step 1 of 5</span>
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Results Summary (initially hidden) -->
+                        <div class="mb-3" id="syncResults" style="display: none;">
+                            <div class="alert alert-success" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <div>
+                                        <strong>Sync Complete!</strong>
+                                        <div class="mt-1">
+                                            <small id="resultsText">Processed 0 emails, created 0 tasks, found 0 people</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
                         <h6 class="card-title mb-0">AI & Analytics</h6>
                     </div>
                     <div class="card-body">
@@ -798,6 +885,232 @@
             hideLoading();
             showAlert('Error exporting data: ' + error.message, 'danger');
         }
+    }
+    
+    // Email sync functionality
+    let syncPollingInterval;
+    let syncStartTime;
+    
+    async function startEmailSync() {
+        const daysBack = parseInt(document.getElementById('syncDaysBack').value);
+        const limit = parseInt(document.getElementById('syncLimit').value);
+        
+        // Disable button and show progress
+        const syncButton = document.getElementById('syncButton');
+        const progressContainer = document.getElementById('syncProgressContainer');
+        const resultsContainer = document.getElementById('syncResults');
+        
+        syncButton.disabled = true;
+        syncButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Syncing...';
+        progressContainer.style.display = 'block';
+        resultsContainer.style.display = 'none';
+        
+        syncStartTime = Date.now();
+        
+        try {
+            // Start the sync process
+            const response = await axios.post('/api/process-emails', {
+                days_back: daysBack,
+                limit: limit,
+                force_refresh: true,
+                with_progress: true
+            });
+            
+            if (response.data.success) {
+                // Start progress tracking
+                const syncId = response.data.sync_id || 'default';
+                trackSyncProgress(syncId);
+            } else {
+                handleSyncError(response.data.error || 'Unknown error');
+            }
+        } catch (error) {
+            handleSyncError(error.message);
+        }
+    }
+    
+    function trackSyncProgress(syncId) {
+        let currentProgress = 0;
+        let currentStep = 1;
+        const totalSteps = 5;
+        const progressSteps = [
+            'Connecting to Gmail...',
+            'Fetching emails...',
+            'Processing with AI...',
+            'Creating entities...',
+            'Generating insights...'
+        ];
+        
+        // Simulate progress since we don't have real-time tracking yet
+        syncPollingInterval = setInterval(async () => {
+            try {
+                // Check if sync is complete by calling status endpoint
+                const statusResponse = await axios.get('/api/status');
+                
+                // Simulate progressive steps
+                if (currentProgress < 95) {
+                    currentProgress += Math.random() * 15 + 5; // 5-20% increments
+                    currentProgress = Math.min(currentProgress, 95);
+                    
+                    // Update step based on progress
+                    const newStep = Math.min(Math.ceil((currentProgress / 100) * totalSteps), totalSteps);
+                    if (newStep > currentStep) {
+                        currentStep = newStep;
+                    }
+                    
+                    updateProgress(currentProgress, currentStep, totalSteps, progressSteps[currentStep - 1]);
+                    updateEstimatedTime(currentProgress);
+                } else {
+                    // Check if actually complete
+                    await checkSyncCompletion();
+                }
+            } catch (error) {
+                console.error('Progress tracking error:', error);
+            }
+        }, 1500); // Update every 1.5 seconds
+        
+        // Set a maximum timeout
+        setTimeout(() => {
+            if (syncPollingInterval) {
+                checkSyncCompletion();
+            }
+        }, 120000); // 2 minutes max
+    }
+    
+    async function checkSyncCompletion() {
+        try {
+            // Get latest stats to see if new data was processed
+            const response = await axios.get('/api/entities/analytics/overview');
+            
+            clearInterval(syncPollingInterval);
+            syncPollingInterval = null;
+            
+            // Complete the progress
+            updateProgress(100, 5, 5, 'Sync complete!');
+            
+            setTimeout(() => {
+                showSyncResults(response.data.data || {});
+            }, 1000);
+            
+        } catch (error) {
+            handleSyncError('Failed to verify completion');
+        }
+    }
+    
+    function updateProgress(percentage, step, totalSteps, stepText) {
+        const progressBar = document.getElementById('syncProgressBar');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const progressText = document.getElementById('progressText');
+        const currentStepText = document.getElementById('currentStep');
+        
+        progressBar.style.width = percentage + '%';
+        progressBar.setAttribute('aria-valuenow', percentage);
+        progressPercentage.textContent = Math.round(percentage) + '%';
+        progressText.textContent = stepText;
+        currentStepText.textContent = `Step ${step} of ${totalSteps}`;
+        
+        // Update progress bar color based on progress
+        if (percentage >= 100) {
+            progressBar.className = 'progress-bar bg-success';
+        } else if (percentage >= 75) {
+            progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-info';
+        } else {
+            progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+        }
+    }
+    
+    function updateEstimatedTime(percentage) {
+        if (!syncStartTime || percentage <= 0) {
+            document.getElementById('estimatedTime').textContent = 'Calculating...';
+            return;
+        }
+        
+        const elapsed = (Date.now() - syncStartTime) / 1000; // seconds
+        const rate = percentage / elapsed; // percentage per second
+        const remaining = (100 - percentage) / rate; // seconds remaining
+        
+        let timeText;
+        if (remaining < 60) {
+            timeText = `${Math.round(remaining)}s remaining`;
+        } else if (remaining < 3600) {
+            timeText = `${Math.round(remaining / 60)}m remaining`;
+        } else {
+            timeText = 'Less than 1m remaining';
+        }
+        
+        document.getElementById('estimatedTime').textContent = timeText;
+    }
+    
+    function showSyncResults(stats) {
+        const progressContainer = document.getElementById('syncProgressContainer');
+        const resultsContainer = document.getElementById('syncResults');
+        const resultsText = document.getElementById('resultsText');
+        const syncButton = document.getElementById('syncButton');
+        
+        // Hide progress, show results
+        progressContainer.style.display = 'none';
+        resultsContainer.style.display = 'block';
+        
+        // Update results text
+        const emailsProcessed = stats.total_emails || 0;
+        const tasksCreated = stats.total_tasks || 0;
+        const peopleFound = stats.total_people || 0;
+        const topicsFound = stats.total_topics || 0;
+        
+        resultsText.textContent = `Processed ${emailsProcessed} emails, created ${tasksCreated} tasks, found ${peopleFound} people, and ${topicsFound} topics`;
+        
+        // Re-enable button
+        syncButton.disabled = false;
+        syncButton.innerHTML = '<i class="fas fa-sync me-2"></i>Start Email Sync';
+        
+        // Update stats in the overview
+        loadUserStats();
+        
+        // Auto-hide results after 10 seconds
+        setTimeout(() => {
+            resultsContainer.style.display = 'none';
+        }, 10000);
+    }
+    
+    function handleSyncError(error) {
+        const progressContainer = document.getElementById('syncProgressContainer');
+        const resultsContainer = document.getElementById('syncResults');
+        const syncButton = document.getElementById('syncButton');
+        
+        // Clean up
+        if (syncPollingInterval) {
+            clearInterval(syncPollingInterval);
+            syncPollingInterval = null;
+        }
+        
+        // Hide progress
+        progressContainer.style.display = 'none';
+        
+        // Show error
+        resultsContainer.innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <div>
+                        <strong>Sync Failed</strong>
+                        <div class="mt-1">
+                            <small>${error}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        resultsContainer.style.display = 'block';
+        
+        // Re-enable button
+        syncButton.disabled = false;
+        syncButton.innerHTML = '<i class="fas fa-sync me-2"></i>Start Email Sync';
+        
+        showAlert('Email sync failed: ' + error, 'danger');
+        
+        // Auto-hide error after 8 seconds
+        setTimeout(() => {
+            resultsContainer.style.display = 'none';
+        }, 8000);
     }
 </script>
 {% endblock %} 

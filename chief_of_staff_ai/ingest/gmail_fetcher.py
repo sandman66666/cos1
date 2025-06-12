@@ -801,7 +801,7 @@ class GmailFetcher:
     def _is_email_processed(self, gmail_id: str, user_id: int) -> bool:
         """Check if email has already been processed"""
         try:
-            from models.enhanced_models import Email
+            from models.database import Email
             
             with get_db_manager().get_session() as session:
                 existing = session.query(Email).filter(
@@ -818,7 +818,7 @@ class GmailFetcher:
     def _store_email_metadata(self, email_data: Dict, user_id: int):
         """Store basic email metadata for tracking purposes"""
         try:
-            from models.enhanced_models import Email
+            from models.database import Email
             
             with get_db_manager().get_session() as session:
                 # Check if already exists
@@ -836,7 +836,7 @@ class GmailFetcher:
                         sender_name=email_data.get('sender_name', ''),
                         email_date=datetime.fromisoformat(email_data.get('email_date', datetime.utcnow().isoformat())),
                         processed_at=datetime.utcnow(),
-                        processing_version='enhanced_v1'
+                        normalizer_version='enhanced_v1'
                     )
                     
                     session.add(email)
@@ -944,7 +944,7 @@ class GmailFetcher:
             user = get_db_manager().get_user_by_email(user_email)
             if user:
                 with get_db_manager().get_session() as session:
-                    from models.enhanced_models import Email
+                    from models.database import Email
                     processed_count = session.query(Email).filter(Email.user_id == user.id).count()
                     diagnostics['tests_performed'].append({
                         'test': 'Previously processed emails',

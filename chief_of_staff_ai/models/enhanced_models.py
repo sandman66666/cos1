@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
+import json
 
 Base = declarative_base()
 
@@ -68,6 +69,24 @@ class Topic(Base):
     emails = relationship("Email", back_populates="primary_topic")
     projects = relationship("Project", back_populates="primary_topic")
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'description': self.description,
+            'keywords': json.loads(self.keywords) if self.keywords else [],
+            'is_official': self.is_official,
+            'confidence_score': self.confidence_score,
+            'total_mentions': self.total_mentions,
+            'last_mentioned': self.last_mentioned.isoformat() if self.last_mentioned else None,
+            'intelligence_summary': self.intelligence_summary,
+            'strategic_importance': self.strategic_importance,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'version': self.version
+        }
+
 class Person(Base):
     """Enhanced Person model with relationship intelligence"""
     __tablename__ = 'people'
@@ -100,6 +119,27 @@ class Person(Base):
     topics = relationship("Topic", secondary=person_topic_association, back_populates="people")
     tasks_assigned = relationship("Task", foreign_keys="Task.assignee_id", back_populates="assignee")
     tasks_mentioned = relationship("Task", foreign_keys="Task.mentioned_person_id", back_populates="mentioned_person")
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'email_address': self.email_address,
+            'phone': self.phone,
+            'company': self.company,
+            'title': self.title,
+            'relationship_type': self.relationship_type,
+            'importance_level': self.importance_level,
+            'communication_frequency': self.communication_frequency,
+            'last_contact': self.last_contact.isoformat() if self.last_contact else None,
+            'total_interactions': self.total_interactions,
+            'linkedin_url': self.linkedin_url,
+            'bio': self.bio,
+            'professional_story': self.professional_story,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
 
 class Task(Base):
     """Enhanced Task model with full context"""
@@ -135,6 +175,26 @@ class Task(Base):
     assignee = relationship("Person", foreign_keys=[assignee_id], back_populates="tasks_assigned")
     mentioned_person = relationship("Person", foreign_keys=[mentioned_person_id], back_populates="tasks_mentioned")
     source_email = relationship("Email", back_populates="generated_tasks")
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'description': self.description,
+            'context_story': self.context_story,
+            'assignee_id': self.assignee_id,
+            'mentioned_person_id': self.mentioned_person_id,
+            'priority': self.priority,
+            'status': self.status,
+            'category': self.category,
+            'confidence': self.confidence,
+            'source_email_id': self.source_email_id,
+            'source_event_id': self.source_event_id,
+            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None
+        }
 
 class Email(Base):
     """Streamlined Email model focused on intelligence, not storage"""
@@ -175,6 +235,29 @@ class Email(Base):
     primary_topic = relationship("Topic", back_populates="emails")
     generated_tasks = relationship("Task", back_populates="source_email")
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'gmail_id': self.gmail_id,
+            'subject': self.subject,
+            'sender': self.sender,
+            'sender_name': self.sender_name,
+            'recipient_emails': json.loads(self.recipient_emails) if self.recipient_emails else [],
+            'email_date': self.email_date.isoformat() if self.email_date else None,
+            'ai_summary': self.ai_summary,
+            'business_category': self.business_category,
+            'sentiment': self.sentiment,
+            'urgency_score': self.urgency_score,
+            'strategic_importance': self.strategic_importance,
+            'content_hash': self.content_hash,
+            'blob_storage_key': self.blob_storage_key,
+            'primary_topic_id': self.primary_topic_id,
+            'processed_at': self.processed_at.isoformat() if self.processed_at else None,
+            'processing_version': self.processing_version,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
 class CalendarEvent(Base):
     """Enhanced Calendar model with business intelligence"""
     __tablename__ = 'calendar_events'
@@ -204,6 +287,25 @@ class CalendarEvent(Base):
     
     # Relationships
     topics = relationship("Topic", secondary=event_topic_association, back_populates="events")
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'google_event_id': self.google_event_id,
+            'title': self.title,
+            'description': self.description,
+            'location': self.location,
+            'start_time': self.start_time.isoformat() if self.start_time else None,
+            'end_time': self.end_time.isoformat() if self.end_time else None,
+            'business_context': self.business_context,
+            'attendee_intelligence': self.attendee_intelligence,
+            'preparation_priority': self.preparation_priority,
+            'outcome_summary': self.outcome_summary,
+            'follow_up_needed': self.follow_up_needed,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
 
 class Project(Base):
     """Projects as coherent business initiatives"""
@@ -235,6 +337,26 @@ class Project(Base):
     # Relationships
     primary_topic = relationship("Topic", back_populates="projects")
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'description': self.description,
+            'status': self.status,
+            'priority': self.priority,
+            'stakeholder_summary': self.stakeholder_summary,
+            'objective': self.objective,
+            'current_phase': self.current_phase,
+            'challenges': self.challenges,
+            'opportunities': self.opportunities,
+            'primary_topic_id': self.primary_topic_id,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'target_completion': self.target_completion.isoformat() if self.target_completion else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 class EntityRelationship(Base):
     """Track relationships between any entities for advanced intelligence"""
     __tablename__ = 'entity_relationships'
@@ -260,6 +382,24 @@ class EntityRelationship(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'entity_type_a': self.entity_type_a,
+            'entity_id_a': self.entity_id_a,
+            'entity_type_b': self.entity_type_b,
+            'entity_id_b': self.entity_id_b,
+            'relationship_type': self.relationship_type,
+            'strength': self.strength,
+            'frequency': self.frequency,
+            'context_summary': self.context_summary,
+            'last_interaction': self.last_interaction.isoformat() if self.last_interaction else None,
+            'total_interactions': self.total_interactions,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
 
 class IntelligenceInsight(Base):
     """Capture proactive insights generated by the system"""
@@ -287,6 +427,24 @@ class IntelligenceInsight(Base):
     expires_at = Column(DateTime)  # Some insights are time-sensitive
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'insight_type': self.insight_type,
+            'title': self.title,
+            'description': self.description,
+            'priority': self.priority,
+            'confidence': self.confidence,
+            'related_entity_type': self.related_entity_type,
+            'related_entity_id': self.related_entity_id,
+            'status': self.status,
+            'user_feedback': self.user_feedback,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
 
 # Migration strategy: Create these tables alongside existing ones,
 # then populate with data transformation scripts 

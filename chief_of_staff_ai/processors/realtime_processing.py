@@ -14,7 +14,8 @@ import time
 
 from processors.enhanced_ai_pipeline import enhanced_ai_processor
 from processors.unified_entity_engine import entity_engine, EntityContext
-from models.enhanced_models import IntelligenceInsight, Person, Topic, Task, CalendarEvent
+from config.settings import settings
+from models.database import IntelligenceInsight, Person, Topic, Task, CalendarEvent
 
 logger = logging.getLogger(__name__)
 
@@ -527,7 +528,7 @@ class RealTimeProcessor:
         
         try:
             from models.database import get_db_manager
-            from models.enhanced_models import EntityRelationship
+            from models.database import EntityRelationship
             
             with get_db_manager().get_session() as session:
                 # Find direct relationships

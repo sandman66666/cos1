@@ -13,7 +13,7 @@ import hashlib
 
 from config.settings import settings
 from processors.unified_entity_engine import entity_engine, EntityContext
-from models.enhanced_models import Email, CalendarEvent, Topic, Person, Task, Project
+from models.database import Email, Topic, Person, Task, Project, EntityRelationship, IntelligenceInsight
 
 logger = logging.getLogger(__name__)
 
@@ -216,7 +216,7 @@ class EnhancedAIProcessor:
                 # Get recent people (last 30 days)
                 recent_people = session.query(Person).filter(
                     Person.user_id == user_id,
-                    Person.last_contact > datetime.utcnow() - timedelta(days=30)
+                    Person.last_interaction > datetime.utcnow() - timedelta(days=30)
                 ).limit(20).all()
                 
                 context['existing_people'] = [
@@ -601,14 +601,18 @@ Focus on business intelligence that builds on existing context rather than isola
     def _store_email_intelligence(self, email_data: Dict, analysis: Dict, user_id: int):
         """Store processed email intelligence in optimized format"""
         try:
-            from models.database import get_db_manager
+            from models.database import get_db_manager, Email
+            import hashlib
             
             # Create content hash for deduplication
-            content = email_data.get('body_text', email_data.get('body_clean', ''))
+            content = email_data.get('body_clean', '')
             content_hash = hashlib.sha256(content.encode()).hexdigest()
             
             # Store in blob storage (simplified for now - would use S3/GCS in production)
             blob_key = f"emails/{user_id}/{content_hash}.txt"
+            
+            # Convert sentiment string to float for database storage
+            sentiment_value = self._convert_sentiment_to_float(analysis.get('sentiment'))
             
             with get_db_manager().get_session() as session:
                 # Check if email already exists
@@ -620,21 +624,21 @@ Focus on business intelligence that builds on existing context rather than isola
                     # Update existing email with new intelligence
                     existing_email.ai_summary = analysis.get('business_summary')
                     existing_email.business_category = analysis.get('category')
-                    existing_email.sentiment = analysis.get('sentiment')
+                    existing_email.sentiment = sentiment_value
                     existing_email.strategic_importance = analysis.get('strategic_importance', 0.5)
                     existing_email.processed_at = datetime.utcnow()
                 else:
                     # Create new email record
                     email_record = Email(
                         user_id=user_id,
-                        gmail_id=email_data.get('gmail_id'),
+                        gmail_id=email_data.get('gmail_id') or email_data.get('id'),  # Use gmail_id or id
                         subject=email_data.get('subject'),
                         sender=email_data.get('sender'),
                         sender_name=email_data.get('sender_name'),
                         email_date=email_data.get('email_date'),
                         ai_summary=analysis.get('business_summary'),
                         business_category=analysis.get('category'),
-                        sentiment=analysis.get('sentiment'),
+                        sentiment=sentiment_value,
                         strategic_importance=analysis.get('strategic_importance', 0.5),
                         content_hash=content_hash,
                         blob_storage_key=blob_key,
@@ -647,6 +651,28 @@ Focus on business intelligence that builds on existing context rather than isola
                 
         except Exception as e:
             logger.error(f"Failed to store email intelligence: {str(e)}")
+    
+    def _convert_sentiment_to_float(self, sentiment):
+        """Convert sentiment string to float value for database storage"""
+        if isinstance(sentiment, (int, float)):
+            return float(sentiment)
+        
+        if isinstance(sentiment, str):
+            sentiment_lower = sentiment.lower()
+            if sentiment_lower in ['positive', 'good', 'happy']:
+                return 0.7
+            elif sentiment_lower in ['negative', 'bad', 'sad', 'angry']:
+                return -0.7
+            elif sentiment_lower in ['neutral', 'mixed', 'balanced']:
+                return 0.0
+            else:
+                # Try to parse as float
+                try:
+                    return float(sentiment)
+                except ValueError:
+                    return 0.0
+        
+        return 0.0  # Default neutral
     
     # =====================================================================
     # MEETING ENHANCEMENT METHODS (simplified for space)

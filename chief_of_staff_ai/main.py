@@ -15,13 +15,18 @@ from auth.gmail_auth import gmail_auth
 # Enhanced API System
 from api import enhanced_api_bp
 
+# Import other existing API blueprints
+from api.batch_endpoints import batch_api_bp
+from api.auth_endpoints import auth_api_bp
+from api.docs_endpoints import docs_api_bp
+
 # Enhanced Processors
 from ingest.gmail_fetcher import gmail_fetcher
 from processors.unified_entity_engine import entity_engine, EntityContext
 from processors.enhanced_ai_pipeline import enhanced_ai_processor
 from processors.realtime_processing import realtime_processor, EventType
 from processors import processor_manager
-from models.enhanced_models import Topic, Person, Task, IntelligenceInsight, EntityRelationship, Email
+from models.database import Topic, Person, Task, IntelligenceInsight, EntityRelationship, Email
 
 # Database
 from models.database import get_db_manager
@@ -45,7 +50,7 @@ claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 CURRENT_VERSION = 'v2.0-enhanced'
 
 # Start enhanced processor system when app starts
-if not realtime_processor.is_running:
+if not realtime_processor.running:
     processor_manager.start_all_processors()
 
 # =====================================================================
@@ -55,8 +60,20 @@ if not realtime_processor.is_running:
 # Register enhanced API blueprint
 app.register_blueprint(enhanced_api_bp)
 
-logger.info("Registered enhanced API blueprints:")
+# Register batch processing blueprint
+app.register_blueprint(batch_api_bp)
+
+# Register authentication blueprint  
+app.register_blueprint(auth_api_bp)
+
+# Register documentation blueprint
+app.register_blueprint(docs_api_bp)
+
+logger.info("Registered API blueprints:")
 logger.info("  - Enhanced API: /api/enhanced/*")
+logger.info("  - Batch API: /api/batch/*")
+logger.info("  - Auth API: /api/auth/*")
+logger.info("  - Docs API: /api/docs/*")
 
 # =====================================================================
 # FRONTEND ROUTES (Updated to use enhanced backend)
@@ -1246,7 +1263,7 @@ def generate_360_business_intelligence(user_id: int) -> Dict:
             people_count = session.query(Person).filter(Person.user_id == user_id).count()
             tasks_count = session.query(Task).filter(Task.user_id == user_id).count()
             
-            from models.enhanced_models import CalendarEvent
+            from models.database import CalendarEvent
             events_count = session.query(CalendarEvent).filter(CalendarEvent.user_id == user_id).count()
             
             intelligence['entity_summary'] = {
@@ -1258,7 +1275,7 @@ def generate_360_business_intelligence(user_id: int) -> Dict:
             }
             
             # Relationship intelligence
-            from models.enhanced_models import EntityRelationship
+            from models.database import EntityRelationship
             relationships_count = session.query(EntityRelationship).filter(
                 EntityRelationship.user_id == user_id
             ).count()
@@ -1426,7 +1443,7 @@ def get_person_topic_affinity(person_id: int, topic_id: int) -> float:
     """Get affinity score between person and topic"""
     try:
         from models.database import get_db_manager
-        from models.enhanced_models import person_topic_association
+        from models.database import person_topic_association
         
         with get_db_manager().get_session() as session:
             # Query the association table for affinity score
