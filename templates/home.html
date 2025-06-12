@@ -3,637 +3,941 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chief of Staff - Home</title>
+    <title>AI Chief of Staff - Intelligence Dashboard</title>
     
-    <!-- Modern Fonts -->
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
-    <link
-        rel="stylesheet"
-        as="style"
-        onload="this.rel='stylesheet'"
-        href="https://fonts.googleapis.com/css2?display=swap&family=Inter%3Awght%40400%3B500%3B700%3B900&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
-    />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'" 
+          href="https://fonts.googleapis.com/css2?display=swap&family=Inter%3Awght%40400%3B500%3B700%3B900&family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <style>
+        .intelligence-card { 
+            transition: all 0.3s ease; 
+            border-left: 4px solid transparent;
+        }
+        .intelligence-card:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 25px rgba(11, 128, 238, 0.15);
+            border-left-color: #0b80ee;
+        }
+        .insight-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .entity-connection { 
+            background: linear-gradient(135deg, rgba(11, 128, 238, 0.1), rgba(144, 174, 203, 0.1));
+            border: 1px solid rgba(11, 128, 238, 0.2);
+        }
+        .real-time-indicator {
+            position: relative;
+            overflow: hidden;
+        }
+        .real-time-indicator::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(11, 128, 238, 0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        .strategic-importance-high { border-left-color: #ef4444; }
+        .strategic-importance-medium { border-left-color: #f59e0b; }
+        .strategic-importance-low { border-left-color: #10b981; }
+    </style>
 </head>
-<body>
-<div class="relative flex size-full min-h-screen flex-col bg-[#101a23] dark group/design-root overflow-x-hidden" style='font-family: Inter, "Noto Sans", sans-serif;'>
-    <div class="layout-container flex h-full grow flex-col">
-        <div class="gap-1 px-6 flex flex-1 justify-center py-5">
-            
-            <!-- Left Sidebar -->
-            <div class="layout-content-container flex flex-col w-80">
-                <div class="flex h-full min-h-[700px] flex-col justify-between bg-[#101a23] p-4">
-                    <div class="flex flex-col gap-4">
-                        <!-- Logo/Header -->
-                        <h1 class="text-white text-base font-medium leading-normal">AI Chief of Staff</h1>
-                        
-                        <!-- Navigation Menu -->
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center gap-3 px-3 py-2 rounded-full bg-[#223649]">
-                                <div class="text-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                                        <path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0,1.14,1.14,0,0,0,.11.11l80,75.48A16,16,0,0,1,224,115.55Z"></path>
-                                    </svg>
+<body class="bg-[#101a23] text-white min-h-screen">
+    <div class="relative flex size-full min-h-screen flex-col bg-[#101a23] dark group/design-root overflow-x-hidden" 
+         style='font-family: Inter, "Noto Sans", sans-serif;'>
+        
+        <!-- Real-Time Processing Status Bar -->
+        <div id="processingStatus" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center py-2 text-sm hidden">
+            <span class="real-time-indicator px-4 py-1 rounded-full bg-black bg-opacity-20">
+                🧠 AI Intelligence Processing... <span id="processingProgress">0%</span>
+            </span>
+        </div>
+        
+        <div class="layout-container flex h-full grow flex-col">
+            <div class="gap-1 px-6 flex flex-1 justify-center py-5">
+                
+                <!-- Left Sidebar -->
+                <div class="layout-content-container flex flex-col w-80">
+                    <div class="flex h-full min-h-[700px] flex-col justify-between bg-[#101a23] p-4">
+                        <div class="flex flex-col gap-4">
+                            <!-- Enhanced Logo/Header -->
+                            <div class="flex gap-3 items-center">
+                                <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full size-12 flex items-center justify-center text-white font-bold text-lg relative">
+                                    🧠
+                                    <div id="aiThinkingIndicator" class="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full hidden insight-pulse"></div>
                                 </div>
-                                <p class="text-white text-sm font-medium leading-normal">Home</p>
+                                <div>
+                                    <h1 class="text-white text-base font-medium leading-normal">AI Chief of Staff</h1>
+                                    <p class="text-[#90aecb] text-xs">Intelligence Platform</p>
+                                </div>
                             </div>
                             
-                            <a href="/knowledge" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
-                                <div class="text-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                                        <path d="M224,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h64a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64Z"></path>
-                                    </svg>
+                            <!-- Intelligence Summary Cards -->
+                            <div class="space-y-2">
+                                <div class="bg-[#223649] rounded-lg p-3 intelligence-card">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[#90aecb] text-xs">Active Intelligence</span>
+                                        <span id="intelligenceScore" class="text-white font-bold text-lg">--</span>
+                                    </div>
+                                    <div class="mt-1">
+                                        <div class="bg-[#101a23] rounded-full h-2">
+                                            <div id="intelligenceProgress" class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <p class="text-white text-sm font-medium leading-normal">Knowledge</p>
-                            </a>
+                                
+                                <div class="bg-[#223649] rounded-lg p-3 intelligence-card">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[#90aecb] text-xs">Entity Network</span>
+                                        <span id="entityCount" class="text-white font-bold text-lg">--</span>
+                                    </div>
+                                    <div class="flex gap-2 mt-2 text-xs">
+                                        <span class="bg-blue-600 px-2 py-1 rounded text-white" id="topicsCount">0 Topics</span>
+                                        <span class="bg-green-600 px-2 py-1 rounded text-white" id="peopleCount">0 People</span>
+                                    </div>
+                                </div>
+                            </div>
                             
-                            <a href="/tasks" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
-                                <div class="text-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                                        <path d="M56,128a16,16,0,1,1-16-16A16,16,0,0,1,56,128ZM40,48A16,16,0,1,0,56,64,16,16,0,0,0,40,48Zm0,128a16,16,0,1,0,16,16A16,16,0,0,0,40,176Zm176-64H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V120A8,8,0,0,0,216,112Zm0-64H88a8,8,0,0,0-8,8V72a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V56A8,8,0,0,0,216,48Zm0,128H88a8,8,0,0,0-8,8v16a8,8,0,0,0,8,8H216a8,8,0,0,0,8-8V184A8,8,0,0,0,216,176Z"></path>
-                                    </svg>
+                            <!-- Navigation Menu -->
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center gap-3 px-3 py-2 rounded-full bg-[#223649]">
+                                    <div class="text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
+                                            <path d="M224,115.55V208a16,16,0,0,1-16,16H168a16,16,0,0,1-16-16V168a8,8,0,0,0-8-8H112a8,8,0,0,0-8,8v40a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V115.55a16,16,0,0,1,5.17-11.78l80-75.48.11-.11a16,16,0,0,1,21.53,0,1.14,1.14,0,0,0,.11.11l80,75.48A16,16,0,0,1,224,115.55Z"></path>
+                                        </svg>
+                                    </div>
+                                    <p class="text-white text-sm font-medium leading-normal">Intelligence Hub</p>
                                 </div>
-                                <p class="text-white text-sm font-medium leading-normal">Tasks</p>
-                            </a>
+                                
+                                <a href="/topics" class="nav-link flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">🧠</div>
+                                    <p class="text-white text-sm font-medium leading-normal">Topics Brain</p>
+                                </a>
+                                
+                                <a href="/people" class="nav-link flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">👥</div>
+                                    <p class="text-white text-sm font-medium leading-normal">Relationship Intel</p>
+                                </a>
+                                
+                                <a href="/tasks" class="nav-link flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">⚡</div>
+                                    <p class="text-white text-sm font-medium leading-normal">Context Tasks</p>
+                                </a>
+                                
+                                <a href="/calendar" class="nav-link flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
+                                    <div class="text-white">📅</div>
+                                    <p class="text-white text-sm font-medium leading-normal">Smart Calendar</p>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Real-Time Intelligence Actions -->
+                        <div class="space-y-3">
+                            <button id="unifiedSyncBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-sm font-bold hover:from-blue-700 hover:to-purple-700 transition-all">
+                                <span class="text-lg">🚀</span>
+                                <span>Unified Intelligence Sync</span>
+                            </button>
                             
-                            <a href="/people" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
-                                <div class="text-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                                        <path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"></path>
-                                    </svg>
+                            <button id="generateInsightsBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#223649] text-white rounded-full text-sm font-medium hover:bg-[#314d68] transition-colors">
+                                <span>🧠</span>
+                                <span>Generate Insights</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Intelligence Dashboard -->
+                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+                    <!-- Dashboard Header -->
+                    <div class="px-4 py-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h1 class="text-3xl font-bold text-white mb-2">🧠 Intelligence Dashboard</h1>
+                                <p class="text-[#90aecb] text-lg">Your AI-powered business intelligence center with real-time entity connections</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[#90aecb] text-sm">Last Intelligence Update</div>
+                                <div id="lastUpdateTime" class="text-white font-medium">--</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Real-Time Intelligence Metrics -->
+                        <div class="grid grid-cols-4 gap-4 mb-8">
+                            <div class="bg-[#223649] p-4 rounded-lg border border-[#314d68] intelligence-card strategic-importance-high">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium text-[#90aecb]">Active Insights</h3>
+                                    <span class="text-2xl">🔥</span>
                                 </div>
-                                <p class="text-white text-sm font-medium leading-normal">People</p>
-                            </a>
-                            
-                            <a href="/calendar" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
-                                <div class="text-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                                        <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-96-88v64a8,8,0,0,1-16,0V132.94l-4.42,2.22a8,8,0,0,1-7.16-14.32l16-8A8,8,0,0,1,112,120Zm59.16,30.45L152,176h16a8,8,0,0,1,0,16H136a8,8,0,0,1-6.4-12.8l28.78-38.37A8,8,0,1,0,145.07,132a8,8,0,1,1-13.85-8A24,24,0,0,1,176,140,23.76,23.76,0,0,1,171.16,150.45Z"></path>
-                                    </svg>
+                                <p id="activeInsights" class="text-2xl font-bold text-white">0</p>
+                                <p class="text-xs text-[#90aecb] mt-1">High-priority intelligence</p>
+                            </div>
+
+                            <div class="bg-[#223649] p-4 rounded-lg border border-[#314d68] intelligence-card strategic-importance-medium">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium text-[#90aecb]">Entity Network</h3>
+                                    <span class="text-2xl">🕸️</span>
                                 </div>
-                                <p class="text-white text-sm font-medium leading-normal">Calendar</p>
-                            </a>
-                            
-                            <a href="/settings" class="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#223649] rounded-full transition-colors">
-                                <div class="text-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                                        <path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25a8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25a8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25a8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"></path>
-                                    </svg>
+                                <p id="entityNetworkSize" class="text-2xl font-bold text-white">0</p>
+                                <p class="text-xs text-[#90aecb] mt-1">Connected entities</p>
+                            </div>
+
+                            <div class="bg-[#223649] p-4 rounded-lg border border-[#314d68] intelligence-card strategic-importance-medium">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium text-[#90aecb]">Topic Momentum</h3>
+                                    <span class="text-2xl">📈</span>
                                 </div>
-                                <p class="text-white text-sm font-medium leading-normal">Settings</p>
-                            </a>
+                                <p id="topicMomentum" class="text-2xl font-bold text-white">0%</p>
+                                <p class="text-xs text-[#90aecb] mt-1">Business velocity</p>
+                            </div>
+
+                            <div class="bg-[#223649] p-4 rounded-lg border border-[#314d68] intelligence-card strategic-importance-low">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium text-[#90aecb]">Relationship Score</h3>
+                                    <span class="text-2xl">💫</span>
+                                </div>
+                                <p id="relationshipScore" class="text-2xl font-bold text-white">0</p>
+                                <p class="text-xs text-[#90aecb] mt-1">Network strength</p>
+                            </div>
                         </div>
                     </div>
                     
-                    <button id="newPromptBtn" class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#0b80ee] text-white text-sm font-bold leading-normal tracking-[0.015em]">
-                        <span class="truncate">New Chat</span>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Main Content -->
-            <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
-                <!-- Search Bar -->
-                <div class="px-4 py-3">
-                    <label class="flex flex-col min-w-40 h-12 w-full">
-                        <div class="flex w-full flex-1 items-stretch rounded-xl h-full">
-                            <div class="text-[#90aecb] flex border-none bg-[#223649] items-center justify-center pl-4 rounded-l-xl border-r-0">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                                    <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"></path>
-                                </svg>
+                    <!-- Proactive Intelligence Insights -->
+                    <div class="px-4 mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">🚨 Proactive Intelligence</h2>
+                            <div class="flex gap-2">
+                                <button class="insight-filter active px-3 py-1 text-sm rounded bg-[#0b80ee] text-white" data-filter="all">All</button>
+                                <button class="insight-filter px-3 py-1 text-sm rounded bg-[#223649] text-[#90aecb] hover:bg-[#314d68]" data-filter="high">High Priority</button>
+                                <button class="insight-filter px-3 py-1 text-sm rounded bg-[#223649] text-[#90aecb] hover:bg-[#314d68]" data-filter="relationship">Relationships</button>
+                                <button class="insight-filter px-3 py-1 text-sm rounded bg-[#223649] text-[#90aecb] hover:bg-[#314d68]" data-filter="topics">Topics</button>
                             </div>
-                            <input id="searchInput" placeholder="Search tasks, emails, people..." class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#223649] focus:border-none h-full placeholder:text-[#90aecb] px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" />
                         </div>
-                    </label>
-                </div>
-                
-                <!-- AI Insights Section -->
-                <h2 class="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">AI Insights</h2>
-                <div id="insightsContainer" class="space-y-2">
-                    <!-- Loading state -->
-                    <div id="insightsLoading" class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
-                        <div class="text-[#90aecb] flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
-                            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                        </div>
-                        <div class="flex flex-col justify-center">
-                            <p class="text-white text-base font-medium leading-normal">Loading insights...</p>
-                            <p class="text-[#90aecb] text-sm font-normal leading-normal">Analyzing your data</p>
+                        
+                        <div id="proactiveInsightsContainer" class="space-y-3">
+                            <!-- Insights will be loaded here -->
+                            <div class="text-center py-8 text-[#90aecb]">
+                                <div class="text-4xl mb-2">🧠</div>
+                                <p>AI is analyzing your business intelligence...</p>
+                                <p class="text-sm mt-1">Proactive insights will appear here</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Recent Activity Section -->
-                <h2 class="text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Recent Activity</h2>
-                <div id="activityContainer" class="space-y-2">
-                    <!-- Loading state -->
-                    <div id="activityLoading" class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
-                        <div class="text-[#90aecb] flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
-                            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                        </div>
-                        <div class="flex flex-col justify-center">
-                            <p class="text-white text-base font-medium leading-normal">Loading activity...</p>
-                            <p class="text-[#90aecb] text-sm font-normal leading-normal">Fetching recent updates</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Quick Actions -->
-                <div class="px-4 py-4">
-                    <div class="flex gap-3 flex-wrap">
-                        <button id="processEmailsBtn" class="flex items-center gap-2 px-4 py-2 bg-[#0b80ee] text-white rounded-full text-sm font-medium hover:bg-[#0966c7] transition-colors">
-                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
-                                <path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"></path>
-                            </svg>
-                            Process Emails
-                        </button>
-                        <button id="refreshDataBtn" class="flex items-center gap-2 px-4 py-2 bg-[#223649] text-white rounded-full text-sm font-medium hover:bg-[#2a3e50] transition-colors">
-                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
-                                <path d="M197.67,186.37a8,8,0,0,1,0,11.29C196.58,198.73,170.82,224,128,224c-37.39,0-64.53-22.4-80-39.85V208a8,8,0,0,1-16,0V160a8,8,0,0,1,8-8H88a8,8,0,0,1,0,16H55.44C67.76,183.35,93,208,128,208c36.72,0,58.4-21.15,58.38-21.13A8,8,0,0,1,197.67,186.37ZM216,40a8,8,0,0,0-8,8V71.85C192.53,54.4,165.39,32,128,32,85.18,32,59.42,57.27,58.33,58.34a8,8,0,0,0,11.34,11.32C69.86,69.47,91.54,48.17,128,48c35,0,60.24,24.65,72.56,40H168a8,8,0,0,0,0,16h48a8,8,0,0,0,8-8V48A8,8,0,0,0,216,40Z"></path>
-                            </svg>
-                            Refresh
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Chat Input -->
-                <div class="flex items-center px-4 py-3 gap-3 @container">
-                    <label class="flex flex-col min-w-40 h-12 flex-1">
-                        <div class="flex w-full flex-1 items-stretch rounded-xl h-full">
-                            <input id="chatInput" placeholder="Ask me anything about your emails, tasks, or schedule..." class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-white focus:outline-0 focus:ring-0 border-none bg-[#223649] focus:border-none h-full placeholder:text-[#90aecb] px-4 rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal" />
-                            <div class="flex border-none bg-[#223649] items-center justify-center pr-4 rounded-r-xl border-l-0 !pr-2">
-                                <div class="flex items-center gap-4 justify-end">
-                                    <button id="sendChatBtn" class="min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-8 px-4 bg-[#0b80ee] text-white text-sm font-medium leading-normal flex">
-                                        <span class="truncate">Send</span>
+                    
+                    <!-- Entity Intelligence Network -->
+                    <div class="px-4 mb-8">
+                        <h2 class="text-xl font-semibold text-white mb-4">🕸️ Entity Intelligence Network</h2>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Topics Brain -->
+                            <div class="bg-[#223649] rounded-lg border border-[#314d68] p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-white font-semibold">🧠 Topics Brain</h3>
+                                    <span class="text-xs bg-purple-600 text-white px-2 py-1 rounded-full">Central Intelligence</span>
+                                </div>
+                                
+                                <div id="topicsBrainContainer" class="space-y-3 max-h-64 overflow-y-auto">
+                                    <!-- Topics will be loaded here -->
+                                </div>
+                                
+                                <div class="mt-4 pt-3 border-t border-[#314d68]">
+                                    <button class="w-full text-center text-[#0b80ee] text-sm hover:underline" onclick="location.href='/topics'">
+                                        View Full Topics Intelligence →
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Relationship Intelligence -->
+                            <div class="bg-[#223649] rounded-lg border border-[#314d68] p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-white font-semibold">👥 Relationship Intelligence</h3>
+                                    <span class="text-xs bg-green-600 text-white px-2 py-1 rounded-full">Dynamic</span>
+                                </div>
+                                
+                                <div id="relationshipIntelContainer" class="space-y-3 max-h-64 overflow-y-auto">
+                                    <!-- Relationships will be loaded here -->
+                                </div>
+                                
+                                <div class="mt-4 pt-3 border-t border-[#314d68]">
+                                    <button class="w-full text-center text-[#0b80ee] text-sm hover:underline" onclick="location.href='/people'">
+                                        View Full Relationship Map →
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    </label>
-                </div>
-                
-                <!-- Chat Response Area -->
-                <div id="chatResponse" class="hidden px-4 py-4">
-                    <div class="bg-[#223649] rounded-lg p-4">
-                        <div id="chatResponseContent" class="text-white"></div>
+                    </div>
+                    
+                    <!-- Context-Aware Tasks -->
+                    <div class="px-4 mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-semibold text-white">⚡ Context-Aware Tasks</h2>
+                            <div class="text-sm text-[#90aecb]">
+                                <span id="tasksWithContext">0</span> tasks with business context
+                            </div>
+                        </div>
+                        
+                        <div id="contextTasksContainer" class="space-y-3">
+                            <!-- Context tasks will be loaded here -->
+                        </div>
+                        
+                        <div class="mt-4 text-center">
+                            <button class="text-[#0b80ee] text-sm hover:underline" onclick="location.href='/tasks'">
+                                View All Context Tasks →
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- AI Chat Interface -->
+                    <div class="px-4 py-6 border-t border-[#314d68]">
+                        <h2 class="text-xl font-semibold text-white mb-4">💬 Intelligence Assistant</h2>
+                        
+                        <div class="bg-[#223649] rounded-lg border border-[#314d68] p-4">
+                            <div id="chatHistory" class="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                                <div class="text-[#90aecb] text-sm text-center py-4">
+                                    Ask me anything about your business intelligence, relationships, or strategic insights...
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-3">
+                                <input id="chatInput" type="text" 
+                                       placeholder="Ask about your business intelligence..." 
+                                       class="flex-1 bg-[#101a23] text-white border border-[#314d68] rounded-lg px-4 py-2 focus:outline-none focus:border-[#0b80ee] transition-colors">
+                                <button id="sendChatBtn" 
+                                        class="px-6 py-2 bg-[#0b80ee] text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                    Send
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-// Global state
-let currentData = {
-    emails: [],
-    tasks: [],
-    people: [],
-    insights: []
-};
+    <script>
+        // Global state for real-time intelligence
+        let intelligenceState = {
+            entities: { topics: 0, people: 0, tasks: 0, events: 0 },
+            insights: [],
+            relationships: [],
+            processing: false,
+            lastUpdate: null
+        };
 
-// Initialize the page
-document.addEventListener('DOMContentLoaded', function() {
-    loadInitialData();
-    setupEventListeners();
-});
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeIntelligenceDashboard();
+            setupEventListeners();
+            startRealTimeUpdates();
+        });
 
-function setupEventListeners() {
-    // Process emails button
-    document.getElementById('processEmailsBtn').addEventListener('click', processEmails);
-    
-    // Refresh data button
-    document.getElementById('refreshDataBtn').addEventListener('click', refreshData);
-    
-    // New prompt button
-    document.getElementById('newPromptBtn').addEventListener('click', () => {
-        document.getElementById('chatInput').focus();
-    });
-    
-    // Chat functionality
-    document.getElementById('sendChatBtn').addEventListener('click', sendChat);
-    document.getElementById('chatInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            sendChat();
+        function initializeIntelligenceDashboard() {
+            loadIntelligenceMetrics();
+            loadProactiveInsights();
+            loadEntityNetwork();
+            loadContextTasks();
+            updateLastUpdateTime();
         }
-    });
-    
-    // Search functionality
-    document.getElementById('searchInput').addEventListener('input', performSearch);
-}
 
-async function loadInitialData() {
-    try {
-        // Load insights first
-        await loadInsights();
-        
-        // Load recent activity
-        await loadRecentActivity();
-        
-    } catch (error) {
-        console.error('Error loading initial data:', error);
-        showError('Failed to load data. Please refresh the page.');
-    }
-}
-
-async function loadInsights() {
-    try {
-        const response = await fetch('/api/email-insights');
-        const data = await response.json();
-        
-        if (data.success && data.strategic_insights && data.strategic_insights.length > 0) {
-            displayStrategicInsights(data.strategic_insights);
-        } else {
-            displayInsights([]);
+        function setupEventListeners() {
+            // Unified sync button
+            document.getElementById('unifiedSyncBtn').addEventListener('click', runUnifiedIntelligenceSync);
+            
+            // Generate insights button
+            document.getElementById('generateInsightsBtn').addEventListener('click', generateProactiveInsights);
+            
+            // Chat functionality
+            document.getElementById('sendChatBtn').addEventListener('click', sendIntelligenceChat);
+            document.getElementById('chatInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') sendIntelligenceChat();
+            });
+            
+            // Insight filters
+            document.querySelectorAll('.insight-filter').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    filterInsights(this.dataset.filter);
+                    updateFilterButtons(this);
+                });
+            });
         }
-    } catch (error) {
-        console.error('Error loading insights:', error);
-        displayInsights([]);
-    }
-}
 
-async function loadRecentActivity() {
-    try {
-        // Load business-level activity instead of individual emails
-        const [tasksResponse, peopleResponse, insightsResponse] = await Promise.all([
-            fetch('/api/tasks?limit=3'),
-            fetch('/api/people?limit=3'),
-            fetch('/api/email-insights')
-        ]);
-        
-        const [tasksData, peopleData, insightsData] = await Promise.all([
-            tasksResponse.json(),
-            peopleResponse.json(),
-            insightsResponse.json()
-        ]);
-        
-        let activities = [];
-        
-        // Add high-priority tasks
-        if (tasksData.success && tasksData.tasks) {
-            const highPriorityTasks = tasksData.tasks.filter(task => task.priority === 'high').slice(0, 2);
-            activities = activities.concat(highPriorityTasks.map(task => ({
-                type: 'task',
-                title: `High Priority: ${task.description || 'Task'}`,
-                subtitle: `Status: ${task.status || 'Open'} • Assigned to you`,
-                icon: 'task',
-                data: task
-            })));
+        function startRealTimeUpdates() {
+            // Update metrics every 30 seconds
+            setInterval(() => {
+                if (!intelligenceState.processing) {
+                    loadIntelligenceMetrics();
+                    updateLastUpdateTime();
+                }
+            }, 30000);
+            
+            // Check for new insights every 60 seconds
+            setInterval(() => {
+                loadProactiveInsights();
+            }, 60000);
         }
-        
-        // Add recent important people interactions
-        if (peopleData.success && peopleData.people) {
-            const recentContacts = peopleData.people.filter(person => person.total_emails > 1).slice(0, 2);
-            activities = activities.concat(recentContacts.map(person => ({
-                type: 'person',
-                title: `Recent Contact: ${person.name}`,
-                subtitle: `${person.total_emails} interactions • ${person.company || 'Unknown company'}`,
-                icon: 'person',
-                data: person
-            })));
-        }
-        
-        // Add strategic insights
-        if (insightsData.success && insightsData.strategic_insights) {
-            const recentInsights = insightsData.strategic_insights.slice(0, 2);
-            activities = activities.concat(recentInsights.map(insight => ({
-                type: 'insight',
-                title: `Business Insight: ${insight.title}`,
-                subtitle: `${insight.description.slice(0, 80)}...`,
-                icon: 'insight',
-                data: insight
-            })));
-        }
-        
-        // Limit total activities
-        activities = activities.slice(0, 6);
-        
-        displayRecentActivity(activities);
-        
-    } catch (error) {
-        console.error('Error loading recent activity:', error);
-        displayRecentActivity([]);
-    }
-}
 
-function displayInsights(insights) {
-    const container = document.getElementById('insightsContainer');
-    const loading = document.getElementById('insightsLoading');
-    
-    if (loading) loading.remove();
-    
-    if (!insights || insights.length === 0) {
-        container.innerHTML = `
-            <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
-                <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                        <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM116,136V112a12,12,0,0,1,24,0v24a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,176Z"></path>
-                    </svg>
-                </div>
-                <div class="flex flex-col justify-center">
-                    <p class="text-white text-base font-medium leading-normal">No insights yet</p>
-                    <p class="text-[#90aecb] text-sm font-normal leading-normal">Process your emails to generate AI insights</p>
-                </div>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = insights.map(insight => `
-        <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2 cursor-pointer hover:bg-[#223649] transition-colors">
-            <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"></path>
-                </svg>
-            </div>
-            <div class="flex flex-col justify-center">
-                <p class="text-white text-base font-medium leading-normal line-clamp-1">${insight.subject || 'Email Insight'}</p>
-                <p class="text-[#90aecb] text-sm font-normal leading-normal line-clamp-2">${insight.ai_summary || 'AI analysis available'}</p>
-            </div>
-        </div>
-    `).join('');
-}
+        async function runUnifiedIntelligenceSync() {
+            const btn = document.getElementById('unifiedSyncBtn');
+            const originalText = btn.innerHTML;
+            
+            try {
+                intelligenceState.processing = true;
+                showProcessingStatus(true);
+                
+                btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Processing Intelligence...';
+                btn.disabled = true;
+                
+                // Show AI thinking indicator
+                document.getElementById('aiThinkingIndicator').classList.remove('hidden');
+                
+                const response = await fetch('/api/unified-intelligence-sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        max_emails: 25,
+                        days_back: 7,
+                        days_forward: 14,
+                        force_refresh: false
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update intelligence state
+                    intelligenceState.entities = data.entity_intelligence?.entity_summary || intelligenceState.entities;
+                    intelligenceState.insights = data.insights_generated || [];
+                    
+                    // Show detailed success message
+                    showIntelligenceSuccess(data);
+                    
+                    // Refresh all dashboard components
+                    await refreshIntelligenceDashboard();
+                    
+                } else {
+                    showError('Intelligence sync failed: ' + (data.error || 'Unknown error'));
+                }
+                
+            } catch (error) {
+                console.error('Intelligence sync error:', error);
+                showError('Failed to sync intelligence. Please try again.');
+            } finally {
+                intelligenceState.processing = false;
+                showProcessingStatus(false);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                document.getElementById('aiThinkingIndicator').classList.add('hidden');
+            }
+        }
 
-function displayStrategicInsights(insights) {
-    const container = document.getElementById('insightsContainer');
-    const loading = document.getElementById('insightsLoading');
-    
-    if (loading) loading.remove();
-    
-    if (!insights || insights.length === 0) {
-        container.innerHTML = `
-            <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
-                <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                        <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM116,136V112a12,12,0,0,1,24,0v24a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,176Z"></path>
-                    </svg>
-                </div>
-                <div class="flex flex-col justify-center">
-                    <p class="text-white text-base font-medium leading-normal">No insights yet</p>
-                    <p class="text-[#90aecb] text-sm font-normal leading-normal">Process your emails to generate AI insights</p>
-                </div>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = insights.map(insight => `
-        <div class="bg-[#101a23] px-4 py-4 rounded-lg border border-[#223649] hover:bg-[#152028] transition-colors cursor-pointer">
-            <div class="flex items-start gap-4">
-                <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
-                    <div class="text-2xl">${insight.icon || '🧠'}</div>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-start justify-between gap-3">
-                        <h3 class="text-white text-base font-medium leading-normal line-clamp-1">${escapeHtml(insight.title || 'Business Insight')}</h3>
-                        <span class="px-2 py-1 text-xs rounded-full ${getPriorityColor(insight.priority)} shrink-0">${insight.priority || 'medium'}</span>
+        async function loadIntelligenceMetrics() {
+            try {
+                // This would call a new endpoint for real-time metrics
+                const response = await fetch('/api/intelligence-metrics');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateIntelligenceMetrics(data.metrics);
+                }
+            } catch (error) {
+                console.error('Failed to load intelligence metrics:', error);
+            }
+        }
+
+        function updateIntelligenceMetrics(metrics) {
+            // Update entity counts
+            document.getElementById('entityCount').textContent = metrics.total_entities || 0;
+            document.getElementById('topicsCount').textContent = `${metrics.topics || 0} Topics`;
+            document.getElementById('peopleCount').textContent = `${metrics.people || 0} People`;
+            
+            // Update intelligence score (0-100)
+            const score = Math.round((metrics.intelligence_quality || 0) * 100);
+            document.getElementById('intelligenceScore').textContent = score;
+            document.getElementById('intelligenceProgress').style.width = score + '%';
+            
+            // Update other metrics
+            document.getElementById('activeInsights').textContent = metrics.active_insights || 0;
+            document.getElementById('entityNetworkSize').textContent = metrics.entity_relationships || 0;
+            document.getElementById('topicMomentum').textContent = Math.round((metrics.topic_momentum || 0) * 100) + '%';
+            document.getElementById('relationshipScore').textContent = Math.round((metrics.relationship_density || 0) * 100);
+        }
+
+        async function loadProactiveInsights() {
+            try {
+                const response = await fetch('/api/intelligence-insights?status=new&limit=10');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayProactiveInsights(data.insights);
+                }
+            } catch (error) {
+                console.error('Failed to load proactive insights:', error);
+            }
+        }
+
+        function displayProactiveInsights(insights) {
+            const container = document.getElementById('proactiveInsightsContainer');
+            
+            if (!insights || insights.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-[#90aecb]">
+                        <div class="text-4xl mb-2">🧠</div>
+                        <p>No new insights available</p>
+                        <p class="text-sm mt-1">Process more data to generate intelligence</p>
                     </div>
-                    <p class="text-[#90aecb] text-sm font-normal leading-normal mt-1 line-clamp-2">${escapeHtml(insight.description || 'Strategic business intelligence')}</p>
-                    ${insight.details ? `<p class="text-[#78879a] text-xs leading-normal mt-2 line-clamp-3">${escapeHtml(insight.details)}</p>` : ''}
-                    ${insight.action ? `
-                        <div class="mt-3 p-2 bg-[#0b1117] rounded border border-[#223649]">
-                            <p class="text-[#0b80ee] text-xs font-medium">💡 Recommended Action:</p>
-                            <p class="text-[#a8b8c8] text-xs mt-1">${escapeHtml(insight.action)}</p>
+                `;
+                return;
+            }
+            
+            container.innerHTML = insights.map(insight => createInsightCard(insight)).join('');
+        }
+
+        function createInsightCard(insight) {
+            const priorityColors = {
+                'high': 'border-red-500 bg-red-500 bg-opacity-10',
+                'medium': 'border-yellow-500 bg-yellow-500 bg-opacity-10',
+                'low': 'border-green-500 bg-green-500 bg-opacity-10'
+            };
+            
+            const typeEmojis = {
+                'relationship_alert': '👥',
+                'topic_momentum': '📈',
+                'meeting_prep': '📅',
+                'project_attention': '📋',
+                'important_contact': '⭐',
+                'urgent_task': '⚡'
+            };
+            
+            const colorClass = priorityColors[insight.priority] || priorityColors['medium'];
+            const emoji = typeEmojis[insight.insight_type] || '🧠';
+            
+            return `
+                <div class="intelligence-card bg-[#182734] rounded-lg border ${colorClass} p-4" data-insight-type="${insight.insight_type}" data-priority="${insight.priority}">
+                    <div class="flex items-start gap-4">
+                        <div class="text-2xl">${emoji}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-3">
+                                <h3 class="text-white font-medium leading-tight">${escapeHtml(insight.title)}</h3>
+                                <div class="flex gap-2 shrink-0">
+                                    <span class="text-xs px-2 py-1 rounded-full ${getPriorityColor(insight.priority)}">${insight.priority.toUpperCase()}</span>
+                                    <span class="text-xs px-2 py-1 rounded-full bg-[#314d68] text-[#90aecb]">${Math.round(insight.confidence * 100)}%</span>
+                                </div>
+                            </div>
+                            <p class="text-[#90aecb] text-sm mt-2 leading-relaxed">${escapeHtml(insight.description)}</p>
+                            <div class="flex items-center justify-between mt-3">
+                                <span class="text-xs text-[#78879a]">${formatTimeAgo(insight.created_at)}</span>
+                                <div class="flex gap-2">
+                                    <button onclick="markInsightFeedback(${insight.id}, 'helpful')" class="text-xs px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded">👍 Helpful</button>
+                                    <button onclick="markInsightFeedback(${insight.id}, 'not_helpful')" class="text-xs px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded">👎 Not helpful</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadEntityNetwork() {
+            try {
+                // Load topics brain
+                const topicsResponse = await fetch('/api/topics?limit=5');
+                const topicsData = await topicsResponse.json();
+                
+                if (topicsData.success) {
+                    displayTopicsBrain(topicsData.topics);
+                }
+                
+                // Load relationship intelligence
+                const peopleResponse = await fetch('/api/people?limit=5');
+                const peopleData = await peopleResponse.json();
+                
+                if (peopleData.success) {
+                    displayRelationshipIntelligence(peopleData.people);
+                }
+                
+            } catch (error) {
+                console.error('Failed to load entity network:', error);
+            }
+        }
+
+        function displayTopicsBrain(topics) {
+            const container = document.getElementById('topicsBrainContainer');
+            
+            if (!topics || topics.length === 0) {
+                container.innerHTML = '<div class="text-[#90aecb] text-sm text-center py-4">No topics discovered yet</div>';
+                return;
+            }
+            
+            container.innerHTML = topics.map(topic => `
+                <div class="entity-connection rounded-lg p-3 hover:bg-[#314d68] transition-colors cursor-pointer">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-white font-medium text-sm truncate">${escapeHtml(topic.name)}</h4>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs text-[#90aecb]">${topic.total_mentions} mentions</span>
+                                ${topic.is_official ? '<span class="text-xs bg-blue-600 text-white px-2 py-1 rounded">Official</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="text-lg">${topic.activity_level > 0.7 ? '🔥' : topic.activity_level > 0.4 ? '📈' : '📊'}</div>
+                    </div>
+                    ${topic.related_entities && topic.related_entities.total > 0 ? `
+                        <div class="mt-2 text-xs text-[#78879a]">
+                            Connected: ${topic.related_entities.people} people, ${topic.related_entities.tasks} tasks
                         </div>
                     ` : ''}
                 </div>
-            </div>
-        </div>
-    `).join('');
-}
+            `).join('');
+        }
 
-function displayRecentActivity(activities) {
-    const container = document.getElementById('activityContainer');
-    const loading = document.getElementById('activityLoading');
-    
-    if (loading) loading.remove();
-    
-    if (!activities || activities.length === 0) {
-        container.innerHTML = `
-            <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2">
-                <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                        <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM116,136V112a12,12,0,0,1,24,0v24a12,12,0,0,1-24,0Zm28,40a16,16,0,1,1-16-16A16,16,0,0,1,144,176Z"></path>
-                    </svg>
-                </div>
-                <div class="flex flex-col justify-center">
-                    <p class="text-white text-base font-medium leading-normal">No recent activity</p>
-                    <p class="text-[#90aecb] text-sm font-normal leading-normal">Your tasks and emails will appear here</p>
-                </div>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = activities.map(activity => `
-        <div class="flex items-center gap-4 bg-[#101a23] px-4 min-h-[72px] py-2 cursor-pointer hover:bg-[#223649] transition-colors">
-            <div class="text-white flex items-center justify-center rounded-lg bg-[#223649] shrink-0 size-12">
-                ${getActivityIcon(activity.type)}
-            </div>
-            <div class="flex flex-col justify-center">
-                <p class="text-white text-base font-medium leading-normal line-clamp-1">${activity.title}</p>
-                <p class="text-[#90aecb] text-sm font-normal leading-normal line-clamp-2">${activity.subtitle}</p>
-            </div>
-        </div>
-    `).join('');
-}
-
-function getActivityIcon(type) {
-    const icons = {
-        task: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z"></path></svg>',
-        person: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM74.08,197.5a64,64,0,0,1,107.84,0,87.83,87.83,0,0,1-107.84,0ZM96,120a32,32,0,1,1,32,32A32,32,0,0,1,96,120Z"></path></svg>',
-        insight: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M176,232a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h80A8,8,0,0,1,176,232Zm40-128a87.55,87.55,0,0,1-33.64,69.21A16.24,16.24,0,0,0,176,189.45V192a16,16,0,0,1-16,16H96a16,16,0,0,1-16-16v-2.55a16.24,16.24,0,0,0-6.36-12.76A87.55,87.55,0,0,1,40,104.49C39.74,56.83,78.26,17.14,125.88,16A88,88,0,0,1,216,104Z"></path></svg>',
-        email: '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z"></path></svg>'
-    };
-    return icons[type] || icons.insight;
-}
-
-function getPriorityColor(priority) {
-    const colors = {
-        'high': 'bg-red-600 text-white',
-        'medium': 'bg-yellow-600 text-white', 
-        'low': 'bg-green-600 text-white'
-    };
-    return colors[priority] || colors.medium;
-}
-
-async function processEmails() {
-    const btn = document.getElementById('processEmailsBtn');
-    const originalText = btn.innerHTML;
-    
-    btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Processing...';
-    btn.disabled = true;
-    
-    try {
-        const response = await fetch('/api/trigger-email-sync', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                max_emails: 20,
-                days_back: 7,
-                force_refresh: true
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            // Show detailed success message with AI processing results
-            const results = data.database_populated || {};
-            const stages = data.processing_stages || {};
+        function displayRelationshipIntelligence(people) {
+            const container = document.getElementById('relationshipIntelContainer');
             
-            let successMessage = `🤖 AI Processing Complete!\n\n`;
-            successMessage += `📧 Analyzed ${stages.emails_fetched || 0} emails\n`;
-            successMessage += `🧠 Generated ${results.insights_generated || 0} strategic insights\n`;
-            successMessage += `👥 Extracted ${results.people_extracted || 0} business contacts\n`;
-            successMessage += `✅ Created ${results.tasks_created || 0} actionable tasks\n`;
-            successMessage += `📋 Identified ${results.projects_identified || 0} projects\n\n`;
-            
-            if (data.next_steps && data.next_steps.length > 0) {
-                successMessage += `Next Steps:\n${data.next_steps.join('\n')}`;
+            if (!people || people.length === 0) {
+                container.innerHTML = '<div class="text-[#90aecb] text-sm text-center py-4">No relationship data yet</div>';
+                return;
             }
             
-            showSuccess(successMessage);
+            container.innerHTML = people.map(person => `
+                <div class="entity-connection rounded-lg p-3 hover:bg-[#314d68] transition-colors cursor-pointer">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                            ${getInitials(person.name)}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-white font-medium text-sm truncate">${escapeHtml(person.name)}</h4>
+                            <div class="text-xs text-[#90aecb] truncate">${escapeHtml(person.company || 'Unknown company')}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-[#90aecb]">${person.total_interactions} interactions</div>
+                            <div class="text-xs text-yellow-400">${Math.round((person.importance_level || 0) * 100)}% importance</div>
+                        </div>
+                    </div>
+                    ${person.relationship_intelligence ? `
+                        <div class="mt-2 text-xs text-[#78879a]">
+                            Strength: ${Math.round(person.relationship_intelligence.strength * 100)}% • 
+                            Topics: ${person.relationship_intelligence.topic_connections}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function loadContextTasks() {
+            try {
+                const response = await fetch('/api/tasks?limit=5');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayContextTasks(data.tasks);
+                    document.getElementById('tasksWithContext').textContent = 
+                        data.summary?.with_context || 0;
+                }
+            } catch (error) {
+                console.error('Failed to load context tasks:', error);
+            }
+        }
+
+        function displayContextTasks(tasks) {
+            const container = document.getElementById('contextTasksContainer');
             
-            // Show processing details in console for debugging
-            console.log('AI Processing Results:', {
-                stages: stages,
-                database_populated: results,
-                ai_processing_success: stages.ai_processing_success,
-                next_steps: data.next_steps
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = '<div class="text-[#90aecb] text-sm text-center py-4">No context tasks yet</div>';
+                return;
+            }
+            
+            container.innerHTML = tasks.slice(0, 3).map(task => `
+                <div class="intelligence-card bg-[#223649] rounded-lg border border-[#314d68] p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-white font-medium text-sm leading-tight">${escapeHtml(task.description)}</h4>
+                            ${task.context_story ? `
+                                <p class="text-[#90aecb] text-xs mt-2 leading-relaxed">${escapeHtml(task.context_story)}</p>
+                            ` : ''}
+                            <div class="flex items-center gap-2 mt-3">
+                                <span class="text-xs px-2 py-1 rounded ${getPriorityColor(task.priority)}">${task.priority.toUpperCase()}</span>
+                                ${task.related_topics.length > 0 ? `
+                                    <span class="text-xs text-[#90aecb]">Topics: ${task.related_topics.slice(0, 2).join(', ')}</span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="text-lg">⚡</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function sendIntelligenceChat() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            const chatHistory = document.getElementById('chatHistory');
+            
+            // Add user message
+            addChatMessage('user', message, chatHistory);
+            input.value = '';
+            
+            // Add loading message
+            const loadingId = addChatMessage('ai', 'Analyzing your business intelligence...', chatHistory);
+            
+            try {
+                const response = await fetch('/api/chat-with-knowledge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        include_context: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Remove loading message
+                document.getElementById(loadingId).remove();
+                
+                if (data.success) {
+                    addChatMessage('ai', data.response, chatHistory);
+                } else {
+                    addChatMessage('ai', 'Sorry, I encountered an error processing your request.', chatHistory);
+                }
+                
+            } catch (error) {
+                console.error('Chat error:', error);
+                document.getElementById(loadingId).remove();
+                addChatMessage('ai', 'Sorry, I encountered a network error.', chatHistory);
+            }
+        }
+
+        function addChatMessage(sender, message, container) {
+            const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            const isUser = sender === 'user';
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.id = messageId;
+            messageDiv.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+            messageDiv.innerHTML = `
+                <div class="max-w-[80%] ${isUser ? 'bg-[#0b80ee] text-white' : 'bg-[#314d68] text-white'} rounded-lg px-4 py-2">
+                    <div class="text-xs opacity-70 mb-1">${isUser ? 'You' : 'AI Assistant'}</div>
+                    <div class="text-sm whitespace-pre-wrap">${escapeHtml(message)}</div>
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            return messageId;
+        }
+
+        async function refreshIntelligenceDashboard() {
+            loadIntelligenceMetrics();
+            loadProactiveInsights();
+            loadEntityNetwork();
+            loadContextTasks();
+            updateLastUpdateTime();
+        }
+
+        async function generateProactiveInsights() {
+            const btn = document.getElementById('generateInsightsBtn');
+            const originalText = btn.innerHTML;
+            
+            try {
+                btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Generating...';
+                btn.disabled = true;
+                
+                // This would trigger proactive insight generation
+                const response = await fetch('/api/generate-insights', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`Generated ${data.insights_count || 0} new insights`);
+                    loadProactiveInsights();
+                } else {
+                    showError('Failed to generate insights');
+                }
+                
+            } catch (error) {
+                console.error('Failed to generate insights:', error);
+                showError('Failed to generate insights');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function filterInsights(filter) {
+            const insights = document.querySelectorAll('[data-insight-type]');
+            
+            insights.forEach(insight => {
+                const shouldShow = filter === 'all' || 
+                                 (filter === 'high' && insight.dataset.priority === 'high') ||
+                                 (filter === 'relationship' && insight.dataset.insightType.includes('relationship')) ||
+                                 (filter === 'topics' && insight.dataset.insightType.includes('topic'));
+                
+                insight.style.display = shouldShow ? 'block' : 'none';
+            });
+        }
+
+        function updateFilterButtons(activeBtn) {
+            document.querySelectorAll('.insight-filter').forEach(btn => {
+                btn.classList.remove('active', 'bg-[#0b80ee]', 'text-white');
+                btn.classList.add('bg-[#223649]', 'text-[#90aecb]');
             });
             
-            // Reload data
-            await loadInitialData();
-        } else {
-            showError(data.error || 'Failed to process emails');
+            activeBtn.classList.add('active', 'bg-[#0b80ee]', 'text-white');
+            activeBtn.classList.remove('bg-[#223649]', 'text-[#90aecb]');
         }
-        
-    } catch (error) {
-        console.error('Error processing emails:', error);
-        showError('Failed to process emails. Please try again.');
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
-}
 
-async function refreshData() {
-    const btn = document.getElementById('refreshDataBtn');
-    const originalText = btn.innerHTML;
-    
-    btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Refreshing...';
-    btn.disabled = true;
-    
-    try {
-        await loadInitialData();
-        showSuccess('Data refreshed successfully');
-    } catch (error) {
-        console.error('Error refreshing data:', error);
-        showError('Failed to refresh data');
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
-}
-
-async function sendChat() {
-    const input = document.getElementById('chatInput');
-    const message = input.value.trim();
-    
-    if (!message) return;
-    
-    const responseDiv = document.getElementById('chatResponse');
-    const contentDiv = document.getElementById('chatResponseContent');
-    
-    // Show loading state
-    responseDiv.classList.remove('hidden');
-    contentDiv.innerHTML = '<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div> Thinking...';
-    
-    try {
-        const response = await fetch('/api/chat-with-knowledge', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message: message,
-                include_context: true
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            contentDiv.innerHTML = `<div class="whitespace-pre-wrap">${data.response}</div>`;
-            input.value = '';
-        } else {
-            contentDiv.innerHTML = `<div class="text-red-400">Error: ${data.error}</div>`;
+        async function markInsightFeedback(insightId, feedback) {
+            try {
+                const response = await fetch(`/api/insights/${insightId}/feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ feedback: feedback })
+                });
+                
+                if (response.ok) {
+                    showSuccess(`Feedback submitted: ${feedback}`);
+                    // Remove or update the insight card
+                    const insightCard = document.querySelector(`[data-insight-id="${insightId}"]`);
+                    if (insightCard) {
+                        insightCard.style.opacity = '0.5';
+                        insightCard.querySelector('.flex.gap-2').innerHTML = 
+                            `<span class="text-xs text-green-400">✓ ${feedback.replace('_', ' ')}</span>`;
+                    }
+                } else {
+                    showError('Failed to submit feedback');
+                }
+                
+            } catch (error) {
+                console.error('Failed to submit feedback:', error);
+                showError('Failed to submit feedback');
+            }
         }
-        
-    } catch (error) {
-        console.error('Error sending chat:', error);
-        contentDiv.innerHTML = '<div class="text-red-400">Failed to send message. Please try again.</div>';
-    }
-}
 
-function performSearch() {
-    const query = document.getElementById('searchInput').value.toLowerCase();
-    // TODO: Implement search functionality
-    console.log('Searching for:', query);
-}
-
-function formatDate(dateString) {
-    if (!dateString) return 'Unknown date';
-    try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    } catch (error) {
-        return 'Invalid date';
-    }
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function showSuccess(message) {
-    // Simple toast notification with support for multi-line messages
-    const toast = document.createElement('div');
-    toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg z-50 max-w-md shadow-lg';
-    toast.style.whiteSpace = 'pre-line'; // Support line breaks
-    toast.style.fontSize = '14px';
-    toast.style.lineHeight = '1.4';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    // Show longer for detailed AI results
-    const displayTime = message.includes('🤖') ? 8000 : 3000;
-    
-    setTimeout(() => {
-        if (document.body.contains(toast)) {
-            document.body.removeChild(toast);
+        function showProcessingStatus(show) {
+            const statusBar = document.getElementById('processingStatus');
+            if (show) {
+                statusBar.classList.remove('hidden');
+                // Simulate progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 15;
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(interval);
+                    }
+                    document.getElementById('processingProgress').textContent = Math.round(progress) + '%';
+                }, 500);
+            } else {
+                statusBar.classList.add('hidden');
+            }
         }
-    }, displayTime);
-}
 
-function showError(message) {
-    // Simple toast notification
-    const toast = document.createElement('div');
-    toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        document.body.removeChild(toast);
-    }, 5000);
-}
-</script>
+        function showIntelligenceSuccess(data) {
+            const stages = data.processing_stages || {};
+            const intelligence = data.entity_intelligence || {};
+            const insights = data.insights_generated || [];
+            
+            let message = `🤖 Intelligence Sync Complete!\n\n`;
+            message += `📧 Processed ${stages.emails_fetched || 0} emails\n`;
+            message += `📅 Enhanced ${stages.calendar_events_fetched || 0} calendar events\n`;
+            message += `🧠 Generated ${insights.length} strategic insights\n`;
+            message += `🕸️ Updated ${intelligence.entity_summary?.total_entities || 0} entity connections\n\n`;
+            
+            if (data.next_steps && data.next_steps.length > 0) {
+                message += `Next Steps:\n${data.next_steps.join('\n')}`;
+            }
+            
+            showSuccess(message);
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdateTime').textContent = 
+                now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function getPriorityColor(priority) {
+            const colors = {
+                'high': 'bg-red-600 text-white',
+                'medium': 'bg-yellow-600 text-white',
+                'low': 'bg-green-600 text-white'
+            };
+            return colors[priority] || colors['medium'];
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            const words = name.split(' ').filter(word => word.length > 0);
+            if (words.length === 0) return '?';
+            if (words.length === 1) return words[0].charAt(0).toUpperCase();
+            return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+        }
+
+        function formatTimeAgo(dateString) {
+            if (!dateString) return 'Unknown time';
+            
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.round(diffMs / 60000);
+            const diffHours = Math.round(diffMs / 3600000);
+            const diffDays = Math.round(diffMs / 86400000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return date.toLocaleDateString();
+        }
+
+        function showSuccess(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-lg z-50 max-w-md shadow-lg';
+            toast.style.whiteSpace = 'pre-line';
+            toast.style.fontSize = '14px';
+            toast.style.lineHeight = '1.4';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, message.includes('🤖') ? 8000 : 4000);
+        }
+
+        function showError(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg z-50';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 5000);
+        }
+    </script>
 </body>
 </html> 
