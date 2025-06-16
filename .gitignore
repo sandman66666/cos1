@@ -51,6 +51,9 @@ data/
 *.json
 *.csv
 
+# Archive folder (unused/obsolete files)
+archive/
+
 # Temporary files
 tmp/
 temp/
