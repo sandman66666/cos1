@@ -311,7 +311,7 @@ class EnhancedEmailProcessor:
         return normalized
     
     def _is_duplicate_email(self, email_data: Dict, user_id: int) -> bool:
-        """Check if email has already been processed"""
+        """Check if email has already been processed with AI"""
         try:
             from models.database import get_db_manager
             
@@ -322,7 +322,8 @@ class EnhancedEmailProcessor:
             with get_db_manager().get_session() as session:
                 existing = session.query(Email).filter(
                     Email.user_id == user_id,
-                    Email.gmail_id == gmail_id
+                    Email.gmail_id == gmail_id,
+                    Email.ai_summary.isnot(None)  # Only consider it duplicate if AI-processed
                 ).first()
                 
                 return existing is not None

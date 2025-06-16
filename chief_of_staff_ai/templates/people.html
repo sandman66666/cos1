@@ -329,7 +329,7 @@
     async function loadPeople() {
         try {
             showLoading();
-            const response = await axios.get('/api/entities/people', {
+            const response = await axios.get('/api/people', {
                 params: {
                     limit: 1000,
                     include_relationships: true
@@ -339,7 +339,7 @@
             hideLoading();
             
             if (response.data.success) {
-                currentPeople = response.data.data.people || [];
+                currentPeople = response.data.people || [];
                 filteredPeople = [...currentPeople];
                 updateStatistics();
                 renderPeople();

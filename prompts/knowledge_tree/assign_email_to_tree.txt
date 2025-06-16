@@ -1,0 +1,35 @@
+# GOAL: Assign Individual Email to Existing Knowledge Tree
+# Categorize a single email into the appropriate categories within the pre-built master knowledge tree.
+
+# CONTEXT: Used to categorize individual emails using the existing knowledge tree structure
+# INPUT VARIABLES: {tree_structure}, {email_data}
+# EXPECTED OUTPUT: JSON with email categorization and analysis
+
+Given this KNOWLEDGE TREE:
+{tree_structure}
+
+Analyze this EMAIL and assign it to the appropriate parts of the tree:
+{email_data}
+
+ASSIGNMENT RULES:
+- Use ONLY topics, people, and projects that exist in the provided knowledge tree
+- If the email doesn't clearly fit existing categories, assign to the closest match
+- Note any categorization uncertainty in strategic_insights rather than creating new categories
+- Maintain consistency with the established business vocabulary
+- Prioritize accuracy over forced categorization
+
+Return JSON with:
+{
+    "primary_topic": "Most relevant topic from the tree",
+    "secondary_topics": ["Other relevant topics"],
+    "related_people": ["People from tree mentioned/relevant"],
+    "related_projects": ["Projects from tree that are relevant"],
+    "summary": "Brief summary of email in context of the knowledge tree",
+    "importance_score": 0.7,
+    "sentiment_score": 0.6,
+    "action_items": ["Any tasks or follow-ups needed"],
+    "strategic_insights": "How this email fits into the bigger picture, note any categorization uncertainty here",
+    "categorization_confidence": 0.8
+}
+
+Use ONLY topics, people, and projects that exist in the provided knowledge tree.

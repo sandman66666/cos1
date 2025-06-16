@@ -5,7 +5,7 @@ import logging
 import base64
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
-from email.utils import parsedate_to_datetime
+from email.utils import parsedate_to_datetime, parseaddr
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -16,6 +16,7 @@ from config.settings import settings
 from processors.realtime_processing import realtime_processor, EventType
 from processors.enhanced_ai_pipeline import enhanced_ai_processor
 from processors.unified_entity_engine import entity_engine, EntityContext
+from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
 
 logger = logging.getLogger(__name__)
 
@@ -113,10 +114,22 @@ class GmailFetcher:
                             skipped_duplicates += 1
                             continue
                         
-                        # Enhanced processing: Send to real-time processor
+                        # 🔥 NEW: APPLY EMAIL QUALITY FILTERING BEFORE AI PROCESSING
+                        quality_result = email_quality_filter.analyze_email_quality(email_data, user.id)
+                        
+                        # Store basic metadata regardless of quality (for engagement analysis)
+                        self._store_email_metadata(email_data, user.id)
+                        
+                        if not quality_result.should_process:
+                            logger.info(f"🗑️  FILTERED OUT: {email_data.get('subject', 'No subject')[:50]} from {quality_result.sender_stats.email_address if quality_result.sender_stats else 'unknown'} (Tier: {quality_result.tier.value}, Reason: {quality_result.reason})")
+                            continue  # Skip AI processing for low-quality emails
+                        
+                        logger.info(f"✅ PROCESSING: {email_data.get('subject', 'No subject')[:50]} from {quality_result.sender_stats.email_address if quality_result.sender_stats else 'unknown'} (Tier: {quality_result.tier.value})")
+                        
+                        # Enhanced processing: Send to real-time processor ONLY if quality approved
                         if realtime_processor.running:
                             realtime_processor.process_new_email(email_data, user.id, priority=3)
-                            logger.debug(f"Sent email to real-time processor: {email_data.get('subject', 'No subject')}")
+                            logger.debug(f"Sent quality email to real-time processor: {email_data.get('subject', 'No subject')}")
                         else:
                             # Fallback: Process directly through enhanced AI pipeline
                             logger.info("Real-time processor not running, processing directly")
@@ -129,8 +142,8 @@ class GmailFetcher:
                         processed_emails.append(email_data)
                         emails_fetched += 1
                         
-                        # Store basic email metadata for tracking
-                        self._store_email_metadata(email_data, user.id)
+                        # Store basic email metadata for tracking - MOVED ABOVE
+                        # self._store_email_metadata(email_data, user.id)
                         
                 except Exception as e:
                     logger.error(f"Error processing message {message['id']}: {str(e)}")
@@ -231,7 +244,7 @@ class GmailFetcher:
                 }
             
             # Fetch full email content for sent emails (lighter processing)
-            emails = self._fetch_sent_emails_batch(service, email_list)
+            emails = self._fetch_sent_emails_batch(service, email_list, user.id)
             
             logger.info(f"Successfully fetched {len(emails)} sent emails for {user_email}")
             
@@ -371,13 +384,14 @@ class GmailFetcher:
             logger.error(f"Failed to fetch emails in batch: {str(e)}")
             raise
     
-    def _fetch_sent_emails_batch(self, service, email_list: List[Dict]) -> List[Dict]:
+    def _fetch_sent_emails_batch(self, service, email_list: List[Dict], user_id: int) -> List[Dict]:
         """
         Fetch sent emails with lighter processing for engagement analysis
         
         Args:
             service: Gmail service object
             email_list: List of email metadata from list API
+            user_id: Database user ID
             
         Returns:
             List of processed sent email dictionaries
@@ -395,6 +409,17 @@ class GmailFetcher:
                     email_id = email_meta['id']
                     
                     try:
+                        # Check if email already exists in database
+                        with get_db_manager().get_session() as session:
+                            existing_email = session.query(Email).filter(
+                                Email.user_id == user_id,
+                                Email.gmail_id == email_id
+                            ).first()
+                            
+                            if existing_email:
+                                batch_emails.append(existing_email.to_dict())
+                                continue
+                        
                         # Fetch email with minimal format for efficiency
                         full_email = service.users().messages().get(
                             userId='me',
@@ -405,7 +430,10 @@ class GmailFetcher:
                         
                         # Process the sent email (lighter processing)
                         processed_email = self._process_sent_gmail_message(full_email)
-                        batch_emails.append(processed_email)
+                        
+                        # Save to database
+                        email_record = get_db_manager().save_email(user_id, processed_email)
+                        batch_emails.append(email_record.to_dict())
                         
                         processed_count += 1
                         
@@ -533,8 +561,61 @@ class GmailFetcher:
             Processed sent email dictionary with engagement data
         """
         try:
-            headers = {h['name'].lower(): h['value'] for h in gmail_message['payload'].get('headers', [])}
+            # Log raw message structure
+            logger.info(f"Raw Gmail message structure: {gmail_message.keys()}")
+            logger.info(f"Payload structure: {gmail_message.get('payload', {}).keys()}")
             
+            # Gmail API returns headers in payload.headers array
+            headers = {}
+            for header in gmail_message.get('payload', {}).get('headers', []):
+                name = header.get('name', '').lower()
+                value = header.get('value', '')
+                headers[name] = value
+                logger.info(f"Found header {name}: {value}")
+            
+            # Parse timestamp first to avoid issues
+            date_str = headers.get('date', '')
+            try:
+                timestamp = parsedate_to_datetime(date_str) if date_str else datetime.utcnow()
+            except:
+                timestamp = datetime.utcnow()
+
+            # Parse sender information
+            sender_full = headers.get('from', '')
+            if '<' in sender_full and '>' in sender_full:
+                sender_name = sender_full.split('<')[0].strip().strip('"')
+                sender_email = sender_full.split('<')[1].split('>')[0]
+            else:
+                sender_name = sender_full.split('@')[0] if '@' in sender_full else sender_full
+                sender_email = sender_full
+
+            # Extract recipient information
+            to_header = headers.get('to', '')
+            cc_header = headers.get('cc', '')
+            bcc_header = headers.get('bcc', '')
+
+            # Parse recipient emails
+            def parse_recipients(header_value):
+                if not header_value:
+                    return []
+                recipients = []
+                # Split by comma for multiple recipients
+                for recipient in header_value.split(','):
+                    recipient = recipient.strip()
+                    if '<' in recipient and '>' in recipient:
+                        email = recipient.split('<')[1].split('>')[0].strip()
+                    else:
+                        email = recipient
+                    if '@' in email:
+                        recipients.append(email.lower())
+                return recipients
+
+            recipient_emails = parse_recipients(to_header)
+            cc_list = parse_recipients(cc_header)
+            bcc_list = parse_recipients(bcc_header)
+
+            logger.info(f"Extracted recipients - TO: {recipient_emails}, CC: {cc_list}, BCC: {bcc_list}")
+
             # Extract basic email info for engagement analysis
             email_data = {
                 'id': gmail_message['id'],
@@ -542,12 +623,23 @@ class GmailFetcher:
                 'snippet': gmail_message.get('snippet', ''),
                 
                 # Headers for recipient analysis
-                'sender': headers.get('from', ''),
-                'recipients': self._parse_recipients(headers.get('to', '')),
-                'cc': self._parse_recipients(headers.get('cc', '')),
-                'bcc': self._parse_recipients(headers.get('bcc', '')),
+                'sender': sender_email,
+                'sender_name': sender_name,
+                'recipient_emails': recipient_emails,
+                'cc': cc_list,
+                'bcc': bcc_list,
                 'subject': headers.get('subject', ''),
-                'date': headers.get('date', ''),
+                
+                # Required fields for database storage
+                'email_date': timestamp,
+                'timestamp': timestamp,
+                'body_text': '',  # Minimal processing for sent emails
+                'body_html': '',
+                'has_attachments': False,
+                'message_type': 'sent',
+                'is_read': True,  # Sent emails are always read
+                'is_important': False,
+                'is_starred': False,
                 
                 # Processing metadata
                 'processing_metadata': {
@@ -557,19 +649,12 @@ class GmailFetcher:
                 }
             }
             
-            # Parse timestamp
-            if email_data['date']:
-                try:
-                    email_data['timestamp'] = parsedate_to_datetime(email_data['date'])
-                except:
-                    email_data['timestamp'] = datetime.utcnow()
-            else:
-                email_data['timestamp'] = datetime.utcnow()
-            
+            logger.info(f"Final processed email data: {email_data}")
             return email_data
             
         except Exception as e:
             logger.error(f"Failed to process sent Gmail message {gmail_message.get('id', 'unknown')}: {str(e)}")
+            logger.error(f"Exception details:", exc_info=True)
             return {
                 'id': gmail_message.get('id', 'unknown'),
                 'error': True,
@@ -582,28 +667,69 @@ class GmailFetcher:
         Parse recipients string into list of email addresses
         
         Args:
-            recipients_string: Comma-separated recipients string
+            recipients_string: Comma-separated recipients string from Gmail API
+                Format can be:
+                - "user@example.com"
+                - "User Name <user@example.com>"
+                - Multiple addresses: "user1@example.com, User2 <user2@example.com>"
             
         Returns:
             List of email addresses
         """
+        logger.info(f"Parsing recipients string: {recipients_string}")
         if not recipients_string:
             return []
         
         recipients = []
-        for recipient in recipients_string.split(','):
-            recipient = recipient.strip()
-            if '<' in recipient and '>' in recipient:
-                # Extract email from "Name <email@domain.com>" format
-                email = recipient.split('<')[1].split('>')[0].strip()
-            else:
-                # Plain email address
-                email = recipient.strip()
-            
-            if email and '@' in email:
-                recipients.append(email)
         
-        return recipients
+        # Handle quoted strings and commas within quotes
+        import re
+        # Split by comma but preserve commas within quotes
+        parts = re.split(r',(?=(?:[^"]*"[^"]*")*[^"]*$)', recipients_string)
+        
+        for part in parts:
+            part = part.strip()
+            logger.info(f"Processing recipient part: {part}")
+            
+            try:
+                # Try email.utils parsing first (handles most RFC email formats)
+                name, email = parseaddr(part)
+                if email and '@' in email:
+                    email = email.lower()
+                    recipients.append(email)
+                    logger.info(f"Added recipient via parseaddr: {email}")
+                    continue
+                
+                # Fallback: manual parsing
+                if '<' in part and '>' in part:
+                    # Extract from angle brackets
+                    email = part.split('<')[1].split('>')[0].strip().lower()
+                    if email and '@' in email:
+                        recipients.append(email)
+                        logger.info(f"Added recipient via angle brackets: {email}")
+                else:
+                    # Try direct email
+                    email = part.strip().lower()
+                    if email and '@' in email:
+                        recipients.append(email)
+                        logger.info(f"Added recipient via direct email: {email}")
+                    else:
+                        logger.warning(f"Could not extract email from part: {part}")
+            
+            except Exception as e:
+                logger.error(f"Error parsing recipient part '{part}': {str(e)}")
+                continue
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_recipients = []
+        for r in recipients:
+            if r not in seen:
+                seen.add(r)
+                unique_recipients.append(r)
+        
+        logger.info(f"Final unique recipients list: {unique_recipients}")
+        return unique_recipients
     
     def _calculate_business_priority(self, label_ids: List[str], headers: Dict) -> float:
         """

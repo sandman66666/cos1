@@ -15,6 +15,7 @@ from config.settings import settings
 from processors.realtime_processing import realtime_processor, EventType
 from processors.enhanced_ai_pipeline import enhanced_ai_processor
 from processors.unified_entity_engine import entity_engine, EntityContext
+from processors.intelligence_engine import intelligence_engine
 
 logger = logging.getLogger(__name__)
 
@@ -280,6 +281,52 @@ class CalendarFetcher:
             if not event_id:
                 return None
             
+            # Parse start and end times
+            start = event.get('start', {})
+            end = event.get('end', {})
+            
+            # Handle all-day events
+            if 'date' in start:
+                is_all_day = True
+                # For all-day events, parse date and set to midnight
+                start_date = datetime.strptime(start['date'], '%Y-%m-%d')
+                end_date = datetime.strptime(end['date'], '%Y-%m-%d')
+                
+                # Convert to UTC
+                start_time = start_date.replace(tzinfo=timezone.utc)
+                end_time = end_date.replace(tzinfo=timezone.utc)
+                timezone_str = 'UTC'
+            else:
+                is_all_day = False
+                # For timed events, parse datetime
+                start_datetime_str = start.get('dateTime')
+                end_datetime_str = end.get('dateTime')
+                
+                if start_datetime_str and end_datetime_str:
+                    # Parse timezone-aware datetime
+                    start_time = datetime.fromisoformat(start_datetime_str.replace('Z', '+00:00'))
+                    end_time = datetime.fromisoformat(end_datetime_str.replace('Z', '+00:00'))
+                    timezone_str = start.get('timeZone', 'UTC')
+                else:
+                    # Fallback for events without proper time data
+                    return None
+            
+            # Process attendees
+            attendees = []
+            attendee_emails = []
+            for attendee in event.get('attendees', []):
+                attendee_info = {
+                    'email': attendee.get('email'),
+                    'name': attendee.get('displayName', attendee.get('email', '').split('@')[0]),
+                    'response_status': attendee.get('responseStatus', 'needsAction'),
+                    'optional': attendee.get('optional', False),
+                    'organizer': attendee.get('organizer', False)
+                }
+                attendees.append(attendee_info)
+                
+                if attendee.get('email'):
+                    attendee_emails.append(attendee['email'])
+            
             # Build event data structure
             event_data = {
                 'event_id': event_id,
@@ -289,62 +336,22 @@ class CalendarFetcher:
                 'description': event.get('description', ''),
                 'location': event.get('location', ''),
                 'status': event.get('status', 'confirmed'),
-                'visibility': event.get('visibility', 'default'),
-                'is_recurring': 'recurrence' in event,
-                'recurrence_rules': event.get('recurrence', []),
+                'start_time': start_time,
+                'end_time': end_time,
+                'timezone': timezone_str,
+                'is_all_day': is_all_day,
+                'attendees': attendees,
+                'attendee_emails': attendee_emails,
+                'organizer_email': event.get('organizer', {}).get('email'),
+                'organizer_name': event.get('organizer', {}).get('displayName'),
                 'html_link': event.get('htmlLink'),
                 'hangout_link': event.get('hangoutLink'),
                 'ical_uid': event.get('iCalUID'),
                 'sequence': event.get('sequence', 0),
-                'attendees': [],
-                'attendee_emails': []
+                'visibility': event.get('visibility', 'default'),
+                'is_recurring': 'recurrence' in event,
+                'recurrence_rules': event.get('recurrence', [])
             }
-            
-            # Parse start and end times
-            start = event.get('start', {})
-            end = event.get('end', {})
-            
-            # Handle all-day events
-            if 'date' in start:
-                event_data['is_all_day'] = True
-                # For all-day events, parse date and set to midnight
-                start_date = datetime.strptime(start['date'], '%Y-%m-%d')
-                end_date = datetime.strptime(end['date'], '%Y-%m-%d')
-                
-                # Convert to UTC
-                event_data['start_time'] = start_date.replace(tzinfo=timezone.utc)
-                event_data['end_time'] = end_date.replace(tzinfo=timezone.utc)
-                event_data['timezone'] = 'UTC'
-            else:
-                event_data['is_all_day'] = False
-                # For timed events, parse datetime
-                start_datetime_str = start.get('dateTime')
-                end_datetime_str = end.get('dateTime')
-                
-                if start_datetime_str and end_datetime_str:
-                    # Parse timezone-aware datetime
-                    event_data['start_time'] = datetime.fromisoformat(start_datetime_str.replace('Z', '+00:00'))
-                    event_data['end_time'] = datetime.fromisoformat(end_datetime_str.replace('Z', '+00:00'))
-                    event_data['timezone'] = start.get('timeZone', 'UTC')
-                else:
-                    # Fallback for events without proper time data
-                    return None
-            
-            # Process attendees
-            attendees = event.get('attendees', [])
-            
-            for attendee in attendees:
-                attendee_info = {
-                    'email': attendee.get('email'),
-                    'name': attendee.get('displayName', attendee.get('email', '').split('@')[0]),
-                    'response_status': attendee.get('responseStatus', 'needsAction'),
-                    'optional': attendee.get('optional', False),
-                    'organizer': attendee.get('organizer', False)
-                }
-                event_data['attendees'].append(attendee_info)
-                
-                if attendee.get('email'):
-                    event_data['attendee_emails'].append(attendee['email'])
             
             # Extract conference/meeting details
             conference_data = event.get('conferenceData', {})
@@ -375,11 +382,6 @@ class CalendarFetcher:
             
             # Add processing metadata
             event_data['fetched_at'] = datetime.now(timezone.utc)
-            
-            # Enhance event with business context if user_id is provided
-            if user_id:
-                enhanced_event = self._enhance_event_with_business_context(user_id, event_data)
-                return enhanced_event
             
             return event_data
             
@@ -685,580 +687,77 @@ class CalendarFetcher:
         }
 
     def create_meeting_prep_tasks(self, user_id: int, events: List[Dict]) -> Dict:
-        """
-        ENHANCED 360-CONTEXT MEETING PREPARATION AUGMENTATION
-        
-        Analyze calendar events and create intelligent preparation tasks using:
-        - Email history with attendees
-        - People relationship intelligence  
-        - Project context analysis
-        - Topic pattern recognition
-        - Strategic business insights
-        - Meeting pattern analysis
-        
-        Creates a comprehensive "smart 360-context product" for meeting preparation
-        """
+        """Create meeting preparation tasks using intelligence engine"""
         try:
-            # Temporarily enable debug logging for this method
-            original_level = logger.level
-            logger.setLevel(logging.DEBUG)
+            from processors.intelligence_engine import intelligence_engine
+            from models.database import get_db_manager
             
-            prep_tasks_created = []
-            now_utc = datetime.now(timezone.utc)
+            db_manager = get_db_manager()
+            prep_tasks_created = 0
+            all_tasks = []
             
-            # Get user's comprehensive business intelligence for context
-            user_business_context = self._get_user_business_context(user_id)
-            
-            for event in events:
-                # Only create prep tasks for future events
-                start_time = event.get('start_time')
-                if not start_time:
-                    continue
-                
-                # Ensure start_time is a datetime object
-                if isinstance(start_time, str):
-                    try:
-                        start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-                    except ValueError:
-                        continue
-                
-                if start_time <= now_utc:
-                    continue
-                
-                # ENHANCED 360-CONTEXT ANALYSIS
-                context_analysis = self._analyze_360_meeting_context(event, user_business_context)
-                
-                if context_analysis['needs_prep']:
-                    # Create highly contextualized preparation tasks
-                    for task_template in context_analysis['intelligent_tasks']:
-                        # Calculate smart due date based on task complexity and meeting importance
-                        meeting_time = start_time
-                        prep_lead_time = task_template.get('lead_time_hours', 24)
-                        due_date = meeting_time - timedelta(hours=prep_lead_time)
+            for event_dict in events:
+                try:
+                    # Find the calendar event in database
+                    with db_manager.get_session() as session:
+                        from models.database import Calendar
+                        event = session.query(Calendar).filter(
+                            Calendar.user_id == user_id,
+                            Calendar.event_id == event_dict.get('event_id', event_dict.get('id'))
+                        ).first()
                         
-                        # Only create task if due date is in the future
-                        if due_date > now_utc:
-                            task_data = {
-                                'description': task_template['description'],
-                                'due_date': due_date,
-                                'due_date_text': f"{prep_lead_time} hours before meeting",
-                                'priority': task_template.get('priority', 'medium'),
-                                'category': 'meeting_preparation',
-                                'assignee': None,  # Will be set to user
-                                'confidence': task_template.get('confidence', 0.9),
-                                'source_text': task_template.get('context_source', f"Auto-generated for meeting: {event.get('title', 'Untitled')}"),
-                                'extractor_version': 'calendar_360_context_v2.0',
-                                'status': 'pending'
-                                # Note: Removed invalid fields that don't exist in Task model:
-                                # context, business_context, attendee_context, project_context, 
-                                # meeting_id, meeting_title, auto_generated
-                            }
-                            
-                            # Save the enhanced task
-                            try:
-                                logger.debug(f"About to save task with data: {task_data}")
-                                task_record = get_db_manager().save_task(user_id, None, task_data)
+                        if event and event.attendee_emails:
+                            # Skip if meeting is too far in future or too soon
+                            if event.start_time:
+                                from datetime import datetime, timedelta
+                                hours_until = (event.start_time - datetime.utcnow()).total_seconds() / 3600
                                 
-                                logger.debug(f"save_task returned: {type(task_record)} - {task_record}")
-                                
-                                # Robust task ID extraction - handle both objects and dicts
-                                task_id = None
-                                if task_record:
-                                    try:
-                                        # Try object-style access first (expected)
-                                        if hasattr(task_record, 'id'):
-                                            task_id = task_record.id
-                                        # Try dict-style access as fallback
-                                        elif isinstance(task_record, dict) and 'id' in task_record:
-                                            task_id = task_record['id']
+                                # Only process meetings 2-72 hours away
+                                if 2 <= hours_until <= 72:
+                                    # Generate comprehensive meeting intelligence
+                                    meeting_intel = intelligence_engine.generate_meeting_intelligence(user_id, event)
+                                    
+                                    if meeting_intel:
+                                        # Create preparation tasks
+                                        for task_info in meeting_intel.preparation_tasks:
+                                            prep_tasks_created += 1
+                                            all_tasks.append(task_info)
                                         
-                                        logger.debug(f"Extracted task_id: {task_id}")
+                                        # Store meeting intelligence in database
+                                        intelligence_data = {
+                                            'business_context': meeting_intel.business_context,
+                                            'importance_score': meeting_intel.strategic_importance,
+                                            'preparation_needed': True if meeting_intel.preparation_tasks else False
+                                        }
                                         
-                                    except Exception as extract_error:
-                                        logger.error(f"Failed to extract task ID: {str(extract_error)}")
-                                        logger.error(f"task_record type: {type(task_record)}")
-                                        logger.error(f"task_record: {task_record}")
-                                
-                                # Only proceed if we successfully got a task ID
-                                if task_id:
-                                    prep_tasks_created.append({
-                                        'task_id': task_id,
-                                        'description': task_data['description'],
-                                        'meeting_title': event.get('title'),
-                                        'due_date': due_date.isoformat(),
-                                        'priority': task_data['priority'],
-                                        'context_level': task_template.get('context_level', 'standard'),
-                                        'intelligence_source': task_template.get('intelligence_source', 'calendar')
-                                    })
-                                    logger.info(f"Created 360-context prep task for meeting '{event.get('title')}': {task_data['description']}")
-                                else:
-                                    logger.warning(f"Could not extract task ID from save_task result: {type(task_record)} - {task_record}")
-                                
-                            except Exception as task_error:
-                                logger.error(f"Failed to save 360-context prep task: {str(task_error)}")
-                                logger.error(f"Task data that failed: {task_data}")
-                                logger.error(f"Exception type: {type(task_error)}")
-                                import traceback
-                                logger.error(f"Full traceback: {traceback.format_exc()}")
-                                continue
+                                        db_manager.enhance_calendar_event_with_intelligence(
+                                            user_id, event.event_id, intelligence_data
+                                        )
+                                        
+                                        logger.info(f"Generated {len(meeting_intel.preparation_tasks)} prep tasks for meeting: {event.title}")
+                        
+                        session.expunge_all()
+                        
+                except Exception as e:
+                    logger.error(f"Failed to process event for prep tasks: {str(e)}")
+                    continue
+            
+            logger.info(f"Created {prep_tasks_created} meeting preparation tasks for {len(events)} events")
             
             return {
                 'success': True,
-                'prep_tasks_created': len(prep_tasks_created),
-                'tasks': prep_tasks_created,
-                'context_level': '360_degree_business_intelligence'
+                'prep_tasks_created': prep_tasks_created,
+                'tasks': all_tasks
             }
             
         except Exception as e:
-            logger.error(f"Failed to create 360-context meeting prep tasks: {str(e)}")
+            logger.error(f"Failed to create meeting prep tasks: {str(e)}")
             return {
                 'success': False,
-                'error': str(e),
                 'prep_tasks_created': 0,
-                'tasks': []
+                'tasks': [],
+                'error': str(e)
             }
-        finally:
-            # Restore original logging level
-            try:
-                logger.setLevel(original_level)
-            except:
-                pass  # In case original_level wasn't set due to early exception
-    
-    def _get_user_business_context(self, user_id: int) -> Dict:
-        """
-        Get comprehensive business intelligence context for 360-degree meeting preparation
-        """
-        try:
-            context = {
-                'emails': [],
-                'people': [],
-                'projects': [],
-                'topics': [],
-                'recent_decisions': [],
-                'opportunities': [],
-                'relationship_map': {}
-            }
-            
-            # Get user's business data
-            emails = get_db_manager().get_user_emails(user_id, limit=500)  # More comprehensive
-            people = get_db_manager().get_user_people(user_id, limit=200)
-            projects = get_db_manager().get_user_projects(user_id, limit=100)
-            topics = get_db_manager().get_user_topics(user_id, limit=100)
-            
-            # Process emails for business intelligence
-            for email in emails:
-                if email.ai_summary and email.key_insights:
-                    context['emails'].append({
-                        'sender': email.sender,
-                        'sender_name': email.sender_name,
-                        'subject': email.subject,
-                        'summary': email.ai_summary,
-                        'insights': email.key_insights,
-                        'date': email.email_date,
-                        'topics': email.topics or []
-                    })
-                    
-                    # Extract business decisions and opportunities
-                    if isinstance(email.key_insights, dict):
-                        decisions = email.key_insights.get('key_decisions', [])
-                        context['recent_decisions'].extend(decisions[:3])  # Recent decisions
-                        
-                        opps = email.key_insights.get('strategic_opportunities', [])
-                        context['opportunities'].extend(opps[:3])  # Strategic opportunities
-            
-            # Process people relationships
-            for person in people:
-                if person.name and person.email_address:
-                    context['people'].append({
-                        'name': person.name,
-                        'email': person.email_address,
-                        'company': person.company,
-                        'title': person.title,
-                        'relationship': person.relationship_type,
-                        'importance': person.importance_level,
-                        'total_emails': person.total_emails,
-                        'last_interaction': person.last_interaction,
-                        'key_topics': person.key_topics or []
-                    })
-                    
-                    # Build relationship map
-                    context['relationship_map'][person.email_address] = {
-                        'name': person.name,
-                        'relationship_strength': person.total_emails or 0,
-                        'company': person.company,
-                        'title': person.title
-                    }
-            
-            # Process projects
-            for project in projects:
-                if project.status == 'active':
-                    context['projects'].append({
-                        'name': project.name,
-                        'description': project.description,
-                        'stakeholders': project.stakeholders or [],
-                        'key_topics': project.key_topics or [],
-                        'priority': project.priority
-                    })
-            
-            # Process topics
-            for topic in topics:
-                if topic.is_official:
-                    context['topics'].append({
-                        'name': topic.name,
-                        'description': topic.description,
-                        'keywords': json.loads(topic.keywords) if topic.keywords else [],
-                        'confidence': topic.confidence_score or 0
-                    })
-            
-            return context
-            
-        except Exception as e:
-            logger.error(f"Failed to get user business context: {str(e)}")
-            return {}
-    
-    def _analyze_360_meeting_context(self, event: Dict, business_context: Dict) -> Dict:
-        """
-        ADVANCED 360-CONTEXT MEETING ANALYSIS
-        
-        Analyzes meeting using comprehensive business intelligence to create
-        highly contextualized and personalized preparation tasks
-        """
-        try:
-            title = (event.get('title') or '').lower()
-            description = (event.get('description') or '').lower()
-            attendees = event.get('attendees', [])
-            attendee_emails = [a.get('email', '').lower() for a in attendees if a.get('email')]
-            
-            # Safely get duration with error handling
-            try:
-                duration_minutes = self._get_event_duration_minutes(event)
-            except Exception as e:
-                logger.warning(f"Failed to get event duration: {str(e)}")
-                duration_minutes = 60  # Default duration
-            
-            # STEP 1: Analyze attendee relationships and history
-            try:
-                attendee_intelligence = self._analyze_attendee_intelligence(attendee_emails, business_context)
-            except Exception as e:
-                logger.warning(f"Failed to analyze attendee intelligence: {str(e)}")
-                attendee_intelligence = {'high_value_attendees': [], 'total_relationship_strength': 0, 'known_attendees': 0}
-            
-            # STEP 2: Analyze topic and project connections
-            try:
-                topic_connections = self._analyze_topic_connections(title, description, business_context)
-            except Exception as e:
-                logger.warning(f"Failed to analyze topic connections: {str(e)}")
-                topic_connections = {'relevant_topics': [], 'related_projects': []}
-            
-            # STEP 3: Analyze email history patterns with these attendees
-            try:
-                email_context = self._analyze_email_history_context(attendee_emails, business_context)
-            except Exception as e:
-                logger.warning(f"Failed to analyze email history context: {str(e)}")
-                email_context = {'recent_decisions': [], 'opportunities': [], 'common_topics': []}
-            
-            # STEP 4: Determine meeting importance and preparation needs
-            try:
-                importance_analysis = self._calculate_meeting_importance(
-                    attendee_intelligence, topic_connections, email_context, duration_minutes
-                )
-            except Exception as e:
-                logger.warning(f"Failed to calculate meeting importance: {str(e)}")
-                importance_analysis = {'importance_score': 0.5, 'contributing_factors': []}
-            
-            # STEP 5: Generate intelligent, contextualized tasks
-            intelligent_tasks = []
-            
-            try:
-                if importance_analysis['importance_score'] >= 0.6:  # High importance threshold
-                    
-                    # Context-aware preparation tasks based on attendee relationships
-                    if attendee_intelligence['high_value_attendees']:
-                        for attendee_info in attendee_intelligence['high_value_attendees'][:3]:
-                            intelligent_tasks.append({
-                                'description': f"Review recent communications and relationship history with {attendee_info['name']} ({attendee_info['company']}) before '{event.get('title', 'Meeting')}'",
-                                'priority': 'high',
-                                'lead_time_hours': 12,
-                                'confidence': 0.95,
-                                'context_level': 'relationship_intelligence',
-                                'intelligence_source': 'attendee_analysis',
-                                'business_context': f"Key relationship: {attendee_info['relationship_context']}",
-                                'attendee_context': attendee_info['name'],
-                                'context_source': f"Relationship intelligence analysis with {attendee_info['name']}"
-                            })
-                    
-                    # Project-based preparation tasks
-                    if topic_connections['related_projects']:
-                        for project in topic_connections['related_projects'][:2]:
-                            intelligent_tasks.append({
-                                'description': f"Prepare project update and discussion points for '{project['name']}' project relevant to '{event.get('title', 'Meeting')}'",
-                                'priority': 'high',
-                                'lead_time_hours': 24,
-                                'confidence': 0.9,
-                                'context_level': 'project_intelligence',
-                                'intelligence_source': 'project_analysis',
-                                'project_context': project['name'],
-                                'context_source': f"Project connection analysis for {project['name']}"
-                            })
-                    
-                    # Email history-based tasks
-                    if email_context['recent_decisions']:
-                        intelligent_tasks.append({
-                            'description': f"Review recent decisions and follow-up items from previous discussions with meeting attendees for '{event.get('title', 'Meeting')}'",
-                            'priority': 'medium',
-                            'lead_time_hours': 8,
-                            'confidence': 0.85,
-                            'context_level': 'decision_intelligence',
-                            'intelligence_source': 'email_history',
-                            'business_context': f"Recent decisions: {'; '.join(email_context['recent_decisions'][:2])}",
-                            'context_source': "Email history analysis of recent business decisions"
-                        })
-                    
-                    # Topic-specific preparation
-                    if topic_connections['relevant_topics']:
-                        for topic in topic_connections['relevant_topics'][:2]:
-                            intelligent_tasks.append({
-                                'description': f"Prepare materials and talking points on '{topic['name']}' for '{event.get('title', 'Meeting')}'",
-                                'priority': 'medium',
-                                'lead_time_hours': 16,
-                                'confidence': 0.8,
-                                'context_level': 'topic_intelligence',
-                                'intelligence_source': 'topic_analysis',
-                                'business_context': topic.get('description', ''),
-                                'context_source': f"Topic intelligence analysis for {topic['name']}"
-                            })
-                    
-                    # Strategic opportunity tasks
-                    if email_context['opportunities']:
-                        intelligent_tasks.append({
-                            'description': f"Prepare discussion of strategic opportunities identified in recent communications for '{event.get('title', 'Meeting')}'",
-                            'priority': 'high',
-                            'lead_time_hours': 24,
-                            'confidence': 0.9,
-                            'context_level': 'strategic_intelligence',
-                            'intelligence_source': 'opportunity_analysis',
-                            'business_context': f"Opportunities: {'; '.join(email_context['opportunities'][:2])}",
-                            'context_source': "Strategic opportunity analysis from email intelligence"
-                        })
-                    
-                    # Default comprehensive task if no specific context found
-                    if not intelligent_tasks:
-                        intelligent_tasks.append({
-                            'description': f"Conduct comprehensive preparation including attendee research, agenda review, and material preparation for '{event.get('title', 'Meeting')}'",
-                            'priority': 'medium',
-                            'lead_time_hours': 12,
-                            'confidence': 0.7,
-                            'context_level': 'standard',
-                            'intelligence_source': 'general_analysis',
-                            'context_source': "General meeting importance analysis"
-                        })
-            
-            except Exception as e:
-                logger.warning(f"Failed to generate intelligent tasks: {str(e)}")
-                # Fallback to a simple default task
-                intelligent_tasks = [{
-                    'description': f"Prepare for meeting: '{event.get('title', 'Untitled Meeting')}'",
-                    'priority': 'medium',
-                    'lead_time_hours': 12,
-                    'confidence': 0.5,
-                    'context_level': 'basic',
-                    'intelligence_source': 'fallback',
-                    'context_source': "Fallback preparation task"
-                }]
-            
-            return {
-                'needs_prep': importance_analysis['importance_score'] >= 0.6,
-                'importance_score': importance_analysis['importance_score'],
-                'intelligent_tasks': intelligent_tasks,
-                'analysis_summary': {
-                    'attendee_intelligence': attendee_intelligence,
-                    'topic_connections': topic_connections,
-                    'email_context': email_context,
-                    'context_sources': len(intelligent_tasks)
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"Failed to analyze 360-degree meeting context: {str(e)}")
-            # Return a safe fallback structure
-            return {
-                'needs_prep': True,  # Default to creating prep tasks
-                'importance_score': 0.5,
-                'intelligent_tasks': [{
-                    'description': f"Prepare for meeting: '{event.get('title', 'Untitled Meeting')}'",
-                    'priority': 'medium',
-                    'lead_time_hours': 12,
-                    'confidence': 0.5,
-                    'context_level': 'basic',
-                    'intelligence_source': 'fallback',
-                    'context_source': "Fallback preparation task due to analysis error"
-                }],
-                'analysis_summary': {
-                    'attendee_intelligence': {'high_value_attendees': [], 'total_relationship_strength': 0},
-                    'topic_connections': {'relevant_topics': [], 'related_projects': []},
-                    'email_context': {'recent_decisions': [], 'opportunities': []},
-                    'context_sources': 1
-                }
-            }
-    
-    def _analyze_attendee_intelligence(self, attendee_emails: List[str], business_context: Dict) -> Dict:
-        """Analyze attendee relationships and importance"""
-        high_value_attendees = []
-        total_relationship_strength = 0
-        
-        for email in attendee_emails:
-            if email in business_context['relationship_map']:
-                person_info = business_context['relationship_map'][email]
-                relationship_strength = person_info['relationship_strength']
-                total_relationship_strength += relationship_strength
-                
-                if relationship_strength > 5:  # Significant relationship
-                    high_value_attendees.append({
-                        'email': email,
-                        'name': person_info['name'],
-                        'company': person_info.get('company', 'Unknown'),
-                        'title': person_info.get('title', 'Unknown'),
-                        'relationship_strength': relationship_strength,
-                        'relationship_context': f"{relationship_strength} email interactions with {person_info['name']}"
-                    })
-        
-        return {
-            'high_value_attendees': sorted(high_value_attendees, key=lambda x: x['relationship_strength'], reverse=True),
-            'total_relationship_strength': total_relationship_strength,
-            'known_attendees': len([e for e in attendee_emails if e in business_context['relationship_map']])
-        }
-    
-    def _analyze_topic_connections(self, title: str, description: str, business_context: Dict) -> Dict:
-        """Analyze connections to existing topics and projects"""
-        relevant_topics = []
-        related_projects = []
-        
-        # Check topic connections
-        for topic in business_context['topics']:
-            topic_keywords = topic.get('keywords', [])
-            topic_name = topic['name'].lower()
-            
-            # Check if meeting relates to this topic
-            if (topic_name in title or topic_name in description or
-                any(keyword in title or keyword in description for keyword in topic_keywords)):
-                relevant_topics.append(topic)
-        
-        # Check project connections
-        for project in business_context['projects']:
-            project_name = project['name'].lower()
-            project_topics = project.get('key_topics', [])
-            
-            # Check if meeting relates to this project
-            if (project_name in title or project_name in description or
-                any(topic.lower() in title or topic.lower() in description for topic in project_topics)):
-                related_projects.append(project)
-        
-        return {
-            'relevant_topics': relevant_topics[:3],  # Top 3 relevant topics
-            'related_projects': related_projects[:3]  # Top 3 related projects
-        }
-    
-    def _analyze_email_history_context(self, attendee_emails: List[str], business_context: Dict) -> Dict:
-        """Analyze email history patterns with attendees"""
-        recent_decisions = []
-        opportunities = []
-        common_topics = set()
-        
-        # Analyze emails involving these attendees
-        for email_data in business_context['emails']:
-            email_sender = email_data.get('sender', '').lower()
-            
-            if email_sender in attendee_emails:
-                # Extract recent decisions
-                if isinstance(email_data.get('insights'), dict):
-                    decisions = email_data['insights'].get('key_decisions', [])
-                    recent_decisions.extend(decisions)
-                    
-                    opps = email_data['insights'].get('strategic_opportunities', [])
-                    opportunities.extend(opps)
-                
-                # Extract common topics
-                email_topics = email_data.get('topics', [])
-                common_topics.update(email_topics)
-        
-        return {
-            'recent_decisions': recent_decisions[:5],  # Top 5 recent decisions
-            'opportunities': opportunities[:5],  # Top 5 opportunities
-            'common_topics': list(common_topics)[:10]  # Top 10 common topics
-        }
-    
-    def _calculate_meeting_importance(self, attendee_intel: Dict, topic_connections: Dict, 
-                                    email_context: Dict, duration_minutes: int) -> Dict:
-        """Calculate overall meeting importance for preparation prioritization"""
-        importance_score = 0.0
-        factors = []
-        
-        # Attendee importance
-        if attendee_intel['total_relationship_strength'] > 20:
-            importance_score += 0.3
-            factors.append("High-value attendee relationships")
-        elif attendee_intel['total_relationship_strength'] > 10:
-            importance_score += 0.2
-            factors.append("Moderate attendee relationships")
-        
-        # Topic/project relevance
-        if topic_connections['related_projects']:
-            importance_score += 0.25
-            factors.append("Connected to active projects")
-        
-        if topic_connections['relevant_topics']:
-            importance_score += 0.15
-            factors.append("Relevant business topics identified")
-        
-        # Email context richness
-        if email_context['recent_decisions']:
-            importance_score += 0.2
-            factors.append("Recent business decisions context")
-        
-        if email_context['opportunities']:
-            importance_score += 0.15
-            factors.append("Strategic opportunities context")
-        
-        # Duration factor
-        if duration_minutes >= 60:
-            importance_score += 0.1
-            factors.append("Long meeting duration")
-        
-        return {
-            'importance_score': min(importance_score, 1.0),  # Cap at 1.0
-            'contributing_factors': factors
-        }
-    
-    def _get_event_duration_minutes(self, event: Dict) -> int:
-        """Calculate event duration in minutes"""
-        try:
-            start_time = event.get('start_time')
-            end_time = event.get('end_time')
-            
-            if not start_time or not end_time:
-                return 60  # Default to 1 hour if times not available
-            
-            # Ensure both are datetime objects
-            if isinstance(start_time, str):
-                start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-            if isinstance(end_time, str):
-                end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-            
-            # Calculate duration in minutes
-            duration = end_time - start_time
-            duration_minutes = int(duration.total_seconds() / 60)
-            
-            # Reasonable bounds check
-            if duration_minutes <= 0:
-                return 30  # Minimum 30 minutes
-            elif duration_minutes > 480:  # More than 8 hours
-                return 480  # Cap at 8 hours
-            
-            return duration_minutes
-            
-        except Exception as e:
-            logger.warning(f"Failed to calculate event duration: {str(e)}")
-            return 60  # Default to 1 hour
 
     def _process_calendar_attendees(self, user_id: int, events: List[Dict]):
         """Process calendar attendees and create People records for new contacts"""

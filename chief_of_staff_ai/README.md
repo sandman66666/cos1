@@ -1,327 +1,397 @@
-# AI Chief of Staff - Gmail E2E v0.1
+# AI Chief of Staff - Enhanced Intelligence Platform
 
-🤖 **Your intelligent email and task management assistant powered by Claude 4 Sonnet**
+🤖 **Your intelligent business intelligence assistant powered by Claude 4 Sonnet and React**
 
-The AI Chief of Staff is a comprehensive system that connects to your Gmail, processes your emails intelligently, extracts actionable tasks, and provides AI-powered assistance for productivity and strategic planning.
+The AI Chief of Staff is a comprehensive platform that transforms your Gmail and Calendar into a proactive business intelligence system with real-time insights, relationship management, and AI-powered assistance.
 
-## 🌟 Features
+## 🌟 Core Features
 
-### Core Functionality
-- **Gmail Integration**: Secure OAuth authentication with Gmail API access
-- **Smart Email Processing**: Normalizes and cleans email content from various formats
-- **AI-Powered Task Extraction**: Uses Claude 4 Sonnet to identify action items, deadlines, and follow-ups
-- **Intelligent Classification**: Automatically categorizes emails (regular, meetings, newsletters, etc.)
-- **Priority Scoring**: Calculates priority scores based on content, labels, and urgency keywords
-- **Natural Language Processing**: Extracts entities (emails, phone numbers, dates, amounts)
+### **📊 React Intelligence Dashboard**
+- **Real-time Intelligence Metrics**: Live tracking of business insights and entity relationships
+- **Proactive Business Insights**: AI-generated strategic recommendations with filtering and confidence scoring
+- **Entity Network Visualization**: Interactive Topics Brain and Relationship Intelligence panels
+- **Intelligence Assistant**: Context-aware AI chat with access to your complete business knowledge
 
-### AI Assistant
-- **Claude 4 Sonnet Integration**: Direct chat interface with state-of-the-art AI
-- **Context-Aware Responses**: AI understands your email context and workflow
-- **Task Management**: Get help with prioritization and planning
-- **Email Summaries**: AI-generated summaries of your email communications
+### **🧠 Advanced AI Processing**
+- **Claude 4 Sonnet Integration**: Comprehensive email analysis with business context understanding
+- **Comprehensive Context Stories**: Rich narratives explaining the full business context of each email and task
+- **Strategic Importance Scoring**: AI-calculated priority levels with confidence metrics
+- **Real-time Processing**: Continuous intelligence generation as new data arrives
 
-### Web Interface
-- **Modern Dashboard**: Clean, responsive web interface
-- **Real-time Processing**: Process emails and see results immediately
-- **Task Visualization**: View extracted tasks with priorities and categories
-- **Status Monitoring**: Track system health and authentication status
+### **📅 Meeting Intelligence & Preparation**
+- **Automated Meeting Preparation**: AI-generated prep tasks with attendee intelligence
+- **Meeting Context Stories**: Rich background information for every calendar event
+- **Attendee Analysis**: Strategic value assessment and communication history
+- **Proactive Scheduling**: Meeting recommendations based on relationship intelligence
+
+### **👥 Professional Network Management**
+- **Relationship Intelligence**: Comprehensive tracking of professional relationships
+- **Engagement Scoring**: Quantified relationship strength with trend analysis
+- **Communication Pattern Analysis**: Understanding of interaction styles and frequencies
+- **Relationship Decay Prediction**: Proactive suggestions for relationship maintenance
+
+### **🔄 Real-time Intelligence System**
+- **Continuous Processing**: Background analysis of emails and calendar events
+- **Proactive Insight Generation**: Strategic business recommendations
+- **Pattern Detection**: Relationship trends, topic momentum, and opportunity identification
+- **Entity-Centric Architecture**: Everything connected through intelligent relationship mapping
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.10+
-- Google Cloud Project with Gmail API enabled
-- Anthropic API key for Claude 4 Sonnet
+- **Node.js 16+** for React frontend
+- **Python 3.10+** for backend services
+- **Google Cloud Project** with Gmail and Calendar API access
+- **Anthropic API key** for Claude 4 Sonnet
 
 ### Installation
 
-1. **Clone and navigate to the project**:
+1. **Clone and Setup Backend**:
    ```bash
+   git clone <repository-url>
    cd chief_of_staff_ai
-   ```
-
-2. **Install dependencies**:
-   ```bash
    pip install -r requirements.txt
    ```
 
-3. **Set up environment variables**:
-   Create a `.env` file in the project root:
+2. **Environment Configuration**:
+   Create `.env` file in project root:
    ```env
-   # Required Settings
+   # Google OAuth (Required)
    GOOGLE_CLIENT_ID=your_google_client_id
    GOOGLE_CLIENT_SECRET=your_google_client_secret
+   GOOGLE_REDIRECT_URI=http://localhost:5000/auth/google/callback
+   
+   # Claude AI (Required)
    ANTHROPIC_API_KEY=your_anthropic_api_key
    
-   # Optional Settings
-   SECRET_KEY=your_secret_key_for_flask
+   # Application Settings
+   SECRET_KEY=your_secret_key
+   DEBUG=True
    PORT=5000
-   DEBUG=False
+   
+   # Intelligence Settings
+   EMAIL_FETCH_LIMIT=50
+   EMAIL_DAYS_BACK=30
+   ENABLE_REAL_TIME_PROCESSING=true
+   ENABLE_PREDICTIVE_ANALYTICS=true
    ```
 
-4. **Run the application**:
+3. **React Frontend Setup**:
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   ```
+
+4. **Database Initialization**:
+   ```bash
+   python migrate_intelligence.py
+   ```
+
+5. **Start the Application**:
    ```bash
    python ../main.py
    ```
 
-5. **Access the web interface**:
-   Open http://localhost:5000 in your browser
+6. **Access Intelligence Dashboard**:
+   Open http://localhost:5000
 
-## ⚙️ Configuration
+## ⚙️ Architecture
 
-### Google Cloud Setup
-
-1. **Create a Google Cloud Project**:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing one
-
-2. **Enable Gmail API**:
-   - Go to APIs & Services > Library
-   - Search for "Gmail API" and enable it
-
-3. **Create OAuth 2.0 Credentials**:
-   - Go to APIs & Services > Credentials
-   - Click "Create Credentials" > "OAuth 2.0 Client IDs"
-   - Application type: Web application
-   - Authorized redirect URIs: `http://localhost:5000/auth/google/callback`
-   - Note down the Client ID and Client Secret
-
-4. **Configure OAuth Consent Screen**:
-   - Add your email as a test user
-   - Add required scopes:
-     - `openid`
-     - `https://www.googleapis.com/auth/userinfo.email`
-     - `https://www.googleapis.com/auth/userinfo.profile`
-     - `https://www.googleapis.com/auth/gmail.readonly`
-
-### Anthropic Setup
-
-1. **Get API Key**:
-   - Sign up at [Anthropic](https://console.anthropic.com/)
-   - Generate an API key
-   - Add it to your `.env` file
-
-### Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `GOOGLE_CLIENT_ID` | ✅ | - | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | ✅ | - | Google OAuth client secret |
-| `ANTHROPIC_API_KEY` | ✅ | - | Anthropic API key for Claude |
-| `SECRET_KEY` | ⚠️ | `dev-key-change-in-production` | Flask session secret |
-| `PORT` | ❌ | `5000` | Web server port |
-| `DEBUG` | ❌ | `False` | Enable debug mode |
-| `EMAIL_FETCH_LIMIT` | ❌ | `50` | Max emails to fetch per request |
-| `EMAIL_DAYS_BACK` | ❌ | `30` | Days back to fetch emails |
-| `CLAUDE_MODEL` | ❌ | `claude-4-sonnet-20250514` | Claude model to use |
-
-## 📋 Usage
-
-### Web Interface
-
-1. **Authentication**:
-   - Click "Sign in with Google"
-   - Grant Gmail access permissions
-   - You'll be redirected to the dashboard
-
-2. **Process Emails**:
-   - Set number of emails to process (1-50)
-   - Set days back to fetch (1-30)
-   - Click "Process Emails & Extract Tasks"
-   - View results in real-time
-
-3. **AI Chat**:
-   - Use the chat interface to ask questions
-   - Get help with email summaries
-   - Ask for task prioritization advice
-   - General productivity assistance
-
-### Command Line Interface
-
-For advanced users and testing:
-
-```bash
-# Test authentication
-python run.py --email your@email.com --test-auth
-
-# Process emails via CLI
-python run.py --email your@email.com --max-emails 10 --days-back 7
-
-# Verbose output
-python run.py --email your@email.com --verbose
-```
-
-### API Endpoints
-
-The system provides REST API endpoints:
-
-- `POST /api/process-emails`: Process emails and extract tasks
-- `POST /api/chat`: Chat with Claude AI
-- `GET /api/status`: Get system status
-- `POST /api/fetch-emails`: Fetch emails only
-
-## 🏗️ Architecture
-
-### System Components
-
-```
-📧 Gmail API ──► 🔄 Gmail Fetcher ──► 📝 Email Normalizer ──► 🤖 Task Extractor ──► 💾 Results
-                                                                     ▲
-                                                              🧠 Claude 4 Sonnet
-```
-
-### Module Structure
-
+### **Backend System (Flask + SQLAlchemy)**
 ```
 chief_of_staff_ai/
-├── config/
-│   └── settings.py          # Configuration management
-├── auth/
-│   └── gmail_auth.py        # Gmail OAuth handling
-├── ingest/
-│   └── gmail_fetcher.py     # Email fetching from Gmail API
+├── models/
+│   ├── database.py              # Core entity models
+│   └── enhanced_models.py       # Intelligence-enhanced models
 ├── processors/
-│   ├── email_normalizer.py  # Email content normalization
-│   └── task_extractor.py    # AI-powered task extraction
-├── interface/
-│   └── prompt_console.py    # CLI interface (future)
-├── storage/
-│   └── vector_store.py      # Vector database (future)
-├── embeddings/
-│   └── embedder.py          # Text embeddings (future)
-└── utils/
-    └── datetime_utils.py    # Date/time utilities (future)
+│   ├── email_intelligence.py    # Email AI processing
+│   ├── intelligence_engine.py   # Core intelligence engine
+│   ├── realtime_processor.py    # Real-time processing
+│   ├── unified_entity_engine.py # Entity management
+│   └── analytics/
+│       └── predictive_analytics.py # Business predictions
+├── ingest/
+│   ├── gmail_fetcher.py         # Gmail API integration
+│   └── calendar_fetcher.py      # Calendar API integration
+├── api/
+│   └── enhanced_endpoints.py    # Intelligence APIs
+└── auth/
+    └── gmail_auth.py            # OAuth authentication
 ```
 
-## 🔍 Task Extraction
+### **Frontend System (React + TypeScript)**
+```
+frontend/
+├── src/
+│   ├── App.tsx                  # Main intelligence dashboard
+│   ├── components/              # React components
+│   ├── types/                   # TypeScript interfaces
+│   ├── hooks/                   # Custom React hooks
+│   └── utils/                   # Utility functions
+├── public/                      # Static assets
+└── package.json                # Dependencies
+```
 
-The AI system identifies and extracts:
+### **Intelligence Pipeline**
+```
+📧 Gmail/Calendar APIs → 🔄 Real-time Processor → 🧠 Claude 4 Analysis → 
+📊 Intelligence Engine → 💾 Entity Database → ⚡ React Dashboard
+```
 
-### Task Types
-- **Action Items**: Explicit tasks mentioned in emails
-- **Follow-ups**: Implied follow-up actions
-- **Deadlines**: Date-specific commitments
-- **Meetings**: Scheduling requests
-- **Research**: Information gathering tasks
+## 📋 Detailed Usage
 
-### Task Attributes
-- **Description**: Clear, actionable task description
-- **Priority**: High, medium, or low
-- **Category**: follow-up, deadline, meeting, research, administrative, other
-- **Due Date**: Parsed from natural language
-- **Assignee**: Person responsible
-- **Confidence Score**: AI confidence in extraction (0-1)
-- **Source**: Reference to original email
+### **Intelligence Dashboard Workflows**
 
-### Priority Calculation
-Tasks are prioritized based on:
-- Gmail labels (Important, Starred)
-- Urgency keywords in subject
-- Email type (direct vs. mass email)
-- Message type classification
+#### **1. Initial Setup & Sync**
+1. **Authentication**: Sign in with Google and authorize access
+2. **Intelligence Sync**: Click "Sync Intelligence" to process emails and calendar
+3. **Dashboard Overview**: View real-time intelligence metrics and insights
 
-## 🧪 Testing
+#### **2. Meeting Preparation**
+1. **Generate Meeting Intelligence**: AI analyzes upcoming meetings
+2. **Attendee Intelligence**: Review relationship context and strategic importance
+3. **Preparation Tasks**: Access AI-generated prep tasks and talking points
+4. **Meeting Context**: Understand business context and historical interactions
 
-### Manual Testing
+#### **3. Business Insights Management**
+1. **Proactive Insights**: Filter by type (relationship, meeting, opportunity, urgent)
+2. **Insight Analysis**: Click insights for detailed analysis and recommendations
+3. **Confidence Scoring**: Understand AI confidence levels (0-100%)
+4. **Action Tracking**: Follow up on insight recommendations
 
-1. **Authentication Test**:
-   ```bash
-   python run.py --email your@email.com --test-auth
+#### **4. Relationship Intelligence**
+1. **Professional Network**: Navigate people with engagement scoring
+2. **Communication Patterns**: Understand interaction frequency and style
+3. **Relationship Maintenance**: Receive proactive outreach suggestions
+4. **Strategic Value**: Assess business value of relationships
+
+#### **5. AI Assistant Interaction**
+1. **Context-Aware Chat**: Ask questions about your business intelligence
+2. **Knowledge Access**: AI has access to your complete email and calendar context
+3. **Strategic Recommendations**: Get business advice based on your data
+4. **Insight Explanations**: Understand how AI generated specific insights
+
+### **Advanced Features**
+
+#### **Real-time Intelligence Processing**
+- **Continuous Analysis**: Background processing of new emails and events
+- **Proactive Notifications**: AI alerts for important business opportunities
+- **Pattern Detection**: Automatic identification of business trends
+- **Relationship Monitoring**: Tracking of communication patterns and decay
+
+#### **Entity-Centric Intelligence**
+- **Topic Intelligence**: Business themes with momentum tracking
+- **Person Intelligence**: Comprehensive relationship analysis
+- **Task Intelligence**: Context-aware action items with business rationale
+- **Calendar Intelligence**: Meeting preparation and strategic importance
+
+## 🔧 Advanced Configuration
+
+### **Google Cloud Setup**
+
+1. **Create Google Cloud Project**:
+   - Enable Gmail API and Google Calendar API
+   - Create OAuth 2.0 credentials for web application
+   - Add authorized redirect URI: `http://localhost:5000/auth/google/callback`
+
+2. **Required OAuth Scopes**:
+   ```
+   https://www.googleapis.com/auth/gmail.readonly
+   https://www.googleapis.com/auth/calendar.readonly
+   https://www.googleapis.com/auth/userinfo.profile
+   https://www.googleapis.com/auth/userinfo.email
    ```
 
-2. **Full E2E Test**:
-   ```bash
-   python run.py --email your@email.com --max-emails 5
-   ```
+### **Anthropic API Setup**
 
-3. **Web Interface Test**:
-   - Start the server: `python ../main.py`
-   - Navigate to http://localhost:5000
-   - Complete OAuth flow
-   - Process test emails
+1. **Get Claude API Access**:
+   - Sign up at [Anthropic Console](https://console.anthropic.com/)
+   - Generate API key for Claude 4 Sonnet
+   - Configure usage limits and monitoring
 
-### Test Data
+### **Intelligence Configuration**
 
-The system works best with emails containing:
-- Clear action items ("Please send me the report by Friday")
-- Meeting requests ("Let's schedule a call next week")
-- Deadlines ("The proposal is due on March 15th")
-- Follow-up requests ("Can you follow up with the client?")
+```env
+# Processing Settings
+EMAIL_FETCH_LIMIT=50              # Max emails per sync
+EMAIL_DAYS_BACK=30               # Days to look back
+CALENDAR_DAYS_FORWARD=14         # Days ahead for calendar
+CALENDAR_DAYS_BACK=3             # Days back for calendar
+
+# AI Settings
+CLAUDE_MODEL=claude-4-sonnet-20250514
+AI_ANALYSIS_DEPTH=comprehensive   # or basic, detailed
+CONFIDENCE_THRESHOLD=0.7          # Minimum confidence for insights
+
+# Real-time Settings
+ENABLE_REAL_TIME_PROCESSING=true
+REAL_TIME_INTERVAL=60            # Seconds between updates
+ENABLE_PROACTIVE_INSIGHTS=true
+```
+
+## 🔍 API Reference
+
+### **Core Intelligence Endpoints**
+- `GET /api/intelligence-metrics` - Real-time intelligence quality metrics
+- `GET /api/intelligence-insights` - Proactive business insights
+- `POST /api/proactive-insights/generate` - Generate new insights
+
+### **Entity Management**
+- `GET /api/tasks` - Enhanced tasks with context stories
+- `GET /api/people` - Relationship intelligence
+- `GET /api/topics` - Topic momentum and intelligence
+- `GET /api/enhanced-calendar-events` - Meeting intelligence
+
+### **Intelligence Operations**
+- `POST /api/trigger-email-sync` - Unified intelligence sync
+- `POST /api/calendar/generate-meeting-intelligence` - Meeting preparation
+- `POST /api/chat-with-knowledge` - AI assistant with business context
+
+### **Real-time Features**
+- `WebSocket /ws/intelligence` - Live intelligence updates
+- `GET /api/status` - System health and processing status
+
+## 🧪 Development & Testing
+
+### **Development Setup**
+```bash
+# Backend development with auto-reload
+python main.py --debug
+
+# Frontend development with hot reload
+cd frontend && npm start
+
+# Database migrations
+python migrate_intelligence.py
+```
+
+### **Testing**
+```bash
+# Backend API testing
+python -m pytest tests/
+
+# React component testing
+cd frontend && npm test
+
+# Integration testing
+python test_integration.py
+
+# End-to-end testing
+npm run test:e2e
+```
+
+### **Debugging**
+```bash
+# Enable verbose logging
+export DEBUG=True
+export LOG_LEVEL=DEBUG
+
+# Test authentication
+python test_auth.py
+
+# Test AI processing
+python test_claude_integration.py
+```
+
+## 🚀 Production Deployment
+
+### **Heroku Deployment**
+```bash
+# Configure buildpacks
+heroku buildpacks:add heroku/nodejs
+heroku buildpacks:add heroku/python
+
+# Environment variables
+heroku config:set GOOGLE_CLIENT_ID=...
+heroku config:set ANTHROPIC_API_KEY=...
+heroku config:set SECRET_KEY=...
+
+# Deploy
+git push heroku main
+```
+
+### **Docker Deployment**
+```dockerfile
+# Multi-stage build with React and Flask
+FROM node:16 AS frontend
+COPY frontend/ /app/frontend/
+RUN cd /app/frontend && npm install && npm run build
+
+FROM python:3.10
+COPY . /app/
+COPY --from=frontend /app/frontend/build /app/frontend/build
+RUN pip install -r requirements.txt
+CMD ["python", "main.py"]
+```
 
 ## 🔒 Security & Privacy
 
-### Data Handling
-- **Gmail Access**: Read-only access with explicit user consent
-- **Local Storage**: Credentials stored temporarily in memory
-- **No Persistent Storage**: Raw emails are not permanently stored
-- **Encryption**: All API communications use HTTPS/TLS
+### **Data Handling**
+- **Read-only Access**: Only reads emails and calendar events
+- **Local Processing**: All intelligence analysis happens on your server
+- **No Data Sharing**: Your business intelligence stays completely private
+- **Encrypted Storage**: Sensitive data encrypted at rest
+- **Minimal Scopes**: Only requests necessary Google permissions
 
-### Privacy Features
-- **Minimal Scopes**: Only requests necessary Gmail permissions
-- **User Control**: Users can revoke access at any time
-- **No Data Sharing**: Email content is not shared with third parties
-- **Local Processing**: Most processing happens locally
-
-## 🚧 Future Enhancements
-
-### Planned Features
-- **Calendar Integration**: Google Calendar sync for meeting scheduling
-- **Vector Database**: Persistent email embeddings for semantic search
-- **Slack Integration**: Team communication processing
-- **File Upload**: Process documents and PDFs
-- **Task Management**: Complete task lifecycle management
-- **Notification System**: Smart alerts and reminders
-- **Mobile App**: Native mobile interface
-
-### Technical Improvements
-- **Database Storage**: Persistent task and email storage
-- **Caching Layer**: Redis for improved performance
-- **Background Processing**: Celery for async email processing
-- **Multi-user Support**: Team collaboration features
-- **Enterprise Auth**: SSO and enterprise authentication
+### **Privacy Features**
+- **User Control**: Complete control over data processing and retention
+- **Audit Trail**: Full logging of all AI processing and decisions
+- **Data Deletion**: Easy cleanup and data removal capabilities
+- **Transparent AI**: Clear explanations of how insights are generated
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+### **Development Workflow**
+1. Fork repository and create feature branch
+2. Follow TypeScript/Python code standards
+3. Add comprehensive tests for new features
+4. Update documentation for API changes
+5. Submit pull request with clear description
+
+### **Code Standards**
+- **Backend**: Python type hints, SQLAlchemy patterns, Flask best practices
+- **Frontend**: TypeScript strict mode, React hooks, component patterns
+- **Testing**: Unit tests, integration tests, E2E coverage
+- **Documentation**: Clear API documentation and user guides
+
+## 🆘 Troubleshooting
+
+### **Common Issues**
+
+**No Intelligence Data**:
+- Verify Google OAuth configuration
+- Check Gmail/Calendar API enablement
+- Confirm Anthropic API key validity
+- Run database migration
+
+**Real-time Updates Not Working**:
+- Check WebSocket connection in browser console
+- Verify real-time processing is enabled
+- Ensure Flask app is running in production mode
+
+**AI Assistant Not Responding**:
+- Verify Anthropic API key and usage limits
+- Check that business intelligence data has been processed
+- Ensure Claude model access
+
+**React Build Issues**:
+- Clear node_modules and reinstall dependencies
+- Check Node.js version compatibility
+- Verify Tailwind CSS configuration
+
+### **Performance Optimization**
+- **Database**: Use indexes for entity relationships
+- **API**: Implement caching for frequent queries
+- **React**: Code splitting and lazy loading
+- **Processing**: Batch AI operations for efficiency
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🆘 Support
-
-### Common Issues
-
-1. **OAuth Errors**:
-   - Verify Google Cloud setup
-   - Check redirect URIs
-   - Ensure Gmail API is enabled
-
-2. **Claude API Errors**:
-   - Verify API key is correct
-   - Check API usage limits
-   - Ensure model name is correct
-
-3. **No Tasks Extracted**:
-   - Check email content has actionable items
-   - Verify Claude API is working
-   - Try with different email types
-
-### Getting Help
-
-- Check the logs for detailed error messages
-- Use verbose mode for debugging: `--verbose`
-- Review the configuration settings
-- Test authentication separately: `--test-auth`
-
-### Contact
-
-For issues and feature requests, please create an issue in the repository.
+This project is licensed under the MIT License - see LICENSE file for details.
 
 ---
 
-**Built with ❤️ using Claude 4 Sonnet, Gmail API, and modern Python**
+**🎯 Your AI Chief of Staff**: Transforming business communication into intelligent action through advanced AI, real-time processing, and proactive insights.
+
+**Built with Claude 4 Sonnet, React, TypeScript, and Modern Python** - Professional business intelligence for the modern workplace.

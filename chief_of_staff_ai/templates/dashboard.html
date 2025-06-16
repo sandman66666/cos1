@@ -536,7 +536,7 @@
                 }
                 
                 // Load relationship intelligence
-                const peopleResponse = await fetch('/api/entities/people?limit=5');
+                const peopleResponse = await fetch('/api/people?limit=5');
                 const peopleData = await peopleResponse.json();
                 
                 if (peopleData.success) {

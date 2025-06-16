@@ -142,6 +142,7 @@ class Email(Base):
     
     # Processing metadata
     processed_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)  # Add missing created_at column
     normalizer_version = Column(String(50))
     has_errors = Column(Boolean, default=False)
     error_message = Column(Text)
@@ -200,7 +201,8 @@ class Email(Base):
             'key_insights': self.key_insights,
             'topics': self.topics,
             'action_required': self.action_required,
-            'follow_up_required': self.follow_up_required
+            'follow_up_required': self.follow_up_required,
+            'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
 class Task(Base):
@@ -1049,51 +1051,50 @@ class DatabaseManager:
     def save_email(self, user_id: int, email_data: Dict) -> Email:
         """Save processed email to database"""
         with self.get_session() as session:
-            # Check if email already exists
-            existing = session.query(Email).filter(
-                Email.user_id == user_id,
-                Email.gmail_id == email_data['id']
-            ).first()
-            
-            if existing:
-                return existing
-            
-            # Create new email record
-            email = Email(
-                user_id=user_id,
-                gmail_id=email_data['id'],
-                thread_id=email_data.get('thread_id'),
-                sender=email_data.get('sender'),
-                sender_name=email_data.get('sender_name'),
-                subject=email_data.get('subject'),
-                body_text=email_data.get('body_text'),
-                body_html=email_data.get('body_html'),
-                body_clean=email_data.get('body_clean'),
-                body_preview=email_data.get('body_preview'),
-                snippet=email_data.get('snippet'),
-                recipients=email_data.get('recipients', []),
-                cc=email_data.get('cc', []),
-                bcc=email_data.get('bcc', []),
-                labels=email_data.get('labels', []),
-                attachments=email_data.get('attachments', []),
-                entities=email_data.get('entities', {}),
-                email_date=email_data.get('timestamp'),
-                size_estimate=email_data.get('size_estimate'),
-                message_type=email_data.get('message_type'),
-                priority_score=email_data.get('priority_score'),
-                is_read=email_data.get('is_read', False),
-                is_important=email_data.get('is_important', False),
-                is_starred=email_data.get('is_starred', False),
-                has_attachments=email_data.get('has_attachments', False),
-                normalizer_version=email_data.get('processing_metadata', {}).get('normalizer_version'),
-                has_errors=email_data.get('error', False),
-                error_message=email_data.get('error_message')
-            )
-            
-            session.add(email)
-            session.commit()
-            session.refresh(email)
-            return email
+            try:
+                # Check if email already exists
+                existing = session.query(Email).filter(
+                    Email.user_id == user_id,
+                    Email.gmail_id == email_data['id']
+                ).first()
+                
+                if existing:
+                    return existing
+                
+                # Create new email record
+                email = Email(
+                    user_id=user_id,
+                    gmail_id=email_data['id'],
+                    thread_id=email_data.get('thread_id'),
+                    sender=email_data.get('sender'),
+                    sender_name=email_data.get('sender_name'),
+                    subject=email_data.get('subject'),
+                    body_text=email_data.get('body_text'),
+                    body_html=email_data.get('body_html'),
+                    recipient_emails=email_data.get('recipient_emails', []),  # Store recipient emails
+                    recipients=email_data.get('recipient_emails', []),  # For backwards compatibility
+                    cc=email_data.get('cc', []),
+                    bcc=email_data.get('bcc', []),
+                    email_date=email_data.get('email_date') or email_data.get('timestamp'),
+                    message_type=email_data.get('message_type', 'regular'),
+                    is_read=email_data.get('is_read', False),
+                    is_important=email_data.get('is_important', False),
+                    is_starred=email_data.get('is_starred', False),
+                    has_attachments=email_data.get('has_attachments', False),
+                    processed_at=datetime.utcnow(),
+                    created_at=datetime.utcnow(),
+                    normalizer_version=email_data.get('processing_metadata', {}).get('fetcher_version', 'v1')
+                )
+                
+                session.add(email)
+                session.commit()
+                session.refresh(email)
+                return email
+                
+            except Exception as e:
+                logger.error(f"Failed to save email: {str(e)}")
+                session.rollback()
+                raise
     
     def save_task(self, user_id: int, email_id: Optional[int], task_data: Dict) -> Task:
         """Save extracted task to database"""
@@ -1903,6 +1904,353 @@ class DatabaseManager:
             session.refresh(event)
             return event
 
+    def create_or_update_task(self, user_id: int, task_data: Dict) -> Task:
+        """Create or update a task with enhanced intelligence data"""
+        with self.get_session() as session:
+            existing_task = None
+            
+            # Check if task already exists (by description similarity for deduplication)
+            if task_data.get('description'):
+                existing_tasks = session.query(Task).filter(
+                    Task.user_id == user_id,
+                    Task.description.like(f"%{task_data['description'][:50]}%")
+                ).all()
+                
+                for task in existing_tasks:
+                    # Simple similarity check to avoid duplicates
+                    if len(set(task.description.split()) & set(task_data['description'].split())) > 3:
+                        existing_task = task
+                        break
+            
+            if existing_task:
+                # Update existing task with new intelligence
+                for key, value in task_data.items():
+                    if hasattr(existing_task, key) and value is not None:
+                        setattr(existing_task, key, value)
+                existing_task.updated_at = datetime.utcnow()
+                session.commit()
+                return existing_task
+            else:
+                # Create new task
+                task = Task(**task_data)
+                task.user_id = user_id
+                session.add(task)
+                session.commit()
+                return task
+
+    def create_intelligence_insight(self, user_id: int, insight_data: Dict) -> IntelligenceInsight:
+        """Create a new intelligence insight"""
+        with self.get_session() as session:
+            insight = IntelligenceInsight(**insight_data)
+            insight.user_id = user_id
+            session.add(insight)
+            session.commit()
+            return insight
+
+    def get_intelligence_insights(self, user_id: int, status: str = None, limit: int = 50) -> List[IntelligenceInsight]:
+        """Get intelligence insights for a user"""
+        with self.get_session() as session:
+            query = session.query(IntelligenceInsight).filter(IntelligenceInsight.user_id == user_id)
+            
+            if status:
+                query = query.filter(IntelligenceInsight.status == status)
+            
+            insights = query.order_by(IntelligenceInsight.created_at.desc()).limit(limit).all()
+            session.expunge_all()
+            return insights
+
+    def create_entity_relationship(self, user_id: int, relationship_data: Dict) -> EntityRelationship:
+        """Create or update an entity relationship"""
+        with self.get_session() as session:
+            # Check if relationship already exists
+            existing = session.query(EntityRelationship).filter(
+                EntityRelationship.user_id == user_id,
+                EntityRelationship.source_entity_type == relationship_data.get('source_entity_type'),
+                EntityRelationship.source_entity_id == relationship_data.get('source_entity_id'),
+                EntityRelationship.target_entity_type == relationship_data.get('target_entity_type'),
+                EntityRelationship.target_entity_id == relationship_data.get('target_entity_id'),
+                EntityRelationship.relationship_type == relationship_data.get('relationship_type')
+            ).first()
+            
+            if existing:
+                # Update existing relationship
+                existing.evidence_count += 1
+                existing.last_evidence_date = datetime.utcnow()
+                if relationship_data.get('strength'):
+                    existing.strength = max(existing.strength, relationship_data['strength'])
+                session.commit()
+                return existing
+            else:
+                # Create new relationship
+                relationship = EntityRelationship(**relationship_data)
+                relationship.user_id = user_id
+                session.add(relationship)
+                session.commit()
+                return relationship
+
+    def get_entity_relationships(self, user_id: int, entity_type: str = None, entity_id: int = None) -> List[EntityRelationship]:
+        """Get entity relationships for a user"""
+        with self.get_session() as session:
+            query = session.query(EntityRelationship).filter(EntityRelationship.user_id == user_id)
+            
+            if entity_type and entity_id:
+                query = query.filter(
+                    ((EntityRelationship.source_entity_type == entity_type) & 
+                     (EntityRelationship.source_entity_id == entity_id)) |
+                    ((EntityRelationship.target_entity_type == entity_type) & 
+                     (EntityRelationship.target_entity_id == entity_id))
+                )
+            
+            relationships = query.order_by(EntityRelationship.strength.desc()).all()
+            session.expunge_all()
+            return relationships
+
+    def enhance_calendar_event_with_intelligence(self, user_id: int, event_id: str, intelligence_data: Dict) -> bool:
+        """Enhance calendar event with AI intelligence"""
+        with self.get_session() as session:
+            event = session.query(Calendar).filter(
+                Calendar.user_id == user_id,
+                Calendar.event_id == event_id
+            ).first()
+            
+            if event:
+                # Update with intelligence data
+                if intelligence_data.get('business_context'):
+                    event.business_context = intelligence_data['business_context']
+                if intelligence_data.get('attendee_intelligence'):
+                    event.business_context = intelligence_data['attendee_intelligence']  # Store in business_context for now
+                if intelligence_data.get('importance_score'):
+                    event.importance_score = intelligence_data['importance_score']
+                if intelligence_data.get('preparation_needed'):
+                    event.preparation_needed = intelligence_data['preparation_needed']
+                
+                event.ai_processed_at = datetime.utcnow()
+                session.commit()
+                return True
+            
+            return False
+
+    def create_meeting_preparation_tasks(self, user_id: int, event_id: str, prep_tasks: List[Dict]) -> List[Task]:
+        """Create meeting preparation tasks"""
+        created_tasks = []
+        
+        for task_data in prep_tasks:
+            # Add meeting context to task
+            enhanced_task_data = {
+                **task_data,
+                'category': 'meeting_prep',
+                'source_text': f"Preparation for meeting: {event_id}",
+                'context': f"Meeting preparation task generated by AI for event {event_id}"
+            }
+            
+            task = self.create_or_update_task(user_id, enhanced_task_data)
+            if task:
+                created_tasks.append(task)
+        
+        return created_tasks
+
+    def get_upcoming_meetings_needing_prep(self, user_id: int, hours_ahead: int = 48) -> List[Calendar]:
+        """Get upcoming meetings that need preparation"""
+        with self.get_session() as session:
+            cutoff_time = datetime.utcnow() + timedelta(hours=hours_ahead)
+            
+            meetings = session.query(Calendar).filter(
+                Calendar.user_id == user_id,
+                Calendar.start_time.between(datetime.utcnow(), cutoff_time),
+                Calendar.preparation_needed == True
+            ).order_by(Calendar.start_time.asc()).all()
+            
+            session.expunge_all()
+            return meetings
+
+    def update_person_intelligence(self, user_id: int, person_id: int, intelligence_data: Dict) -> bool:
+        """Update person with enhanced intelligence data"""
+        with self.get_session() as session:
+            person = session.query(Person).filter(
+                Person.user_id == user_id,
+                Person.id == person_id
+            ).first()
+            
+            if person:
+                # Update intelligence fields
+                for key, value in intelligence_data.items():
+                    if hasattr(person, key) and value is not None:
+                        setattr(person, key, value)
+                
+                person.updated_at = datetime.utcnow()
+                session.commit()
+                return True
+            
+            return False
+
+    def get_business_intelligence_summary(self, user_id: int) -> Dict:
+        """Get comprehensive business intelligence summary"""
+        with self.get_session() as session:
+            # Get active insights
+            active_insights = session.query(IntelligenceInsight).filter(
+                IntelligenceInsight.user_id == user_id,
+                IntelligenceInsight.status.in_(['new', 'viewed'])
+            ).count()
+            
+            # Get high-value relationships
+            strong_relationships = session.query(EntityRelationship).filter(
+                EntityRelationship.user_id == user_id,
+                EntityRelationship.strength > 0.7
+            ).count()
+            
+            # Get upcoming meetings needing prep
+            upcoming_meetings = self.get_upcoming_meetings_needing_prep(user_id, 72)
+            
+            # Get recent strategic communications
+            strategic_emails = session.query(Email).filter(
+                Email.user_id == user_id,
+                Email.strategic_importance > 0.7,
+                Email.email_date > datetime.utcnow() - timedelta(days=7)
+            ).count()
+            
+            return {
+                'active_insights': active_insights,
+                'strong_relationships': strong_relationships,
+                'meetings_needing_prep': len(upcoming_meetings),
+                'recent_strategic_communications': strategic_emails,
+                'intelligence_quality_score': min(1.0, (active_insights + strong_relationships * 0.5) / 10)
+            }
+
+    def flush_user_data(self, user_id: int) -> bool:
+        """
+        Flush all data for a specific user from the database.
+        This is a complete data wipe for the user while preserving the user account.
+        
+        Args:
+            user_id: ID of the user whose data should be flushed
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            with self.get_session() as session:
+                logger.warning(f"🗑️ Starting complete data flush for user ID {user_id}")
+                
+                # Delete in order to respect foreign key constraints
+                
+                # 1. Delete intelligence insights
+                try:
+                    insights_count = session.query(IntelligenceInsight).filter(IntelligenceInsight.user_id == user_id).count()
+                    session.query(IntelligenceInsight).filter(IntelligenceInsight.user_id == user_id).delete()
+                    logger.info(f"   Deleted {insights_count} intelligence insights")
+                except Exception as e:
+                    logger.warning(f"   Intelligence insights table issue: {e}")
+                
+                # 2. Delete entity relationships (using correct column names)
+                try:
+                    relationships_count = session.query(EntityRelationship).filter(EntityRelationship.user_id == user_id).count()
+                    session.query(EntityRelationship).filter(EntityRelationship.user_id == user_id).delete()
+                    logger.info(f"   Deleted {relationships_count} entity relationships")
+                except Exception as e:
+                    logger.warning(f"   Entity relationships table issue: {e}")
+                
+                # 3. Delete Smart Contact Strategy data (if exists)
+                try:
+                    contact_contexts_count = session.query(ContactContext).filter(ContactContext.user_id == user_id).count()
+                    session.query(ContactContext).filter(ContactContext.user_id == user_id).delete()
+                    logger.info(f"   Deleted {contact_contexts_count} contact contexts")
+                except Exception as e:
+                    logger.warning(f"   Contact contexts table issue: {e}")
+                
+                try:
+                    task_contexts_count = session.query(TaskContext).filter(TaskContext.user_id == user_id).count()
+                    session.query(TaskContext).filter(TaskContext.user_id == user_id).delete()
+                    logger.info(f"   Deleted {task_contexts_count} task contexts")
+                except Exception as e:
+                    logger.warning(f"   Task contexts table issue: {e}")
+                
+                try:
+                    topic_knowledge_count = session.query(TopicKnowledgeBase).filter(TopicKnowledgeBase.user_id == user_id).count()
+                    session.query(TopicKnowledgeBase).filter(TopicKnowledgeBase.user_id == user_id).delete()
+                    logger.info(f"   Deleted {topic_knowledge_count} topic knowledge entries")
+                except Exception as e:
+                    logger.warning(f"   Topic knowledge table issue: {e}")
+                
+                try:
+                    trusted_contacts_count = session.query(TrustedContact).filter(TrustedContact.user_id == user_id).count()
+                    session.query(TrustedContact).filter(TrustedContact.user_id == user_id).delete()
+                    logger.info(f"   Deleted {trusted_contacts_count} trusted contacts")
+                except Exception as e:
+                    logger.warning(f"   Trusted contacts table issue: {e}")
+                
+                # 4. Delete calendar events
+                try:
+                    calendar_count = session.query(Calendar).filter(Calendar.user_id == user_id).count()
+                    session.query(Calendar).filter(Calendar.user_id == user_id).delete()
+                    logger.info(f"   Deleted {calendar_count} calendar events")
+                except Exception as e:
+                    logger.warning(f"   Calendar events table issue: {e}")
+                
+                # 5. Delete tasks
+                try:
+                    tasks_count = session.query(Task).filter(Task.user_id == user_id).count()
+                    session.query(Task).filter(Task.user_id == user_id).delete()
+                    logger.info(f"   Deleted {tasks_count} tasks")
+                except Exception as e:
+                    logger.warning(f"   Tasks table issue: {e}")
+                
+                # 6. Delete emails
+                try:
+                    emails_count = session.query(Email).filter(Email.user_id == user_id).count()
+                    session.query(Email).filter(Email.user_id == user_id).delete()
+                    logger.info(f"   Deleted {emails_count} emails")
+                except Exception as e:
+                    logger.warning(f"   Emails table issue: {e}")
+                
+                # 7. Delete people
+                try:
+                    people_count = session.query(Person).filter(Person.user_id == user_id).count()
+                    session.query(Person).filter(Person.user_id == user_id).delete()
+                    logger.info(f"   Deleted {people_count} people")
+                except Exception as e:
+                    logger.warning(f"   People table issue: {e}")
+                
+                # 8. Delete projects
+                try:
+                    projects_count = session.query(Project).filter(Project.user_id == user_id).count()
+                    session.query(Project).filter(Project.user_id == user_id).delete()
+                    logger.info(f"   Deleted {projects_count} projects")
+                except Exception as e:
+                    logger.warning(f"   Projects table issue: {e}")
+                
+                # 9. Delete topics
+                try:
+                    topics_count = session.query(Topic).filter(Topic.user_id == user_id).count()
+                    session.query(Topic).filter(Topic.user_id == user_id).delete()
+                    logger.info(f"   Deleted {topics_count} topics")
+                except Exception as e:
+                    logger.warning(f"   Topics table issue: {e}")
+                
+                # 10. Delete user sessions and API keys
+                try:
+                    sessions_count = session.query(UserSession).filter(UserSession.user_id == user_id).count()
+                    session.query(UserSession).filter(UserSession.user_id == user_id).delete()
+                    logger.info(f"   Deleted {sessions_count} user sessions")
+                except Exception as e:
+                    logger.warning(f"   User sessions table issue: {e}")
+                
+                try:
+                    api_keys_count = session.query(ApiKey).filter(ApiKey.user_id == user_id).count()
+                    session.query(ApiKey).filter(ApiKey.user_id == user_id).delete()
+                    logger.info(f"   Deleted {api_keys_count} API keys")
+                except Exception as e:
+                    logger.warning(f"   API keys table issue: {e}")
+                
+                # Commit all deletions
+                session.commit()
+                
+                logger.warning(f"✅ Complete data flush successful for user ID {user_id}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"❌ Database flush failed for user ID {user_id}: {str(e)}")
+            return False
+
 # Global database manager instance - Initialize lazily
 _db_manager = None
 
@@ -1915,3 +2263,156 @@ def get_db_manager():
 
 # Export as db_manager for compatibility, but don't instantiate during import
 db_manager = None  # Will be set by get_db_manager() when first called 
+
+# At the end of the file, before the DatabaseManager class, add these enhanced intelligence models
+
+class IntelligenceInsight(Base):
+    """Proactive intelligence insights generated by AI"""
+    __tablename__ = 'intelligence_insights'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Insight content
+    insight_type = Column(String(50), nullable=False, index=True)  # meeting_prep, relationship_alert, topic_momentum, urgent_task
+    title = Column(String(255), nullable=False)
+    description = Column(Text)
+    priority = Column(String(20), default='medium', index=True)  # high, medium, low
+    confidence = Column(Float, default=0.5)
+    
+    # Related entities
+    related_entity_type = Column(String(50), index=True)  # email, task, person, event
+    related_entity_id = Column(Integer, index=True)
+    
+    # Actionable data
+    action_required = Column(Boolean, default=False)
+    action_due_date = Column(DateTime)
+    action_taken = Column(Boolean, default=False)
+    
+    # Insight lifecycle
+    status = Column(String(20), default='new', index=True)  # new, viewed, acted_on, dismissed
+    user_feedback = Column(String(50))  # helpful, not_helpful, etc.
+    expires_at = Column(DateTime)
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    viewed_at = Column(DateTime)
+    acted_on_at = Column(DateTime)
+    
+    # Relationships
+    user = relationship("User", backref="intelligence_insights")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_insight_user_type', 'user_id', 'insight_type'),
+        Index('idx_insight_user_status', 'user_id', 'status'),
+        Index('idx_insight_user_priority', 'user_id', 'priority'),
+        Index('idx_insight_expires', 'expires_at'),
+    )
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'insight_type': self.insight_type,
+            'title': self.title,
+            'description': self.description,
+            'priority': self.priority,
+            'confidence': self.confidence,
+            'related_entity_type': self.related_entity_type,
+            'related_entity_id': self.related_entity_id,
+            'action_required': self.action_required,
+            'action_due_date': self.action_due_date.isoformat() if self.action_due_date else None,
+            'action_taken': self.action_taken,
+            'status': self.status,
+            'user_feedback': self.user_feedback,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'viewed_at': self.viewed_at.isoformat() if self.viewed_at else None,
+            'acted_on_at': self.acted_on_at.isoformat() if self.acted_on_at else None
+        }
+
+
+class EntityRelationship(Base):
+    """Relationships between entities (people, tasks, events, topics)"""
+    __tablename__ = 'entity_relationships'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    
+    # Relationship entities
+    source_entity_type = Column(String(50), nullable=False, index=True)  # person, task, event, topic
+    source_entity_id = Column(Integer, nullable=False, index=True)
+    target_entity_type = Column(String(50), nullable=False, index=True)
+    target_entity_id = Column(Integer, nullable=False, index=True)
+    
+    # Relationship properties
+    relationship_type = Column(String(100), nullable=False, index=True)  # works_with, mentioned_in, assigned_to, discussed_in
+    strength = Column(Float, default=0.5)  # 0.0 to 1.0
+    direction = Column(String(20), default='bidirectional')  # unidirectional, bidirectional
+    
+    # Supporting evidence
+    evidence_count = Column(Integer, default=1)
+    last_evidence_date = Column(DateTime, default=datetime.utcnow)
+    source_emails = Column(JSONType)  # Email IDs that support this relationship
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", backref="entity_relationships")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_relationship_source', 'user_id', 'source_entity_type', 'source_entity_id'),
+        Index('idx_relationship_target', 'user_id', 'target_entity_type', 'target_entity_id'),
+        Index('idx_relationship_type', 'user_id', 'relationship_type'),
+        Index('idx_relationship_strength', 'user_id', 'strength'),
+    )
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'source_entity_type': self.source_entity_type,
+            'source_entity_id': self.source_entity_id,
+            'target_entity_type': self.target_entity_type,
+            'target_entity_id': self.target_entity_id,
+            'relationship_type': self.relationship_type,
+            'strength': self.strength,
+            'direction': self.direction,
+            'evidence_count': self.evidence_count,
+            'last_evidence_date': self.last_evidence_date.isoformat() if self.last_evidence_date else None,
+            'source_emails': self.source_emails,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+# Enhance existing models with comprehensive intelligence fields
+# Add these columns to Task model (after the existing fields)
+# comprehensive_context_story = Column(Text)  # Rich narrative about task background
+# detailed_task_meaning = Column(Text)  # Detailed explanation of what the task means
+# comprehensive_importance_analysis = Column(Text)  # Why this task is important
+# comprehensive_origin_details = Column(Text)  # Where this task came from
+# business_intelligence = Column(JSONType)  # Additional business intelligence metadata
+
+# Add these columns to Person model (after the existing fields)  
+# comprehensive_relationship_story = Column(Text)  # Rich narrative about the relationship
+# relationship_insights = Column(Text)  # Actionable relationship insights
+# relationship_intelligence = Column(JSONType)  # Comprehensive relationship metadata
+# business_context = Column(JSONType)  # Enhanced business context data
+# relationship_analytics = Column(JSONType)  # Relationship analytics and patterns
+
+# Add these columns to Calendar model (after the existing fields)
+# meeting_preparation_tasks = Column(JSONType)  # List of preparation task IDs
+# attendee_intelligence = Column(Text)  # Intelligence about meeting attendees
+# meeting_context_story = Column(Text)  # Rich narrative about meeting purpose
+# preparation_priority = Column(Float, default=0.5)  # How important prep is
+# strategic_importance = Column(Float, default=0.5)  # Strategic value of meeting
+# preparation_insights = Column(JSONType)  # Specific preparation insights
+# outcome_prediction = Column(JSONType)  # Predicted meeting outcomes
+
+# ... existing code ...

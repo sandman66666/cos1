@@ -462,12 +462,12 @@
     async function loadPeopleAndTopics() {
         try {
             const [peopleResponse, topicsResponse] = await Promise.all([
-                axios.get('/api/entities/people', { params: { limit: 500 } }),
+                axios.get('/api/people', { params: { limit: 500 } }),
                 axios.get('/api/entities/topics', { params: { limit: 500 } })
             ]);
             
             if (peopleResponse.data.success) {
-                people = peopleResponse.data.data.people || [];
+                people = peopleResponse.data.people || [];
                 populatePeopleFilter();
             }
             

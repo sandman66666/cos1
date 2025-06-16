@@ -9,10 +9,11 @@ Core principle: "If I don't engage with it, it probably doesn't matter to my bus
 
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass
 from email.utils import parseaddr
+import json
 
 from models.database import get_db_manager, TrustedContact, Person
 from ingest.gmail_fetcher import gmail_fetcher
@@ -90,7 +91,22 @@ class SmartContactStrategy:
             contact_metrics = {}
             
             for email in sent_emails:
-                email_date = email.get('timestamp')
+                # Ensure we have a valid datetime for email_date
+                try:
+                    if isinstance(email.get('timestamp'), str):
+                        email_date = datetime.fromisoformat(email['timestamp'].replace('Z', '+00:00'))
+                    elif isinstance(email.get('timestamp'), datetime):
+                        email_date = email['timestamp']
+                    elif isinstance(email.get('email_date'), str):
+                        email_date = datetime.fromisoformat(email['email_date'].replace('Z', '+00:00'))
+                    elif isinstance(email.get('email_date'), datetime):
+                        email_date = email['email_date']
+                    else:
+                        email_date = None
+                except Exception as e:
+                    logger.warning(f"Failed to parse email date: {e}")
+                    email_date = None
+
                 recipients = self._extract_all_recipients(email)
                 
                 for recipient_email in recipients:
@@ -111,12 +127,15 @@ class SmartContactStrategy:
                     
                     metrics = contact_metrics[recipient_email]
                     metrics['total_sent_emails'] += 1
-                    metrics['sent_dates'].append(email_date)
-                    
                     if email_date:
-                        if not metrics['first_sent_date'] or email_date < metrics['first_sent_date']:
+                        metrics['sent_dates'].append(email_date)
+                        
+                        # Update first_sent_date if this is earlier
+                        if not metrics['first_sent_date'] or (email_date and email_date < metrics['first_sent_date']):
                             metrics['first_sent_date'] = email_date
-                        if not metrics['last_sent_date'] or email_date > metrics['last_sent_date']:
+                        
+                        # Update last_sent_date if this is later
+                        if not metrics['last_sent_date'] or (email_date and email_date > metrics['last_sent_date']):
                             metrics['last_sent_date'] = email_date
                     
                     # Extract topics from subject and body
@@ -375,26 +394,74 @@ class SmartContactStrategy:
         """Extract all email recipients (TO, CC, BCC) from an email"""
         recipients = set()
         
-        # Extract from TO field
-        to_list = email.get('recipients', [])
-        if isinstance(to_list, str):
-            to_list = [to_list]
+        if not email:
+            logger.warning("Empty email data provided")
+            return recipients
+            
+        logger.info(f"Processing email: {email.get('subject', 'No subject')}")
+        logger.info(f"Raw email data: {email}")
         
-        for recipient in to_list:
-            email_addr = parseaddr(recipient)[1].lower()
-            if email_addr and '@' in email_addr:
-                recipients.add(email_addr)
-        
+        # Extract from recipient_emails field (primary)
+        recipient_list = email.get('recipient_emails', [])
+        if recipient_list:
+            if isinstance(recipient_list, str):
+                try:
+                    recipient_list = json.loads(recipient_list)
+                except:
+                    recipient_list = [recipient_list]
+            elif recipient_list is None:
+                recipient_list = []
+            
+            for recipient in recipient_list:
+                if isinstance(recipient, str) and '@' in recipient:
+                    recipients.add(recipient.lower())
+
+        # Extract from recipients field (legacy)
+        legacy_recipients = email.get('recipients', [])
+        if legacy_recipients:
+            if isinstance(legacy_recipients, str):
+                try:
+                    legacy_recipients = json.loads(legacy_recipients)
+                except:
+                    legacy_recipients = [legacy_recipients]
+            elif legacy_recipients is None:
+                legacy_recipients = []
+            
+            for recipient in legacy_recipients:
+                if isinstance(recipient, str) and '@' in recipient:
+                    recipients.add(recipient.lower())
+
         # Extract from CC field
         cc_list = email.get('cc', [])
-        if isinstance(cc_list, str):
-            cc_list = [cc_list]
-        
-        for recipient in cc_list:
-            email_addr = parseaddr(recipient)[1].lower()
-            if email_addr and '@' in email_addr:
-                recipients.add(email_addr)
-        
+        if cc_list:
+            if isinstance(cc_list, str):
+                try:
+                    cc_list = json.loads(cc_list)
+                except:
+                    cc_list = [cc_list]
+            elif cc_list is None:
+                cc_list = []
+            
+            for recipient in cc_list:
+                if isinstance(recipient, str) and '@' in recipient:
+                    recipients.add(recipient.lower())
+
+        # Extract from BCC field
+        bcc_list = email.get('bcc', [])
+        if bcc_list:
+            if isinstance(bcc_list, str):
+                try:
+                    bcc_list = json.loads(bcc_list)
+                except:
+                    bcc_list = [bcc_list]
+            elif bcc_list is None:
+                bcc_list = []
+            
+            for recipient in bcc_list:
+                if isinstance(recipient, str) and '@' in recipient:
+                    recipients.add(recipient.lower())
+
+        logger.info(f"Final recipients set: {recipients}")
         return recipients
     
     def _extract_email_topics(self, email: Dict) -> Set[str]:
@@ -428,21 +495,27 @@ class SmartContactStrategy:
         """
         try:
             sent_count = metrics['total_sent_emails']
-            first_date = metrics['first_sent_date']
-            last_date = metrics['last_sent_date']
+            first_date = metrics.get('first_sent_date')
+            last_date = metrics.get('last_sent_date')
             
             if not first_date or not last_date:
                 return 0.1
+            
+            # Convert dates to datetime if they're strings
+            if isinstance(first_date, str):
+                first_date = datetime.fromisoformat(first_date)
+            if isinstance(last_date, str):
+                last_date = datetime.fromisoformat(last_date)
             
             # Frequency score (0.0 to 0.5)
             frequency_score = min(sent_count / 50.0, 0.5)  # Cap at 50 emails
             
             # Recency score (0.0 to 0.3)
-            days_since_last = (datetime.now() - last_date).days if last_date else 999
+            days_since_last = (datetime.now(timezone.utc) - last_date).days if last_date else 999
             recency_score = max(0, 0.3 - (days_since_last / 365.0 * 0.3))
             
             # Relationship span score (0.0 to 0.2)
-            relationship_days = (last_date - first_date).days if first_date else 0
+            relationship_days = (last_date - first_date).days if first_date and last_date else 0
             span_score = min(relationship_days / 365.0 * 0.2, 0.2)
             
             total_score = frequency_score + recency_score + span_score
