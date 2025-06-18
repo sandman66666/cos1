@@ -11,7 +11,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from auth.gmail_auth import gmail_auth
-from models.database import get_db_manager, Email
+from chief_of_staff_ai.models.database import get_db_manager, Email
 from config.settings import settings
 
 # Optional compatibility imports
@@ -245,19 +245,56 @@ class GmailFetcher:
             # Build Gmail service
             service = build('gmail', 'v1', credentials=credentials)
             
-            # Calculate date range
+            # Try multiple query strategies
+            query_strategies = []
+            
+            # Strategy 1: Date-based sent emails query
             since_date = datetime.utcnow() - timedelta(days=days_back)
+            query_strategies.append({
+                'query': f"after:{since_date.strftime('%Y/%m/%d')} in:sent",
+                'description': f"Sent emails after {since_date.strftime('%Y/%m/%d')}"
+            })
             
-            # Query for sent emails
-            sent_query = (
-                f"after:{since_date.strftime('%Y/%m/%d')} "
-                f"in:sent"
-            )
+            # Strategy 2: Just sent folder without date filter
+            query_strategies.append({
+                'query': "in:sent",
+                'description': "All sent emails"
+            })
             
-            logger.info(f"Fetching sent emails for {user_email} with query: {sent_query}")
+            # Strategy 3: Alternative sent query
+            query_strategies.append({
+                'query': "is:sent",
+                'description': "Sent emails using 'is:sent'"
+            })
             
-            # Fetch email list
-            email_list = self._fetch_email_list(service, sent_query, max_emails)
+            # Strategy 4: From me query
+            query_strategies.append({
+                'query': "from:me",
+                'description': "Emails from me"
+            })
+            
+            # Try each strategy until one works
+            email_list = []
+            successful_query = None
+            
+            for strategy in query_strategies:
+                try:
+                    logger.info(f"Trying query strategy: {strategy['description']}")
+                    logger.info(f"Query: {strategy['query']}")
+                    
+                    email_list = self._fetch_email_list(service, strategy['query'], max_emails)
+                    
+                    if email_list:
+                        successful_query = strategy
+                        logger.info(f"✅ Success with query: {strategy['query']} - Found {len(email_list)} emails")
+                        break
+                    else:
+                        logger.info(f"❌ No results with query: {strategy['query']}")
+                        
+                except Exception as e:
+                    logger.warning(f"Query strategy failed: {strategy['query']} - {str(e)}")
+                    continue
+            
             if not email_list:
                 return {
                     'success': True,
@@ -266,8 +303,9 @@ class GmailFetcher:
                     'count': 0,
                     'source': 'gmail_api_sent',
                     'fetched_at': datetime.utcnow().isoformat(),
-                    'message': 'No sent emails found in the specified time range',
-                    'query_used': sent_query
+                    'message': 'No sent emails found with any query strategy',
+                    'query_strategies_tried': [s['description'] for s in query_strategies],
+                    'recommendation': 'Check if you have sent emails in your Gmail account'
                 }
             
             # Fetch full email content for sent emails (lighter processing)
@@ -282,7 +320,8 @@ class GmailFetcher:
                 'count': len(emails),
                 'source': 'gmail_api_sent',
                 'fetched_at': datetime.utcnow().isoformat(),
-                'query_used': sent_query,
+                'query_used': successful_query['query'] if successful_query else 'unknown',
+                'query_description': successful_query['description'] if successful_query else 'unknown',
                 'days_back': days_back,
                 'purpose': 'smart_contact_strategy_analysis'
             }
@@ -954,7 +993,7 @@ class GmailFetcher:
     def _is_email_processed(self, gmail_id: str, user_id: int) -> bool:
         """Check if email has already been processed"""
         try:
-            from models.database import Email
+            from chief_of_staff_ai.models.database import Email
             
             with get_db_manager().get_session() as session:
                 existing = session.query(Email).filter(
@@ -971,7 +1010,7 @@ class GmailFetcher:
     def _store_email_metadata(self, email_data: Dict, user_id: int):
         """Store basic email metadata for tracking purposes"""
         try:
-            from models.database import Email
+            from chief_of_staff_ai.models.database import Email
             
             with get_db_manager().get_session() as session:
                 # Check if already exists
@@ -1097,7 +1136,7 @@ class GmailFetcher:
             user = get_db_manager().get_user_by_email(user_email)
             if user:
                 with get_db_manager().get_session() as session:
-                    from models.database import Email
+                    from chief_of_staff_ai.models.database import Email
                     processed_count = session.query(Email).filter(Email.user_id == user.id).count()
                     diagnostics['tests_performed'].append({
                         'test': 'Previously processed emails',

@@ -117,18 +117,31 @@ class IntelligenceOrchestrator:
     async def _extract_sent_contacts(self, user_id: int) -> List[Dict]:
         """Extract unique contacts from sent emails"""
         try:
-            # Get user's Gmail credentials (this would come from auth system)
-            # For now, we'll use the current authenticated user's Gmail
+            # Get user email from user_id
+            user = await storage_manager.get_user_by_id(user_id)
+            if not user:
+                logger.error(f"User with ID {user_id} not found")
+                return []
+            
+            user_email = user.get('email') if isinstance(user, dict) else getattr(user, 'email', None)
+            if not user_email:
+                logger.error(f"No email found for user ID {user_id}")
+                return []
             
             gmail_fetcher = GmailFetcher()
             
             # Get sent emails from last 90 days
-            sent_emails = await gmail_fetcher.fetch_sent_emails(
-                user_id=user_id,
+            sent_emails_result = gmail_fetcher.fetch_sent_emails(
+                user_email=user_email,
                 days_back=90,
-                limit=500
+                max_emails=500
             )
             
+            if not sent_emails_result.get('success'):
+                logger.warning(f"Failed to fetch sent emails: {sent_emails_result.get('error', 'Unknown error')}")
+                return []
+            
+            sent_emails = sent_emails_result.get('emails', [])
             if not sent_emails:
                 logger.warning("No sent emails found")
                 return []
@@ -137,12 +150,16 @@ class IntelligenceOrchestrator:
             contacts_map = {}
             
             for email in sent_emails:
-                recipients = email.get('recipients', [])
-                if isinstance(recipients, str):
-                    recipients = [recipients]
+                # Get recipients from the email data
+                recipients = email.get('recipient_emails', [])
+                if not recipients:
+                    # Fallback to other recipient fields
+                    recipients = email.get('recipients', [])
+                    if isinstance(recipients, str):
+                        recipients = [recipients]
                 
                 for recipient in recipients:
-                    email_addr = recipient.strip()
+                    email_addr = recipient.strip().lower()
                     if '@' in email_addr and email_addr not in contacts_map:
                         # Extract name from email if available
                         name = self._extract_name_from_email(email_addr, email)
@@ -402,17 +419,33 @@ class IntelligenceOrchestrator:
             trusted_emails = {c.email for c in enriched_contacts}
             logger.info(f"🎯 Found {len(trusted_emails)} trusted contacts for knowledge tree")
             
+            # Get user email from user_id
+            user = await storage_manager.get_user_by_id(user_id)
+            if not user:
+                logger.error(f"User with ID {user_id} not found")
+                return []
+            
+            user_email = user.get('email') if isinstance(user, dict) else getattr(user, 'email', None)
+            if not user_email:
+                logger.error(f"No email found for user ID {user_id}")
+                return []
+            
             # Get emails within time window using GmailFetcher
             gmail_fetcher = GmailFetcher()
             cutoff_date = datetime.utcnow() - timedelta(days=time_window_days)
             
             # Fetch received emails from trusted contacts
-            all_emails = await gmail_fetcher.fetch_received_emails(
-                user_id=user_id,
+            all_emails_result = gmail_fetcher.fetch_recent_emails(
+                user_email=user_email,
                 days_back=time_window_days,
                 limit=1000
             )
             
+            if not all_emails_result.get('success'):
+                logger.warning(f"Failed to fetch emails: {all_emails_result.get('error', 'Unknown error')}")
+                return []
+            
+            all_emails = all_emails_result.get('emails', [])
             if not all_emails:
                 logger.warning("No emails found in the specified time window")
                 return []

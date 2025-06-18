@@ -139,6 +139,9 @@ class StrategicStorageManager:
         self.next_contact_id = 1
         self.next_task_id = 1
         self.next_node_id = 1
+        
+        # User context cache for background tasks
+        self._user_context_cache = {}
     
     async def initialize(self):
         """Initialize all database connections"""
@@ -782,6 +785,60 @@ class StrategicStorageManager:
                 return dict(result) if result else None
         except Exception as e:
             logger.error(f"Get user error: {str(e)}")
+            return None
+    
+    async def get_user_by_id(self, user_id: int) -> Optional[Dict]:
+        """Get user by ID - compatibility method"""
+        if not self._initialized:
+            await self.initialize()
+        
+        if self.use_memory_storage:
+            # First check user context cache (for background tasks)
+            if user_id in self._user_context_cache:
+                logger.info(f"Using cached user context for user {user_id}")
+                return self._user_context_cache[user_id]
+            
+            # In-memory storage fallback - get real user from Flask session
+            try:
+                from flask import session
+                if 'user_email' in session and 'db_user_id' in session:
+                    if session['db_user_id'] == user_id:
+                        return {
+                            'id': user_id,
+                            'email': session['user_email'],
+                            'name': session.get('user_name', 'User'),
+                            'google_id': session.get('google_id', '')
+                        }
+                
+                # Fallback: try to get from old database manager
+                from models.database import get_db_manager
+                user = get_db_manager().get_user_by_id(user_id)
+                if user:
+                    return {
+                        'id': user.id,
+                        'email': user.email,
+                        'name': getattr(user, 'name', ''),
+                        'google_id': getattr(user, 'google_id', '')
+                    }
+                    
+            except Exception as e:
+                logger.warning(f"Could not get real user data: {str(e)}")
+            
+            # Last resort fallback
+            return {
+                'id': user_id,
+                'email': f'user{user_id}@strategic-intel.local',
+                'name': f'Strategic User {user_id}',
+                'google_id': f'google_id_{user_id}'
+            }
+            
+        try:
+            with self.pg_conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute("SELECT * FROM users WHERE id = %s;", (user_id,))
+                result = cursor.fetchone()
+                return dict(result) if result else None
+        except Exception as e:
+            logger.error(f"Get user by ID error: {str(e)}")
             return None
     
     async def close(self):

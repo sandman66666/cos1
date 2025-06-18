@@ -17,12 +17,23 @@ class User:
     id: int
     email: str
     name: str = None
+    # OAuth credentials for Gmail integration
+    access_token: str = None
+    refresh_token: str = None
+    token_expires_at: datetime = None
+    scopes: List[str] = None
+    google_id: str = None
     
     def to_dict(self):
         return {
             'id': self.id,
             'email': self.email,
-            'name': self.name
+            'name': self.name,
+            'access_token': self.access_token,
+            'refresh_token': self.refresh_token,
+            'token_expires_at': self.token_expires_at.isoformat() if self.token_expires_at else None,
+            'scopes': self.scopes or [],
+            'google_id': self.google_id
         }
 
 @dataclass
@@ -358,6 +369,13 @@ class DatabaseManager:
         logger.info(f"Created new user: {email}")
         return user
     
+    def get_user_by_id(self, user_id: int) -> Optional[User]:
+        """Get user by ID"""
+        for user in self.users.values():
+            if user.id == user_id:
+                return user
+        return None
+    
     def get_user_tasks(self, user_id: int, limit: int = 50) -> List[Task]:
         """Get tasks for user"""
         user_tasks = []
@@ -412,6 +430,46 @@ class DatabaseManager:
         
         logger.info(f"Created user: {email}")
         return user
+    
+    def create_or_update_user(self, user_info: Dict, credentials: Dict) -> User:
+        """Create or update user with OAuth credentials"""
+        try:
+            email = user_info['email']
+            
+            if email in self.users:
+                # Update existing user with OAuth credentials
+                user = self.users[email]
+                user.name = user_info.get('name', user.name)
+                user.google_id = user_info.get('id', user.google_id)
+                user.access_token = credentials.get('access_token')
+                user.refresh_token = credentials.get('refresh_token')
+                user.token_expires_at = credentials.get('expires_at')
+                user.scopes = credentials.get('scopes', [])
+                
+                logger.info(f"Updated user with OAuth credentials: {email}")
+            else:
+                # Create new user with OAuth credentials
+                user = User(
+                    id=self.next_user_id,
+                    email=email,
+                    name=user_info.get('name', email.split('@')[0].title()),
+                    google_id=user_info.get('id'),
+                    access_token=credentials.get('access_token'),
+                    refresh_token=credentials.get('refresh_token'),
+                    token_expires_at=credentials.get('expires_at'),
+                    scopes=credentials.get('scopes', [])
+                )
+                
+                self.users[email] = user
+                self.next_user_id += 1
+                
+                logger.info(f"Created new user with OAuth credentials: {email}")
+            
+            return user
+            
+        except Exception as e:
+            logger.error(f"Failed to create/update user with OAuth credentials: {str(e)}")
+            raise
     
     # ================================
     # EMAIL MANAGEMENT METHODS
@@ -486,28 +544,98 @@ class DatabaseManager:
                         return self
                     
                     def first(self):
-                        # For Email model queries
+                        """Mock first() method with proper filter evaluation"""
                         if self.model_class == Email:
                             for email in self.db_manager.emails.values():
-                                # Simple filter matching - in real implementation would parse conditions
-                                return email if len(self.filters) > 0 else None
-                        # For Topic model queries  
+                                if self._evaluate_filters(email):
+                                    return email
                         elif self.model_class == Topic:
                             for topic in self.db_manager.topics.values():
-                                return topic if len(self.filters) > 0 else None
-                        # For Person model queries
+                                if self._evaluate_filters(topic):
+                                    return topic
                         elif self.model_class == Person:
                             for person in self.db_manager.people.values():
-                                return person if len(self.filters) > 0 else None
-                        # For Project model queries
+                                if self._evaluate_filters(person):
+                                    return person
                         elif self.model_class == Project:
                             for project in self.db_manager.projects.values():
-                                return project if len(self.filters) > 0 else None
-                        # For CalendarEvent model queries
+                                if self._evaluate_filters(project):
+                                    return project
                         elif self.model_class == CalendarEvent:
                             for event in self.db_manager.calendar_events.values():
-                                return event if len(self.filters) > 0 else None
+                                if self._evaluate_filters(event):
+                                    return event
                         return None
+                    
+                    def _evaluate_filters(self, obj):
+                        """Evaluate SQLAlchemy-style filter conditions against an object"""
+                        if not self.filters:
+                            return True
+                        
+                        for condition in self.filters:
+                            # Handle common SQLAlchemy filter patterns
+                            if hasattr(condition, 'left') and hasattr(condition, 'right'):
+                                # This is a comparison operation like Email.user_id == user_id
+                                left_attr = self._extract_attribute_name(condition.left)
+                                right_value = self._extract_value(condition.right)
+                                
+                                if left_attr and hasattr(obj, left_attr):
+                                    obj_value = getattr(obj, left_attr)
+                                    if not self._compare_values(obj_value, right_value, condition):
+                                        return False
+                            else:
+                                # Simple boolean condition
+                                if not condition:
+                                    return False
+                        
+                        return True
+                    
+                    def _extract_attribute_name(self, attr_expr):
+                        """Extract attribute name from SQLAlchemy expression"""
+                        if hasattr(attr_expr, 'key'):
+                            return attr_expr.key
+                        elif hasattr(attr_expr, '__name__'):
+                            return attr_expr.__name__
+                        elif hasattr(attr_expr, 'name'):
+                            return attr_expr.name
+                        return None
+                    
+                    def _extract_value(self, value_expr):
+                        """Extract actual value from SQLAlchemy expression"""
+                        if hasattr(value_expr, 'value'):
+                            return value_expr.value
+                        elif hasattr(value_expr, 'val'):
+                            return value_expr.val
+                        else:
+                            return value_expr
+                    
+                    def _compare_values(self, obj_value, filter_value, condition):
+                        """Compare values based on the condition type"""
+                        if hasattr(condition, 'operator'):
+                            op = condition.operator
+                        else:
+                            # Default to equality
+                            return obj_value == filter_value
+                        
+                        if op == '==':
+                            return obj_value == filter_value
+                        elif op == '!=':
+                            return obj_value != filter_value
+                        elif op == '>':
+                            return obj_value > filter_value
+                        elif op == '<':
+                            return obj_value < filter_value
+                        elif op == '>=':
+                            return obj_value >= filter_value
+                        elif op == '<=':
+                            return obj_value <= filter_value
+                        elif op == 'in':
+                            return obj_value in filter_value
+                        elif op == 'like':
+                            return filter_value.lower() in str(obj_value).lower()
+                        else:
+                            # Default to equality
+                            return obj_value == filter_value
                     
                     def count(self):
                         if self.model_class == Email:
@@ -523,17 +651,17 @@ class DatabaseManager:
                         return 0
                     
                     def all(self):
-                        """Mock all() method for queries"""
+                        """Mock all() method for queries with filter evaluation"""
                         if self.model_class == Email:
-                            return list(self.db_manager.emails.values())
+                            return [email for email in self.db_manager.emails.values() if self._evaluate_filters(email)]
                         elif self.model_class == Topic:
-                            return list(self.db_manager.topics.values())
+                            return [topic for topic in self.db_manager.topics.values() if self._evaluate_filters(topic)]
                         elif self.model_class == Person:
-                            return list(self.db_manager.people.values())
+                            return [person for person in self.db_manager.people.values() if self._evaluate_filters(person)]
                         elif self.model_class == Project:
-                            return list(self.db_manager.projects.values())
+                            return [project for project in self.db_manager.projects.values() if self._evaluate_filters(project)]
                         elif self.model_class == CalendarEvent:
-                            return list(self.db_manager.calendar_events.values())
+                            return [event for event in self.db_manager.calendar_events.values() if self._evaluate_filters(event)]
                         return []
                     
                     def limit(self, count):

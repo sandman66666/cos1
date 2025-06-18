@@ -19,7 +19,6 @@ import asyncio
 import uuid
 from datetime import timedelta, datetime, timezone
 from flask import Flask, session, render_template, redirect, url_for, request, jsonify
-from flask_session import Session
 from flask_cors import CORS
 import tempfile
 import random
@@ -29,11 +28,15 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
+# Configure logging EARLY
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Import compatibility modules FIRST (before adding chief_of_staff_ai path)
 try:
     from config.settings import settings
     from auth.gmail_auth import gmail_auth
-    from models.database import get_db_manager
+    from chief_of_staff_ai.models.database import get_db_manager
     import anthropic
 except ImportError as e:
     print(f"Failed to import compatibility modules: {e}")
@@ -73,18 +76,12 @@ except ImportError as e:
     
     intelligence_orchestrator = DummyIntelligenceOrchestrator()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 def create_app():
     """Create and configure the Strategic Intelligence Platform Flask application"""
     app = Flask(__name__)
     
     # Configuration
     app.secret_key = settings.SECRET_KEY
-    app.config['SESSION_TYPE'] = 'filesystem'
-    app.config['SESSION_FILE_DIR'] = os.path.join(tempfile.gettempdir(), 'strategic_intel_session')
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=settings.SESSION_TIMEOUT_HOURS)
     
     # Session cookie configuration
@@ -96,15 +93,6 @@ def create_app():
     
     # Configure CORS for React dev server
     CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
-    
-    # Initialize extensions
-    Session(app)
-    
-    # Ensure session directory exists
-    session_dir = app.config['SESSION_FILE_DIR']
-    if not os.path.exists(session_dir):
-        os.makedirs(session_dir, exist_ok=True)
-        logger.info(f"Created session directory: {session_dir}")
     
     # Initialize Claude client
     claude_client = None
@@ -766,10 +754,13 @@ def create_app():
                 logger.error("No email received from OAuth")
                 return redirect(url_for('login') + '?error=no_email')
             
-            user = get_db_manager().get_user_by_email(user_email)
+            # Store OAuth credentials in database
+            credentials = result.get('credentials', {})
+            user = get_db_manager().create_or_update_user(user_info, credentials)
+            
             if not user:
-                logger.error(f"User not found in database: {user_email}")
-                return redirect(url_for('login') + '?error=user_not_found')
+                logger.error(f"Failed to create/update user: {user_email}")
+                return redirect(url_for('login') + '?error=user_creation_failed')
             
             # Set session data
             session_id = str(uuid.uuid4())
@@ -782,7 +773,7 @@ def create_app():
             session['login_time'] = datetime.now().isoformat()
             session.permanent = True
             
-            logger.info(f"🧠 User authenticated for Strategic Intelligence Platform: {user_email} (DB ID: {user.id}, Session: {session_id})")
+            logger.info(f"🧠 User authenticated for Strategic Intelligence Platform: {user_email} (DB ID: {user.id}, Session: {session_id}) with OAuth credentials stored")
             
             response = redirect(url_for('dashboard'))
             response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -1119,21 +1110,35 @@ def create_app():
             if not user:
                 return jsonify({'status': 'error', 'error': 'Authentication required'}), 401
             
+            # Capture user context for background task
+            user_id = user['id']
+            user_email = user['email']
+            
             # Create and start contact enrichment task
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
             task_id = loop.run_until_complete(
-                intelligence_orchestrator.create_intelligence_task(user['id'], 'contact_enrichment')
+                intelligence_orchestrator.create_intelligence_task(user_id, 'contact_enrichment')
             )
             
-            # Start enrichment in background
+            # Start enrichment in background with user context
             def run_enrichment():
                 try:
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
+                    
+                    # Create a user context object to pass to the orchestrator
+                    user_context = {
+                        'id': user_id,
+                        'email': user_email
+                    }
+                    
+                    # Add the user context to the storage manager temporarily
+                    storage_manager._user_context_cache = {user_id: user_context}
+                    
                     result = loop.run_until_complete(
-                        intelligence_orchestrator.enrich_contacts(user['id'], task_id)
+                        intelligence_orchestrator.enrich_contacts(user_id, task_id)
                     )
                     logger.info(f"Phase 1 contact enrichment completed: {result}")
                 except Exception as e:
@@ -1191,27 +1196,28 @@ def create_app():
             if not user:
                 return jsonify({'status': 'error', 'error': 'Authentication required'}), 401
             
-            # Sample contacts for demonstration
-            contacts = [
-                {
-                    'email': 'john.doe@example.com',
-                    'name': 'John Doe',
-                    'company': 'Example Corp',
-                    'enriched': True,
-                    'email_count': 15
-                },
-                {
-                    'email': 'jane.smith@tech.com',
-                    'name': 'Jane Smith',
-                    'company': 'Tech Solutions',
-                    'enriched': False,
-                    'email_count': 8
-                }
-            ]
+            # Get real contacts from Strategic Intelligence Platform
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            contacts = loop.run_until_complete(
+                storage_manager.get_contacts_for_enrichment(user['id'], limit=50)
+            )
+            
+            # Convert to JSON format
+            contacts_data = []
+            for contact in contacts:
+                contacts_data.append({
+                    'email': contact.email,
+                    'name': contact.name or '',
+                    'company': contact.company or '',
+                    'enriched': contact.enrichment_status == 'enriched',
+                    'email_count': contact.engagement_score or 0
+                })
             
             return jsonify({
                 'status': 'success',
-                'contacts': contacts
+                'contacts': contacts_data
             })
             
         except Exception as e:
@@ -1340,6 +1346,170 @@ def create_app():
                 'authenticated': True
             }
         })
+    
+    @app.route('/api/gmail/diagnostics', methods=['GET'])
+    @require_auth
+    def gmail_diagnostics():
+        """Run Gmail diagnostics to troubleshoot sent emails issue"""
+        try:
+            user = get_current_user()
+            if not user:
+                return jsonify({'success': False, 'error': 'User not authenticated'}), 401
+            
+            user_email = session.get('user_email')
+            
+            # Import Gmail fetcher
+            from chief_of_staff_ai.ingest.gmail_fetcher import gmail_fetcher
+            
+            # Run diagnostics
+            diagnostics = gmail_fetcher.get_email_sync_diagnostics(user_email, days_back=90)
+            
+            # Add additional authentication test
+            from chief_of_staff_ai.auth.gmail_auth import gmail_auth
+            auth_status = gmail_auth.get_authentication_status(user_email)
+            
+            diagnostics['authentication'] = auth_status
+            
+            return jsonify({
+                'success': True,
+                'diagnostics': diagnostics,
+                'user_email': user_email,
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            
+        except Exception as e:
+            logger.error(f"Gmail diagnostics failed: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+    @app.route('/api/gmail/test-connection', methods=['GET'])
+    @require_auth
+    def test_gmail_connection():
+        """Test basic Gmail API connection and authentication"""
+        try:
+            user = get_current_user()
+            if not user:
+                return jsonify({'success': False, 'error': 'User not authenticated'}), 401
+            
+            user_email = session.get('user_email')
+            
+            # Test authentication
+            from chief_of_staff_ai.auth.gmail_auth import gmail_auth
+            credentials = gmail_auth.get_valid_credentials(user_email)
+            if not credentials:
+                return jsonify({
+                    'success': False,
+                    'error': 'No valid Gmail credentials',
+                    'user_email': user_email
+                }), 401
+            
+            # Test Gmail API connection
+            from googleapiclient.discovery import build
+            service = build('gmail', 'v1', credentials=credentials)
+            
+            # Test basic API call
+            profile = service.users().getProfile(userId='me').execute()
+            
+            # Test simple message list
+            result = service.users().messages().list(
+                userId='me',
+                maxResults=1
+            ).execute()
+            
+            total_messages = len(result.get('messages', []))
+            
+            return jsonify({
+                'success': True,
+                'user_email': user_email,
+                'gmail_profile': profile,
+                'total_messages_accessible': total_messages,
+                'authentication_status': 'valid',
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            
+        except Exception as e:
+            logger.error(f"Gmail connection test failed: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': str(e),
+                'user_email': user_email if 'user_email' in locals() else 'unknown'
+            }), 500
+    
+    @app.route('/api/gmail/test-sent-query', methods=['POST'])
+    @require_auth
+    def test_sent_query():
+        """Test different Gmail queries for sent emails"""
+        try:
+            user = get_current_user()
+            if not user:
+                return jsonify({'success': False, 'error': 'User not authenticated'}), 401
+            
+            user_email = session.get('user_email')
+            data = request.get_json() or {}
+            days_back = data.get('days_back', 90)
+            
+            # Get Gmail credentials
+            from chief_of_staff_ai.auth.gmail_auth import gmail_auth
+            credentials = gmail_auth.get_valid_credentials(user_email)
+            if not credentials:
+                return jsonify({'success': False, 'error': 'No valid Gmail credentials'}), 401
+            
+            # Build Gmail service
+            from googleapiclient.discovery import build
+            service = build('gmail', 'v1', credentials=credentials)
+            
+            # Test different queries
+            queries_to_test = [
+                ('in:sent', 'Sent folder only'),
+                ('in:sent after:2024/01/01', 'Sent emails since 2024'),
+                ('in:sent after:2023/01/01', 'Sent emails since 2023'),
+                ('in:all', 'All emails'),
+                ('in:inbox', 'Inbox emails'),
+                ('is:sent', 'Alternative sent query'),
+                ('from:me', 'From me query')
+            ]
+            
+            results = []
+            for query, description in queries_to_test:
+                try:
+                    result = service.users().messages().list(
+                        userId='me',
+                        q=query,
+                        maxResults=10
+                    ).execute()
+                    
+                    count = len(result.get('messages', []))
+                    results.append({
+                        'query': query,
+                        'description': description,
+                        'count': count,
+                        'success': True
+                    })
+                except Exception as e:
+                    results.append({
+                        'query': query,
+                        'description': description,
+                        'count': 0,
+                        'success': False,
+                        'error': str(e)
+                    })
+            
+            return jsonify({
+                'success': True,
+                'user_email': user_email,
+                'days_back': days_back,
+                'query_results': results,
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            
+        except Exception as e:
+            logger.error(f"Gmail query test failed: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
     
     # ================================
     # LEGACY API ROUTES (PRESERVED)

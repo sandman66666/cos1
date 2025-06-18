@@ -8,6 +8,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +146,62 @@ class GmailAuthManager:
                 'success': False,
                 'error': str(e)
             }
+    
+    def get_valid_credentials(self, user_email: str) -> Optional[Credentials]:
+        """
+        Get valid credentials for a user, refreshing if necessary
+        
+        Args:
+            user_email: Email of the user
+            
+        Returns:
+            Valid Credentials object or None
+        """
+        try:
+            # Get user from database
+            from models.database import get_db_manager
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user or not user.access_token:
+                logger.warning(f"No stored credentials for user: {user_email}")
+                return None
+            
+            # Create credentials object
+            credentials = Credentials(
+                token=user.access_token,
+                refresh_token=user.refresh_token,
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                scopes=user.scopes or self.scopes
+            )
+            
+            # Set expiry if available
+            if user.token_expires_at:
+                credentials.expiry = user.token_expires_at
+            
+            # Check if credentials are expired and refresh if possible
+            if credentials.expired and credentials.refresh_token:
+                logger.info(f"Refreshing expired credentials for user: {user_email}")
+                credentials.refresh(Request())
+                
+                # Update stored credentials in database
+                credentials_data = {
+                    'access_token': credentials.token,
+                    'refresh_token': credentials.refresh_token,
+                    'expires_at': credentials.expiry,
+                    'scopes': credentials.scopes
+                }
+                get_db_manager().create_or_update_user(user.to_dict(), credentials_data)
+                
+            elif credentials.expired:
+                logger.warning(f"Credentials expired and no refresh token for user: {user_email}")
+                return None
+            
+            return credentials
+            
+        except Exception as e:
+            logger.error(f"Failed to get valid credentials for {user_email}: {str(e)}")
+            return None
 
 # Global Gmail auth manager
 gmail_auth = GmailAuthManager() 
