@@ -1,0 +1,3556 @@
+BVIOUS, CLEAR, ACTIONABLE tasks
+- IGNORE vague or ambiguous requests
+- FOCUS on specific deliverables with clear deadlines
+- SKIP general "follow up" tasks unless very specific
+- REQUIRE confidence >= {confidence_threshold} for all tasks
+- TACTICAL tasks are concrete, specific, and measurable
+
+{prompt}"""
+                    
+                    response = claude_client.messages.create(
+                        model=settings.CLAUDE_MODEL,
+                        max_tokens=2000,
+                        messages=[{"role": "user", "content": tactical_instruction}]
+                    )
+                    
+                    # Parse tasks
+                    response_text = response.content[0].text.strip()
+                    tasks = _parse_tactical_tasks(response_text, confidence_threshold)
+                    
+                    # Save high-confidence tasks only
+                    for task_data in tasks:
+                        if task_data.get('confidence', 0) >= confidence_threshold:
+                            task = _save_tactical_task(task_data, email, db_user.id, master_tree)
+                            if task:
+                                tasks_created += 1
+                                if task_data.get('priority') == 'high':
+                                    high_priority_tasks += 1
+                                
+                                if len(sample_tasks) < 5:
+                                    sample_tasks.append({
+                                        'description': task_data['description'],
+                                        'priority': task_data.get('priority', 'medium'),
+                                        'confidence': task_data.get('confidence', 0),
+                                        'source_email': email.subject
+                                    })
+                    
+                except Exception as e:
+                    logger.error(f"Error processing email {email.id} for tactical tasks: {str(e)}")
+                    continue
+            
+            session.commit()
+            
+            return jsonify({
+                'success': True,
+                'tasks_created': tasks_created,
+                'high_priority_tasks': high_priority_tasks,
+                'knowledge_context_applied': use_knowledge_tree,
+                'confidence_threshold': confidence_threshold,
+                'emails_processed': len(emails_for_tasks),
+                'sample_tasks': sample_tasks,
+                'message': f'Created {tasks_created} tactical tasks with {confidence_threshold} confidence threshold'
+            })
+            
+    except Exception as e:
+        logger.error(f"Create tactical tasks error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+def _format_email_for_tactical_tasks(email_data, master_tree=None):
+    """Format email with knowledge tree context for tactical task extraction"""
+    context = f"""
+EMAIL DETAILS:
+Subject: {email_data['subject']}
+From: {email_data['sender']}
+Date: {email_data['date']}
+AI Summary: {email_data['ai_summary']}
+
+EMAIL CONTENT:
+{email_data['content']}
+
+KNOWLEDGE TREE CONTEXT:
+Primary Topic: {email_data['primary_topic']}
+Strategic Importance: {email_data['importance_score']:.2f}
+"""
+    
+    if master_tree:
+        # Add relevant context from knowledge tree
+        related_topics = []
+        related_people = []
+        related_projects = []
+        
+        # Find related items in knowledge tree
+        for topic in master_tree.get('topics', []):
+            if topic['name'].lower() in email_data['ai_summary'].lower():
+                related_topics.append(topic['name'])
+        
+        for person in master_tree.get('people', []):
+            if person['email'].lower() == email_data['sender'].lower():
+                related_people.append(f"{person['name']} ({person.get('role', 'Unknown role')})")
+        
+        for project in master_tree.get('projects', []):
+            if project['name'].lower() in email_data['ai_summary'].lower():
+                related_projects.append(f"{project['name']} (Status: {project.get('status', 'Unknown')})")
+        
+        if related_topics:
+            context += f"\nRelated Topics: {', '.join(related_topics)}"
+        if related_people:
+            context += f"\nRelated People: {', '.join(related_people)}"
+        if related_projects:
+            context += f"\nRelated Projects: {', '.join(related_projects)}"
+    
+    return context
+
+
+def _parse_tactical_tasks(response_text, confidence_threshold):
+    """Parse Claude response for tactical tasks with confidence filtering"""
+    import json
+    import re
+    
+    try:
+        # Extract JSON array from response
+        json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
+        if not json_match:
+            return []
+        
+        tasks_data = json.loads(json_match.group())
+        if not isinstance(tasks_data, list):
+            return []
+        
+        # Filter by confidence threshold
+        tactical_tasks = []
+        for task in tasks_data:
+            if isinstance(task, dict) and task.get('confidence', 0) >= confidence_threshold:
+                tactical_tasks.append(task)
+        
+        logger.info(f"Filtered {len(tactical_tasks)} tactical tasks from {len(tasks_data)} candidates")
+        return tactical_tasks
+        
+    except Exception as e:
+        logger.error(f"Error parsing tactical tasks: {str(e)}")
+        return []
+
+
+def _save_tactical_task(task_data, source_email, user_id, master_tree=None):
+    """Save a tactical task to the database with knowledge tree context"""
+    try:
+        from models.database import get_db_manager, Task
+        from datetime import datetime
+        
+        # Enhanced task description with knowledge context
+        description = task_data['description']
+        if master_tree and source_email.business_category:
+            description = f"[{source_email.business_category}] {description}"
+        
+        task = Task(
+            user_id=user_id,
+            email_id=source_email.id,
+            description=description,
+            category=task_data.get('category', 'tactical'),
+            priority=task_data.get('priority', 'medium'),
+            status='pending',
+            confidence=task_data.get('confidence', 0.7),
+            due_date=_parse_due_date(task_data.get('due_date_text')),
+            created_at=datetime.utcnow(),
+            source_context=f"Tactical extraction from: {source_email.subject}",
+            # Enhanced with knowledge tree context
+            business_intelligence={
+                'knowledge_tree_topic': source_email.business_category,
+                'strategic_importance': source_email.strategic_importance,
+                'tactical_task': True,
+                'confidence_threshold': 0.7,
+                'extraction_method': 'knowledge_tree_tactical'
+            }
+        )
+        
+        with get_db_manager().get_session() as session:
+            session.add(task)
+            session.commit()
+            return task
+        
+    except Exception as e:
+        logger.error(f"Error saving tactical task: {str(e)}")
+        return None
+
+
+def _parse_due_date(date_text):
+    """Parse due date from text"""
+    if not date_text:
+        return None
+    
+    try:
+        from dateutil import parser
+        return parser.parse(date_text, fuzzy=True)
+    except:
+        return None
+
+
+@task_bp.route('/tasks', methods=['GET'])
+@require_auth
+def api_get_tasks():
+    """Get tasks with comprehensive context and business intelligence"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        user_email = user['email']
+        
+        # Clear any cache to ensure fresh data
+        try:
+            from chief_of_staff_ai.strategic_intelligence.strategic_intelligence_cache import strategic_intelligence_cache
+            strategic_intelligence_cache.invalidate(user_email)
+        except ImportError:
+            pass  # Cache module might not exist
+        
+        # Get real user and their tasks
+        db_user = get_db_manager().get_user_by_email(user_email)
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        status = request.args.get('status')
+        limit = int(request.args.get('limit', 50))
+        
+        tasks = get_db_manager().get_user_tasks(db_user.id, status)
+        if limit:
+            tasks = tasks[:limit]
+        
+        # Build task data with context
+        tasks_data = []
+        for task in tasks:
+            if task.description and len(task.description.strip()) > 3:
+                task_data = {
+                    'id': task.id,
+                    'description': task.description,
+                    'details': task.source_text or '',
+                    'priority': task.priority or 'medium',
+                    'status': task.status or 'pending',
+                    'category': task.category or 'general',
+                    'confidence': task.confidence or 0.8,
+                    'assignee': task.assignee or user_email,
+                    'due_date': task.due_date.isoformat() if task.due_date else None,
+                    'created_at': task.created_at.isoformat() if task.created_at else None,
+                    'source_email_subject': getattr(task, 'source_email_subject', None),
+                }
+                tasks_data.append(task_data)
+        
+        return jsonify({
+            'success': True,
+            'tasks': tasks_data,
+            'count': len(tasks_data),
+            'status_filter': status
+        })
+        
+    except Exception as e:
+        logger.error(f"Get tasks API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@task_bp.route('/email-insights', methods=['GET'])
+@require_auth  
+def api_get_email_insights():
+    """Get strategic business insights from emails"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        # Placeholder for business insights
+        return jsonify({
+            'success': True,
+            'strategic_insights': [],
+            'count': 0,
+            'data_source': 'real_business_insights'
+        })
+        
+    except Exception as e:
+        logger.error(f"Get email insights API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500 
+
+
+================================================================================
+FILE: api/routes/auth_routes.py
+PURPOSE: API endpoints: Auth Routes
+================================================================================
+"""
+Authentication Routes
+====================
+
+Routes for Google OAuth authentication, login, logout, and session management.
+Extracted from main.py for better organization.
+"""
+
+import os
+import uuid
+import time
+import logging
+from datetime import datetime
+from flask import Blueprint, session, render_template, redirect, url_for, request, jsonify, make_response
+
+# Import necessary modules
+from auth.gmail_auth import gmail_auth
+from models.database import get_db_manager
+from ..middleware.auth_middleware import get_current_user
+
+logger = logging.getLogger(__name__)
+
+# Create blueprint
+auth_bp = Blueprint('auth', __name__, url_prefix='')
+
+
+@auth_bp.route('/')
+def index():
+    """Main index route"""
+    user = get_current_user()
+    if not user:
+        return redirect('/auth/google')
+    
+    # Redirect to home page
+    return redirect('/home')
+
+
+@auth_bp.route('/home')
+def home():
+    """Home page route"""
+    user = get_current_user()
+    if not user:
+        return redirect('/auth/google')
+    
+    return render_template('home.html', 
+                           user_email=user['email'],
+                           user_id=user.get('id'),
+                           session_id=session.get('session_id'),
+                           cache_buster=int(time.time()))
+
+
+@auth_bp.route('/login')
+def login():
+    """Login page with Google OAuth"""
+    # Check for logout/switching parameters
+    logged_out = request.args.get('logged_out') == 'true'
+    force_logout = request.args.get('force_logout') == 'true'
+    
+    context = {
+        'logged_out': logged_out,
+        'force_logout': force_logout,
+        'switching_users': logged_out or force_logout
+    }
+    
+    return render_template('login.html', **context)
+
+
+@auth_bp.route('/auth/google')
+def google_auth():
+    """Initiate Google OAuth flow"""
+    try:
+        # Generate unique state for security
+        state = f"cos_{session.get('csrf_token', 'temp')}"
+        
+        # Get authorization URL from our Gmail auth handler
+        auth_url, state = gmail_auth.get_authorization_url(
+            user_id=session.get('temp_user_id', 'anonymous'),
+            state=state
+        )
+        
+        # Store state in session for validation
+        session['oauth_state'] = state
+        
+        return redirect(auth_url)
+        
+    except Exception as e:
+        logger.error(f"Failed to initiate Google OAuth: {str(e)}")
+        return redirect(url_for('auth.login') + '?error=oauth_init_failed')
+
+
+@auth_bp.route('/auth/google/callback')
+def google_callback():
+    """Handle Google OAuth callback with enhanced session management"""
+    try:
+        # Get authorization code and state
+        code = request.args.get('code')
+        state = request.args.get('state')
+        error = request.args.get('error')
+        
+        if error:
+            logger.error(f"OAuth error: {error}")
+            return redirect(url_for('auth.login') + f'?error={error}')
+        
+        if not code:
+            logger.error("No authorization code received")
+            return redirect(url_for('auth.login') + '?error=no_code')
+        
+        # Validate state (basic security check)
+        expected_state = session.get('oauth_state')
+        if state != expected_state:
+            logger.error(f"OAuth state mismatch: {state} != {expected_state}")
+            return redirect(url_for('auth.login') + '?error=state_mismatch')
+        
+        # Handle OAuth callback with our Gmail auth handler
+        result = gmail_auth.handle_oauth_callback(
+            authorization_code=code,
+            state=state
+        )
+        
+        if not result.get('success'):
+            error_msg = result.get('error', 'Unknown OAuth error')
+            logger.error(f"OAuth callback failed: {error_msg}")
+            return redirect(url_for('auth.login') + f'?error=oauth_failed')
+        
+        # COMPLETE SESSION RESET - Critical for user isolation
+        session.clear()
+        
+        # Extract user info from OAuth result
+        user_info = result.get('user_info', {})
+        user_email = user_info.get('email')
+        
+        if not user_email:
+            logger.error("No email received from OAuth")
+            return redirect(url_for('auth.login') + '?error=no_email')
+        
+        # Get or create user in database
+        user = get_db_manager().get_user_by_email(user_email)
+        if not user:
+            logger.error(f"User not found in database: {user_email}")
+            return redirect(url_for('auth.login') + '?error=user_not_found')
+        
+        # Set new session data with unique session ID
+        session_id = str(uuid.uuid4())
+        session['session_id'] = session_id
+        session['user_email'] = user_email
+        session['user_name'] = user_info.get('name')
+        session['google_id'] = user_info.get('id')  # Google ID
+        session['authenticated'] = True
+        session['db_user_id'] = user.id  # Database ID for queries - CRITICAL
+        session['login_time'] = datetime.now().isoformat()
+        session.permanent = True
+        
+        logger.info(f"User authenticated successfully: {user_email} (DB ID: {user.id}, Session: {session_id})")
+        
+        # Create response with cache busting
+        response = redirect(url_for('auth.index') + '?login_success=true&t=' + str(int(datetime.now().timestamp())))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"OAuth callback error: {str(e)}")
+        return redirect(url_for('auth.login') + '?error=callback_failed')
+
+
+@auth_bp.route('/logout')
+def logout():
+    """Logout and clear session completely"""
+    user_email = session.get('user_email')
+    
+    # Complete session cleanup
+    session.clear()
+    
+    # Clear any persistent session files
+    try:
+        import shutil
+        import tempfile
+        session_dir = os.path.join(tempfile.gettempdir(), 'cos_flask_session')
+        if os.path.exists(session_dir):
+            # Clear old session files
+            for filename in os.listdir(session_dir):
+                if filename.startswith('flask_session_'):
+                    try:
+                        os.remove(os.path.join(session_dir, filename))
+                    except:
+                        pass
+    except Exception as e:
+        logger.warning(f"Could not clear session files: {e}")
+    
+    logger.info(f"User logged out completely: {user_email}")
+    
+    # Redirect to login with cache-busting parameter
+    response = redirect(url_for('auth.login') + '?logged_out=true')
+    
+    # Clear all cookies
+    response.set_cookie('session', '', expires=0)
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
+    return response
+
+
+@auth_bp.route('/force-logout')
+def force_logout():
+    """Force complete logout and session reset - use when switching users"""
+    try:
+        # Clear current session
+        user_email = session.get('user_email', 'unknown')
+        session.clear()
+        
+        # Clear all session files
+        import tempfile
+        session_dir = os.path.join(tempfile.gettempdir(), 'cos_flask_session')
+        if os.path.exists(session_dir):
+            for filename in os.listdir(session_dir):
+                if filename.startswith('flask_session_'):
+                    try:
+                        os.remove(os.path.join(session_dir, filename))
+                        logger.info(f"Cleared session file: {filename}")
+                    except Exception as e:
+                        logger.warning(f"Could not clear session file {filename}: {e}")
+        
+        logger.info(f"Force logout completed for: {user_email}")
+        
+        # Create response with aggressive cache clearing
+        response = redirect(url_for('auth.login') + '?force_logout=true&t=' + str(int(datetime.now().timestamp())))
+        
+        # Clear all possible cookies and cache
+        response.set_cookie('session', '', expires=0, path='/')
+        response.set_cookie('flask-session', '', expires=0, path='/')
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        response.headers['Clear-Site-Data'] = '"cache", "cookies", "storage"'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Force logout error: {e}")
+        return jsonify({'error': 'Force logout failed', 'details': str(e)}), 500
+
+
+@auth_bp.route('/debug/session')
+def debug_session():
+    """Debug session information"""
+    return jsonify({
+        'session_data': dict(session),
+        'user_email': session.get('user_email'),
+        'authenticated': session.get('authenticated'),
+        'session_keys': list(session.keys())
+    })
+
+
+# Additional page routes (can be moved to a separate blueprint later)
+@auth_bp.route('/tasks')
+def tasks():
+    """Tasks page route"""
+    user = get_current_user()
+    if not user:
+        return redirect('/auth/google')
+    
+    return render_template('tasks.html', 
+                           user_email=user['email'],
+                           user_id=user.get('id'),
+                           session_id=session.get('session_id'),
+                           cache_buster=int(time.time()))
+
+
+@auth_bp.route('/people')
+def people_page():
+    """People management page"""
+    user = get_current_user()
+    if not user:
+        return redirect('/login')
+    return render_template('people.html')
+
+
+@auth_bp.route('/knowledge')
+def knowledge_page():
+    """Knowledge management page"""
+    user = get_current_user()
+    if not user:
+        return redirect('/login')
+    return render_template('knowledge.html')
+
+
+@auth_bp.route('/calendar')
+def calendar_page():
+    """Calendar management page"""
+    user_email = session.get('user_email')
+    
+    if not user_email:
+        return redirect(url_for('auth.login'))
+    
+    return render_template('calendar.html')
+
+
+@auth_bp.route('/settings')
+def settings_page():
+    """Settings page for configuring email sync and other preferences"""
+    user = get_current_user()
+    if not user:
+        return redirect('/login')
+    return render_template('settings.html')
+
+
+@auth_bp.route('/dashboard')
+def dashboard():
+    """Legacy dashboard route - redirect to home"""
+    return redirect('/home') 
+
+
+================================================================================
+FILE: api/routes/topic_routes.py
+PURPOSE: API endpoints: Topic Routes
+================================================================================
+"""
+Topic Routes Blueprint
+=====================
+
+Topic management and knowledge base routes.
+Extracted from main.py for better organization.
+"""
+
+import logging
+from flask import Blueprint, request, jsonify
+from ..middleware.auth_middleware import get_current_user, require_auth
+
+logger = logging.getLogger(__name__)
+
+topic_bp = Blueprint('topic', __name__, url_prefix='/api')
+
+
+@topic_bp.route('/topics', methods=['GET'])
+@require_auth
+def api_get_topics():
+    """Get all topics for a user"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        db_user = get_db_manager().get_user_by_email(user['email'])
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        topics = get_db_manager().get_user_topics(db_user.id)
+        
+        return jsonify({
+            'success': True,
+            'topics': [topic.to_dict() for topic in topics],
+            'count': len(topics)
+        })
+        
+    except Exception as e:
+        logger.error(f"Get topics API error for user {user['email']}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@topic_bp.route('/topics', methods=['POST'])
+@require_auth
+def api_create_topic():
+    """Create a new topic manually"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        db_user = get_db_manager().get_user_by_email(user['email'])
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        if not data or not data.get('name'):
+            return jsonify({'error': 'Topic name is required'}), 400
+        
+        topic_data = {
+            'name': data['name'],
+            'slug': data['name'].lower().replace(' ', '-'),
+            'description': data.get('description', ''),
+            'is_official': data.get('is_official', True),
+            'keywords': data.get('keywords', [])
+        }
+        
+        topic = get_db_manager().create_or_update_topic(db_user.id, topic_data)
+        
+        return jsonify({
+            'success': True,
+            'topic': topic.to_dict(),
+            'message': f'Topic "{topic.name}" created successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Create topic API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@topic_bp.route('/topics/<int:topic_id>/official', methods=['POST'])
+@require_auth
+def api_mark_topic_official(topic_id):
+    """Mark a topic as official"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        db_user = get_db_manager().get_user_by_email(user['email'])
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        success = get_db_manager().mark_topic_official(db_user.id, topic_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Topic marked as official'
+            })
+        else:
+            return jsonify({'error': 'Topic not found or not authorized'}), 404
+        
+    except Exception as e:
+        logger.error(f"Mark topic official API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@topic_bp.route('/topics/<int:topic_id>/merge', methods=['POST'])
+@require_auth
+def api_merge_topic(topic_id):
+    """Merge one topic into another"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        db_user = get_db_manager().get_user_by_email(user['email'])
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        target_topic_id = data.get('target_topic_id')
+        
+        if not target_topic_id:
+            return jsonify({'error': 'Target topic ID is required'}), 400
+        
+        success = get_db_manager().merge_topics(db_user.id, topic_id, target_topic_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Topics merged successfully'
+            })
+        else:
+            return jsonify({'error': 'Topics not found or merge failed'}), 404
+        
+    except Exception as e:
+        logger.error(f"Merge topic API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@topic_bp.route('/topics/<int:topic_id>', methods=['PUT'])
+@require_auth
+def api_update_topic(topic_id):
+    """Update a topic"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        db_user = get_db_manager().get_user_by_email(user['email'])
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Update topic data
+        topic_data = {}
+        if 'description' in data:
+            topic_data['description'] = data['description']
+        if 'keywords' in data:
+            topic_data['keywords'] = data['keywords']
+        if 'name' in data:
+            topic_data['name'] = data['name']
+        
+        success = get_db_manager().update_topic(db_user.id, topic_id, topic_data)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Topic updated successfully'
+            })
+        else:
+            return jsonify({'error': 'Topic not found or not authorized'}), 404
+        
+    except Exception as e:
+        logger.error(f"Update topic API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@topic_bp.route('/topics/resync', methods=['POST'])
+@require_auth
+def api_resync_topics():
+    """Resync all content with updated topics"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        # This would trigger a resync of all emails with the updated topic definitions
+        return jsonify({
+            'success': True,
+            'message': 'Topic resync initiated - this will re-categorize all content with updated topic definitions'
+        })
+        
+    except Exception as e:
+        logger.error(f"Resync topics API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@topic_bp.route('/sync-topics', methods=['POST'])
+@require_auth
+def api_sync_topics():
+    """Sync topics from email content"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        # Placeholder for topic sync functionality
+        return jsonify({
+            'success': True,
+            'message': 'Topic sync completed',
+            'topics_processed': 0
+        })
+        
+    except Exception as e:
+        logger.error(f"Sync topics API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@topic_bp.route('/topics/ensure-default', methods=['POST'])
+@require_auth
+def api_ensure_default_topic():
+    """Ensure default topics exist"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        db_user = get_db_manager().get_user_by_email(user['email'])
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Create default "General" topic if it doesn't exist
+        default_topic_data = {
+            'name': 'General',
+            'slug': 'general',
+            'description': 'General business communications and tasks',
+            'is_official': True,
+            'keywords': ['general', 'business', 'misc']
+        }
+        
+        topic = get_db_manager().create_or_update_topic(db_user.id, default_topic_data)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Default topic ensured',
+            'topic': topic.to_dict()
+        })
+        
+    except Exception as e:
+        logger.error(f"Ensure default topic API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500 
+
+
+================================================================================
+FILE: api/routes/enhanced_agent_routes.py
+PURPOSE: API endpoints: Enhanced Agent Routes
+================================================================================
+from flask import Blueprint, request, jsonify, current_app
+from datetime import datetime, timedelta
+import asyncio
+import logging
+import json
+import sys
+import os
+
+# Add the chief_of_staff_ai directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../chief_of_staff_ai'))
+
+try:
+    from config.settings import settings
+    from models.database import get_db_manager
+    from agents import (
+        IntelligenceAgent, 
+        AutonomousEmailAgent, 
+        PartnershipWorkflowAgent,
+        InvestorRelationshipAgent,
+        GoalAchievementAgent,
+        MCPConnectorAgent
+    )
+except ImportError as e:
+    print(f"Failed to import agent modules: {e}")
+
+logger = logging.getLogger(__name__)
+
+# Create the blueprint
+enhanced_agent_bp = Blueprint('enhanced_agents', __name__, url_prefix='/api/agents')
+
+def require_auth(f):
+    """Simple auth decorator - would need proper implementation"""
+    def decorated_function(*args, **kwargs):
+        # Basic session check - would need proper auth
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_user_context():
+    """Get comprehensive user context for agent operations"""
+    # This would get actual user data from session/database
+    return {
+        'user_id': 1,
+        'user_name': 'Test User',
+        'user_email': 'test@example.com',
+        'business_context': {
+            'company': 'AI Chief of Staff',
+            'industry': 'Technology',
+            'goals': ['Build AI platform', 'Scale business', 'Strategic partnerships']
+        },
+        'communication_style': {
+            'tone': 'professional',
+            'formality': 'medium',
+            'response_time': 'same_day'
+        },
+        'goals': [
+            {'title': 'Launch AI Platform', 'priority': 'high', 'timeline': '6 months'},
+            {'title': 'Secure Series A', 'priority': 'high', 'timeline': '9 months'}
+        ],
+        'relationship_data': {
+            'total_contacts': 150,
+            'tier_1_contacts': 25,
+            'tier_2_contacts': 75
+        },
+        'network': {
+            'total_connections': 500,
+            'industry_connections': 200,
+            'investor_connections': 50
+        }
+    }
+
+# ================================================================================
+# INTELLIGENCE AGENT ROUTES
+# ================================================================================
+
+@enhanced_agent_bp.route('/intelligence/analyze-contact', methods=['POST'])
+@require_auth
+def analyze_contact_with_intelligence():
+    """Analyze contact using Intelligence Agent with code execution and Files API"""
+    
+    try:
+        data = request.get_json()
+        person_id = data.get('person_id')
+        
+        if not person_id:
+            return jsonify({'error': 'person_id is required'}), 400
+        
+        # Get person data (would come from database)
+        person_data = {
+            'id': person_id,
+            'name': data.get('name', 'Unknown'),
+            'email': data.get('email', ''),
+            'company': data.get('company', ''),
+            'last_interaction': data.get('last_interaction')
+        }
+        
+        # Get email history (would come from database)
+        email_history = data.get('email_history', [])
+        
+        # Initialize Intelligence Agent
+        agent = IntelligenceAgent()
+        
+        # Run async analysis
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            analysis = loop.run_until_complete(
+                agent.analyze_relationship_intelligence_with_data(person_data, email_history)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'analysis': analysis,
+            'person_data': person_data,
+            'capabilities_used': ['code_execution', 'files_api', 'advanced_analytics'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in intelligence analysis: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'intelligence_analysis_error'
+        }), 500
+
+@enhanced_agent_bp.route('/intelligence/strategic-market-analysis', methods=['POST'])
+@require_auth
+def generate_strategic_market_intelligence():
+    """Generate strategic market intelligence using advanced analytics"""
+    
+    try:
+        data = request.get_json()
+        user_context = get_user_context()
+        
+        business_context = data.get('business_context', user_context['business_context'])
+        goals = data.get('goals', user_context['goals'])
+        
+        # Initialize Intelligence Agent
+        agent = IntelligenceAgent()
+        
+        # Run async analysis
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            intelligence = loop.run_until_complete(
+                agent.generate_strategic_market_intelligence(business_context, goals)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'intelligence': intelligence,
+            'goals_analyzed': len(goals),
+            'capabilities_used': ['code_execution', 'market_research', 'predictive_modeling'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in strategic market analysis: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'market_intelligence_error'
+        }), 500
+
+# ================================================================================
+# AUTONOMOUS EMAIL AGENT ROUTES
+# ================================================================================
+
+@enhanced_agent_bp.route('/email/process-autonomous', methods=['POST'])
+@require_auth
+def process_email_autonomously():
+    """Process email with Autonomous Email Agent using extended thinking"""
+    
+    try:
+        data = request.get_json()
+        email_data = data.get('email_data')
+        
+        if not email_data:
+            return jsonify({'error': 'email_data is required'}), 400
+        
+        user_context = get_user_context()
+        
+        # Initialize Autonomous Email Agent
+        agent = AutonomousEmailAgent()
+        
+        # Run async processing
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            result = loop.run_until_complete(
+                agent.process_incoming_email_autonomously(email_data, user_context)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'result': result,
+            'email_subject': email_data.get('subject', 'No subject'),
+            'capabilities_used': ['extended_thinking', 'autonomous_decision_making', 'style_matching'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in autonomous email processing: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'autonomous_email_error'
+        }), 500
+
+@enhanced_agent_bp.route('/email/craft-response', methods=['POST'])
+@require_auth
+def craft_autonomous_email_response():
+    """Craft autonomous email response with perfect style matching"""
+    
+    try:
+        data = request.get_json()
+        email_data = data.get('email_data')
+        decision_analysis = data.get('decision_analysis', {})
+        
+        if not email_data:
+            return jsonify({'error': 'email_data is required'}), 400
+        
+        user_context = get_user_context()
+        
+        # Initialize Autonomous Email Agent
+        agent = AutonomousEmailAgent()
+        
+        # Run async response crafting
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            response_content = loop.run_until_complete(
+                agent.craft_autonomous_response(email_data, decision_analysis, user_context)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'response_content': response_content,
+            'capabilities_used': ['extended_thinking', 'style_matching', 'strategic_alignment'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error crafting autonomous response: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'response_crafting_error'
+        }), 500
+
+# ================================================================================
+# PARTNERSHIP WORKFLOW AGENT ROUTES
+# ================================================================================
+
+@enhanced_agent_bp.route('/partnership/start-workflow', methods=['POST'])
+@require_auth
+def start_partnership_workflow():
+    """Start autonomous partnership development workflow"""
+    
+    try:
+        data = request.get_json()
+        target_company = data.get('target_company')
+        
+        if not target_company:
+            return jsonify({'error': 'target_company is required'}), 400
+        
+        user_context = get_user_context()
+        
+        # Initialize Partnership Workflow Agent
+        agent = PartnershipWorkflowAgent()
+        
+        # Run async workflow
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            workflow_id = loop.run_until_complete(
+                agent.execute_partnership_development_workflow(target_company, user_context)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'workflow_id': workflow_id,
+            'target_company': target_company,
+            'message': f'Autonomous partnership workflow started for {target_company}',
+            'status_url': f'/api/agents/workflow/{workflow_id}/status',
+            'capabilities_used': ['multi_step_workflows', 'autonomous_execution', 'mcp_connectors'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error starting partnership workflow: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'partnership_workflow_error'
+        }), 500
+
+@enhanced_agent_bp.route('/workflow/<workflow_id>/status', methods=['GET'])
+@require_auth
+def get_workflow_status(workflow_id):
+    """Get status of autonomous workflow"""
+    
+    try:
+        # This would query the database for workflow status
+        # For now, return mock status
+        workflow_status = {
+            'workflow_id': workflow_id,
+            'status': 'in_progress',
+            'phases_completed': 3,
+            'total_phases': 5,
+            'autonomous_actions_completed': 2,
+            'pending_approvals': 1,
+            'current_phase': 'Strategic Outreach Planning',
+            'estimated_completion': (datetime.now() + timedelta(hours=2)).isoformat(),
+            'last_updated': datetime.now().isoformat()
+        }
+        
+        return jsonify({
+            'success': True,
+            'workflow_status': workflow_status,
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting workflow status: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'workflow_status_error'
+        }), 500
+
+# ================================================================================
+# INVESTOR RELATIONSHIP AGENT ROUTES
+# ================================================================================
+
+@enhanced_agent_bp.route('/investor/nurture-relationship', methods=['POST'])
+@require_auth
+def nurture_investor_relationship():
+    """Execute investor relationship nurturing workflow"""
+    
+    try:
+        data = request.get_json()
+        investor_data = data.get('investor_data')
+        
+        if not investor_data:
+            return jsonify({'error': 'investor_data is required'}), 400
+        
+        user_context = get_user_context()
+        
+        # Initialize Investor Relationship Agent
+        agent = InvestorRelationshipAgent()
+        
+        # Run async nurturing workflow
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            result = loop.run_until_complete(
+                agent.execute_investor_nurturing_workflow(investor_data, user_context)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'nurturing_result': result,
+            'investor_name': investor_data.get('name', 'Unknown'),
+            'capabilities_used': ['extended_thinking', 'portfolio_analysis', 'relationship_optimization'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in investor relationship nurturing: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'investor_nurturing_error'
+        }), 500
+
+@enhanced_agent_bp.route('/investor/monitor-activity', methods=['POST'])
+@require_auth
+def monitor_investor_activity():
+    """Monitor investor activity and identify engagement opportunities"""
+    
+    try:
+        data = request.get_json()
+        investors = data.get('investors', [])
+        user_context = get_user_context()
+        
+        # Initialize Investor Relationship Agent
+        agent = InvestorRelationshipAgent()
+        
+        # Run async monitoring
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            monitoring_result = loop.run_until_complete(
+                agent.monitor_investor_activity(investors, user_context)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'monitoring_result': monitoring_result,
+            'investors_monitored': len(investors),
+            'capabilities_used': ['external_monitoring', 'pattern_recognition', 'opportunity_identification'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error monitoring investor activity: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'investor_monitoring_error'
+        }), 500
+
+# ================================================================================
+# GOAL ACHIEVEMENT AGENT ROUTES
+# ================================================================================
+
+@enhanced_agent_bp.route('/goal/optimize-strategy', methods=['POST'])
+@require_auth
+def optimize_goal_achievement_strategy():
+    """Optimize goal achievement strategy using AI analytics"""
+    
+    try:
+        data = request.get_json()
+        goal = data.get('goal')
+        
+        if not goal:
+            return jsonify({'error': 'goal data is required'}), 400
+        
+        user_context = get_user_context()
+        
+        # Initialize Goal Achievement Agent
+        agent = GoalAchievementAgent()
+        
+        # Run async optimization
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            optimization_result = loop.run_until_complete(
+                agent.optimize_goal_achievement_strategy(goal, user_context)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'optimization_result': optimization_result,
+            'goal_title': goal.get('title', 'Unknown Goal'),
+            'capabilities_used': ['advanced_analytics', 'predictive_modeling', 'breakthrough_thinking'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error optimizing goal strategy: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'goal_optimization_error'
+        }), 500
+
+@enhanced_agent_bp.route('/goal/breakthrough-strategies', methods=['POST'])
+@require_auth
+def generate_breakthrough_strategies():
+    """Generate breakthrough strategies for goal acceleration"""
+    
+    try:
+        data = request.get_json()
+        goals = data.get('goals', [])
+        user_context = get_user_context()
+        
+        # Initialize Goal Achievement Agent
+        agent = GoalAchievementAgent()
+        
+        # Run async breakthrough generation
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            breakthrough_result = loop.run_until_complete(
+                agent.generate_breakthrough_strategies(goals, user_context)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'breakthrough_result': breakthrough_result,
+            'goals_analyzed': len(goals),
+            'capabilities_used': ['first_principles_thinking', 'exponential_strategies', 'cross_goal_synergy'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating breakthrough strategies: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'breakthrough_strategy_error'
+        }), 500
+
+# ================================================================================
+# MCP CONNECTOR AGENT ROUTES
+# ================================================================================
+
+@enhanced_agent_bp.route('/mcp/enrich-contact', methods=['POST'])
+@require_auth
+def enrich_contact_via_mcp():
+    """Enrich contact data using MCP connectors for external data"""
+    
+    try:
+        data = request.get_json()
+        person_data = data.get('person_data')
+        
+        if not person_data:
+            return jsonify({'error': 'person_data is required'}), 400
+        
+        # Initialize MCP Connector Agent
+        agent = MCPConnectorAgent()
+        
+        # Run async enrichment
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            enrichment_result = loop.run_until_complete(
+                agent.enrich_contact_with_external_data(person_data)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'enrichment_result': enrichment_result,
+            'person_name': person_data.get('name', 'Unknown'),
+            'capabilities_used': ['mcp_connectors', 'external_data_sources', 'intelligence_enrichment'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error enriching contact via MCP: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'mcp_enrichment_error'
+        }), 500
+
+@enhanced_agent_bp.route('/mcp/automate-workflow', methods=['POST'])
+@require_auth
+def automate_business_workflow():
+    """Automate business workflow using MCP connectors"""
+    
+    try:
+        data = request.get_json()
+        workflow_request = data.get('workflow_request')
+        
+        if not workflow_request:
+            return jsonify({'error': 'workflow_request is required'}), 400
+        
+        # Initialize MCP Connector Agent
+        agent = MCPConnectorAgent()
+        
+        # Run async automation
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            automation_result = loop.run_until_complete(
+                agent.automate_business_workflow(workflow_request)
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            'success': True,
+            'automation_result': automation_result,
+            'workflow_type': workflow_request.get('workflow_type', 'Unknown'),
+            'capabilities_used': ['mcp_automation', 'external_integrations', 'workflow_execution'],
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error automating workflow via MCP: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'mcp_automation_error'
+        }), 500
+
+# ================================================================================
+# AGENT STATUS AND CONTROL ROUTES
+# ================================================================================
+
+@enhanced_agent_bp.route('/status', methods=['GET'])
+@require_auth
+def get_agent_system_status():
+    """Get comprehensive agent system status"""
+    
+    try:
+        status = {
+            'claude_model': settings.CLAUDE_MODEL,
+            'agent_capabilities_enabled': True,
+            'available_capabilities': [
+                'code_execution',
+                'files_api', 
+                'mcp_connector',
+                'extended_thinking',
+                'extended_caching'
+            ],
+            'autonomy_settings': {
+                'email_responses': {
+                    'enabled': settings.ENABLE_AUTONOMOUS_EMAIL_RESPONSES,
+                    'threshold': settings.AUTONOMOUS_CONFIDENCE_THRESHOLD
+                },
+                'partnership_workflows': {
+                    'enabled': settings.ENABLE_AUTONOMOUS_PARTNERSHIP_WORKFLOWS,
+                    'threshold': settings.AUTONOMOUS_CONFIDENCE_THRESHOLD
+                },
+                'investor_nurturing': {
+                    'enabled': settings.ENABLE_AUTONOMOUS_INVESTOR_NURTURING,
+                    'threshold': settings.AUTONOMOUS_CONFIDENCE_THRESHOLD
+                }
+            },
+            'rate_limits': {
+                'max_autonomous_actions_per_hour': settings.MAX_AUTONOMOUS_ACTIONS_PER_HOUR,
+                'max_autonomous_emails_per_day': settings.MAX_AUTONOMOUS_EMAILS_PER_DAY
+            },
+            'mcp_servers': {
+                'enabled': settings.ENABLE_MCP_CONNECTOR,
+                'configured_servers': list(settings.get_mcp_servers_config().keys())
+            },
+            'system_health': 'optimal',
+            'last_updated': datetime.now().isoformat()
+        }
+        
+        return jsonify({
+            'success': True,
+            'agent_status': status,
+            'processing_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting agent status: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'agent_status_error'
+        }), 500
+
+@enhanced_agent_bp.route('/capabilities', methods=['GET'])
+@require_auth
+def get_agent_capabilities():
+    """Get detailed information about agent capabilities"""
+    
+    capabilities = {
+        'intelligence_agent': {
+            'description': 'Advanced relationship and market intelligence with code execution',
+            'features': [
+                'Relationship analysis with data visualizations',
+                'Strategic market intelligence generation',
+                'Goal achievement pattern analysis',
+                'Predictive analytics and modeling'
+            ],
+            'tools': ['code_execution', 'files_api', 'extended_thinking']
+        },
+        'autonomous_email_agent': {
+            'description': 'Autonomous email processing and response with extended thinking',
+            'features': [
+                'Autonomous email analysis and decision making',
+                'Perfect style matching for responses',
+                'Confidence-based action classification',
+                'Extended thinking for complex scenarios'
+            ],
+            'tools': ['extended_thinking', 'mcp_connectors', 'style_analysis']
+        },
+        'partnership_workflow_agent': {
+            'description': 'Multi-step autonomous partnership development workflows',
+            'features': [
+                'Comprehensive company research and analysis',
+                'Decision maker identification and mapping',
+                'Warm introduction path analysis',
+                'Autonomous outreach execution with approval gates'
+            ],
+            'tools': ['code_execution', 'files_api', 'mcp_connectors', 'extended_thinking']
+        },
+        'investor_relationship_agent': {
+            'description': 'Autonomous investor relationship nurturing and monitoring',
+            'features': [
+                'Portfolio activity monitoring and analysis',
+                'Strategic engagement opportunity identification',
+                'Value-added communication planning',
+                'Relationship progression tracking'
+            ],
+            'tools': ['extended_thinking', 'mcp_connectors', 'predictive_modeling']
+        },
+        'goal_achievement_agent': {
+            'description': 'AI-powered goal optimization and breakthrough strategy generation',
+            'features': [
+                'Advanced goal achievement analytics',
+                'Breakthrough strategy generation',
+                'Cross-goal synergy identification',
+                'Resource optimization with predictive modeling'
+            ],
+            'tools': ['code_execution', 'advanced_analytics', 'breakthrough_thinking']
+        },
+        'mcp_connector_agent': {
+            'description': 'External data enrichment and workflow automation',
+            'features': [
+                'Contact data enrichment from external sources',
+                'Business workflow automation',
+                'External trigger monitoring',
+                'Multi-platform integration'
+            ],
+            'tools': ['mcp_connectors', 'external_apis', 'automation_workflows']
+        }
+    }
+    
+    return jsonify({
+        'success': True,
+        'agent_capabilities': capabilities,
+        'total_agents': len(capabilities),
+        'processing_timestamp': datetime.now().isoformat()
+    })
+
+# ================================================================================
+# EMAIL DRAFT MANAGEMENT ROUTES (NEW)
+# ================================================================================
+
+@enhanced_agent_bp.route('/email/drafts', methods=['GET'])
+@require_auth
+def get_email_drafts():
+    """Get all pending email drafts for user review"""
+    
+    try:
+        # This would query database for user's drafts
+        # For now, return mock data showing the structure
+        mock_drafts = [
+            {
+                'draft_id': 'draft_001',
+                'created_at': (datetime.now() - timedelta(hours=2)).isoformat(),
+                'original_email': {
+                    'subject': 'Partnership Opportunity',
+                    'sender': 'john@techcorp.com',
+                    'date': (datetime.now() - timedelta(hours=3)).isoformat(),
+                    'body': 'Hi, I wanted to discuss a potential partnership...'
+                },
+                'draft_response': {
+                    'subject': 'Re: Partnership Opportunity',
+                    'body': 'Thank you for reaching out about the partnership opportunity. I\'m very interested in exploring how our companies could collaborate...',
+                    'recipient': 'john@techcorp.com'
+                },
+                'ai_analysis': {
+                    'confidence': 0.87,
+                    'strategic_impact': 'high',
+                    'reasoning': 'High-value partnership opportunity with strong strategic alignment...',
+                    'risk_level': 'low'
+                },
+                'status': 'pending_review',
+                'ready_to_send': True,
+                'draft_quality': 'high'
+            },
+            {
+                'draft_id': 'draft_002', 
+                'created_at': (datetime.now() - timedelta(hours=1)).isoformat(),
+                'original_email': {
+                    'subject': 'Quick Question',
+                    'sender': 'sarah@startup.io',
+                    'date': (datetime.now() - timedelta(hours=1)).isoformat(),
+                    'body': 'Quick question about your product roadmap...'
+                },
+                'draft_response': {
+                    'subject': 'Re: Quick Question',
+                    'body': 'Happy to help! Our product roadmap focuses on...',
+                    'recipient': 'sarah@startup.io'
+                },
+                'ai_analysis': {
+                    'confidence': 0.72,
+                    'strategic_impact': 'medium',
+                    'reasoning': 'Standard information request, good opportunity to build relationship...',
+                    'risk_level': 'low'
+                },
+                'status': 'pending_review',
+                'ready_to_send': False,
+                'draft_quality': 'good'
+            }
+        ]
+        
+        return jsonify({
+            'success': True,
+            'drafts': mock_drafts,
+            'total_drafts': len(mock_drafts),
+            'pending_review': len([d for d in mock_drafts if d['status'] == 'pending_review']),
+            'ready_to_send': len([d for d in mock_drafts if d['ready_to_send']]),
+            'capabilities_used': ['draft_mode', 'ai_analysis', 'confidence_scoring'],
+            'last_updated': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting email drafts: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'draft_retrieval_error'
+        }), 500
+
+@enhanced_agent_bp.route('/email/drafts/<draft_id>/send', methods=['POST'])
+@require_auth
+def send_email_draft(draft_id):
+    """Send an approved email draft"""
+    
+    try:
+        data = request.get_json() or {}
+        modifications = data.get('modifications', {})
+        
+        # This would:
+        # 1. Retrieve draft from database
+        # 2. Apply any user modifications
+        # 3. Send the email
+        # 4. Update draft status to 'sent'
+        
+        # Mock the sending process
+        logger.info(f"📤 Sending email draft {draft_id}")
+        
+        # Simulate email sending
+        send_result = {
+            'success': True,
+            'sent_at': datetime.now().isoformat(),
+            'message_id': f'msg_{draft_id}',
+            'recipient': 'john@techcorp.com',
+            'subject': 'Re: Partnership Opportunity'
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': f'Email draft {draft_id} sent successfully',
+            'send_result': send_result,
+            'draft_id': draft_id,
+            'modifications_applied': len(modifications) > 0,
+            'sent_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error sending email draft {draft_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'draft_send_error'
+        }), 500
+
+@enhanced_agent_bp.route('/email/drafts/<draft_id>/edit', methods=['PUT'])
+@require_auth
+def edit_email_draft(draft_id):
+    """Edit an email draft before sending"""
+    
+    try:
+        data = request.get_json()
+        edits = data.get('edits', {})
+        
+        # This would update the draft in database
+        logger.info(f"✏️ Editing email draft {draft_id}")
+        
+        updated_draft = {
+            'draft_id': draft_id,
+            'subject': edits.get('subject', 'Re: Partnership Opportunity'),
+            'body': edits.get('body', 'Updated email body...'),
+            'last_edited': datetime.now().isoformat(),
+            'user_edited': True
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': f'Email draft {draft_id} updated successfully',
+            'updated_draft': updated_draft,
+            'edits_applied': list(edits.keys()),
+            'edit_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error editing email draft {draft_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'draft_edit_error'
+        }), 500
+
+@enhanced_agent_bp.route('/email/drafts/<draft_id>/reject', methods=['DELETE'])
+@require_auth
+def reject_email_draft(draft_id):
+    """Reject/delete an email draft"""
+    
+    try:
+        data = request.get_json() or {}
+        reason = data.get('reason', 'User decision')
+        
+        # This would delete/mark as rejected in database
+        logger.info(f"❌ Rejecting email draft {draft_id}: {reason}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Email draft {draft_id} rejected and removed',
+            'draft_id': draft_id,
+            'rejection_reason': reason,
+            'rejected_timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error rejecting email draft {draft_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'draft_rejection_error'
+        }), 500
+
+@enhanced_agent_bp.route('/email/draft-settings', methods=['GET', 'PUT'])
+@require_auth
+def manage_draft_settings():
+    """Get or update email draft settings"""
+    
+    try:
+        if request.method == 'GET':
+            # Get current draft settings
+            current_settings = {
+                'draft_mode_enabled': True,
+                'auto_send_enabled': False,
+                'confidence_threshold_for_auto_approval': 0.95,
+                'always_create_drafts': True,
+                'draft_retention_days': 30,
+                'notification_preferences': {
+                    'new_draft_created': True,
+                    'high_confidence_drafts': True,
+                    'daily_draft_summary': True
+                }
+            }
+            
+            return jsonify({
+                'success': True,
+                'draft_settings': current_settings,
+                'last_updated': datetime.now().isoformat()
+            })
+            
+        else:  # PUT - Update settings
+            data = request.get_json()
+            new_settings = data.get('settings', {})
+            
+            # This would update user's draft preferences in database
+            logger.info(f"⚙️ Updating draft settings: {list(new_settings.keys())}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Draft settings updated successfully',
+                'updated_settings': new_settings,
+                'update_timestamp': datetime.now().isoformat()
+            })
+            
+    except Exception as e:
+        logger.error(f"Error managing draft settings: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_type': 'draft_settings_error'
+        }), 500
+
+# Error handler for the blueprint
+@enhanced_agent_bp.errorhandler(Exception)
+def handle_agent_error(error):
+    """Handle agent-related errors"""
+    logger.error(f"Agent error: {str(error)}")
+    return jsonify({
+        'success': False,
+        'error': str(error),
+        'error_type': 'agent_system_error',
+        'timestamp': datetime.now().isoformat()
+    }), 500 
+
+
+================================================================================
+FILE: api/routes/knowledge_routes.py
+PURPOSE: API endpoints: Knowledge Routes
+================================================================================
+"""
+Knowledge Routes Blueprint
+=========================
+
+API routes for the Knowledge-Centric Architecture that enable:
+1. Hierarchical topic tree management (auto-generated + user-managed)
+2. Bidirectional people-topic relationship queries
+3. Source content traceability and verification
+4. Knowledge building and evolution
+5. Multi-source ingestion endpoints (for future Slack, Dropbox, etc.)
+
+This is the API layer for the Knowledge Replacement System.
+"""
+
+import logging
+from flask import Blueprint, request, jsonify
+from typing import Dict, List, Any, Optional
+import json
+from datetime import datetime
+
+from ..middleware.auth_middleware import get_current_user, require_auth
+
+logger = logging.getLogger(__name__)
+
+# Create blueprint
+knowledge_bp = Blueprint('knowledge', __name__, url_prefix='/api/knowledge')
+
+# =============================================================================
+# TOPIC HIERARCHY ENDPOINTS
+# =============================================================================
+
+@knowledge_bp.route('/topics/hierarchy', methods=['GET'])
+@require_auth
+def get_topic_hierarchy():
+    """Get the complete topic hierarchy for the user"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.models.knowledge_models import TopicHierarchy
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get all topics organized by hierarchy
+        with get_db_manager().get_session() as session:
+            all_topics = session.query(TopicHierarchy).filter(
+                TopicHierarchy.user_id == db_user.id
+            ).order_by(TopicHierarchy.depth_level, TopicHierarchy.name).all()
+            
+            # Build hierarchical structure
+            hierarchy = _build_topic_tree(all_topics)
+            
+            # Get statistics
+            stats = {
+                'total_topics': len(all_topics),
+                'max_depth': max([t.depth_level for t in all_topics]) if all_topics else 0,
+                'auto_generated': len([t for t in all_topics if t.auto_generated]),
+                'user_created': len([t for t in all_topics if t.user_created]),
+                'by_type': _count_by_type(all_topics),
+                'recent_activity': len([t for t in all_topics if t.last_mentioned and (datetime.utcnow() - t.last_mentioned).days <= 7])
+            }
+            
+            return jsonify({
+                'success': True,
+                'hierarchy': hierarchy,
+                'stats': stats,
+                'total_count': len(all_topics)
+            })
+            
+    except Exception as e:
+        logger.error(f"Get topic hierarchy error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@knowledge_bp.route('/topics/build-from-emails', methods=['POST'])
+@require_auth
+def build_topics_from_emails():
+    """Build topic hierarchy from existing emails"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
+        from chief_of_staff_ai.models.knowledge_models import SourceType
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get user's emails to analyze
+        with get_db_manager().get_session() as session:
+            emails = get_db_manager().get_user_emails(db_user.id, limit=1000)
+            
+            # Convert to knowledge engine format
+            email_content = []
+            for email in emails:
+                if email.ai_summary:  # Only process emails with AI analysis
+                    email_content.append({
+                        'id': email.gmail_id,
+                        'source_type': 'email',
+                        'content': email.ai_summary,
+                        'body_text': email.body_text or '',
+                        'subject': email.subject or '',
+                        'sender': email.sender,
+                        'timestamp': email.email_date.isoformat() if email.email_date else datetime.utcnow().isoformat()
+                    })
+            
+            if not email_content:
+                return jsonify({
+                    'success': False,
+                    'error': 'No processed emails found. Please sync emails first.'
+                }), 400
+            
+            # Build topic hierarchy
+            result = knowledge_engine.build_topic_hierarchy_from_content(db_user.id, email_content)
+            
+            return jsonify({
+                'success': result.get('success', True),
+                'message': f"Built topic hierarchy from {len(email_content)} emails",
+                'result': result
+            })
+            
+    except Exception as e:
+        logger.error(f"Build topics from emails error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@knowledge_bp.route('/foundation/build-from-bulk-emails', methods=['POST'])
+@require_auth
+def build_foundation_from_bulk_emails():
+    """
+    Build comprehensive knowledge foundation from bulk historical emails.
+    This creates the business context skeleton for accurate content categorization.
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
+        
+        data = request.get_json() or {}
+        months_back = data.get('months_back', 6)  # Default to 6 months
+        
+        # Validate months_back parameter
+        if not isinstance(months_back, int) or months_back < 1 or months_back > 24:
+            return jsonify({
+                'error': 'Invalid months_back parameter. Must be between 1-24.'
+            }), 400
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"🏗️  Starting knowledge foundation build for {user_email} - {months_back} months back")
+        
+        # Build comprehensive knowledge foundation
+        result = knowledge_engine.build_knowledge_foundation_from_bulk_emails(
+            user_id=db_user.id,
+            months_back=months_back
+        )
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': f"Built knowledge foundation from {months_back} months of historical data",
+                'foundation_stats': {
+                    'emails_analyzed': result.get('emails_analyzed', 0),
+                    'topics_created': result.get('topics_created', 0),
+                    'hierarchy_depth': result.get('hierarchy_depth', 0),
+                    'business_areas': result.get('business_areas_identified', 0),
+                    'projects': result.get('projects_identified', 0),
+                    'people_connected': result.get('people_connected', 0),
+                    'foundation_quality': result.get('foundation_quality_score', 0.0)
+                },
+                'next_steps': [
+                    'Your knowledge foundation is now ready',
+                    'Future email processing will use this context',
+                    'You can now create manual topics that integrate with this foundation',
+                    'All new content will be categorized using this business structure'
+                ]
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Foundation building failed'),
+                'recommendation': result.get('recommendation', 'Try the manual interview approach instead')
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Build foundation from bulk emails error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@knowledge_bp.route('/foundation/status', methods=['GET'])
+@require_auth
+def get_foundation_status():
+    """Check if user has a knowledge foundation and its quality"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.models.knowledge_models import TopicHierarchy
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        with get_db_manager().get_session() as session:
+            # Check existing topics
+            topics = session.query(TopicHierarchy).filter(
+                TopicHierarchy.user_id == db_user.id
+            ).all()
+            
+            if not topics:
+                return jsonify({
+                    'has_foundation': False,
+                    'recommendation': 'build_foundation',
+                    'message': 'No knowledge foundation found. Build one from historical emails or manual interview.',
+                    'available_approaches': ['bulk_email_analysis', 'manual_interview']
+                })
+            
+            # Analyze foundation quality
+            foundation_quality = {
+                'total_topics': len(topics),
+                'max_depth': max([t.depth_level for t in topics]) if topics else 0,
+                'topic_types': len(set([t.topic_type for t in topics])),
+                'auto_generated': len([t for t in topics if t.auto_generated]),
+                'user_created': len([t for t in topics if t.user_created]),
+                'avg_confidence': sum([t.confidence_score for t in topics]) / len(topics) if topics else 0
+            }
+            
+            # Determine if foundation is comprehensive enough
+            is_comprehensive = (
+                foundation_quality['total_topics'] >= 5 and
+                foundation_quality['max_depth'] >= 2 and
+                foundation_quality['topic_types'] >= 3
+            )
+            
+            return jsonify({
+                'has_foundation': True,
+                'is_comprehensive': is_comprehensive,
+                'foundation_quality': foundation_quality,
+                'recommendation': 'foundation_ready' if is_comprehensive else 'enhance_foundation',
+                'message': 'Knowledge foundation ready for content processing' if is_comprehensive 
+                          else 'Foundation exists but could be enhanced with more historical data'
+            })
+            
+    except Exception as e:
+        logger.error(f"Get foundation status error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@knowledge_bp.route('/topics', methods=['POST'])
+@require_auth
+def create_topic():
+    """Create a new topic manually"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.models.knowledge_models import TopicHierarchy, TopicType
+        
+        data = request.get_json()
+        if not data or not data.get('name'):
+            return jsonify({'error': 'Topic name is required'}), 400
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        with get_db_manager().get_session() as session:
+            # Check if topic already exists
+            existing = session.query(TopicHierarchy).filter(
+                TopicHierarchy.name.ilike(data['name']),
+                TopicHierarchy.user_id == db_user.id
+            ).first()
+            
+            if existing:
+                return jsonify({'error': 'Topic already exists'}), 400
+            
+            # Find parent if specified
+            parent_topic = None
+            if data.get('parent_id'):
+                parent_topic = session.query(TopicHierarchy).filter(
+                    TopicHierarchy.id == data['parent_id'],
+                    TopicHierarchy.user_id == db_user.id
+                ).first()
+                
+                if not parent_topic:
+                    return jsonify({'error': 'Parent topic not found'}), 404
+            
+            # Create topic
+            topic = TopicHierarchy(
+                name=data['name'],
+                description=data.get('description', ''),
+                topic_type=data.get('topic_type', TopicType.CUSTOM.value),
+                parent_topic_id=parent_topic.id if parent_topic else None,
+                depth_level=(parent_topic.depth_level + 1) if parent_topic else 0,
+                hierarchy_path=f"{parent_topic.hierarchy_path}/{data['name']}" if parent_topic else data['name'],
+                user_created=True,
+                auto_generated=False,
+                confidence_score=1.0,
+                priority=data.get('priority', 'medium'),
+                keywords=data.get('keywords', [])
+            )
+            
+            session.add(topic)
+            session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Topic created successfully',
+                'topic': {
+                    'id': topic.id,
+                    'name': topic.name,
+                    'description': topic.description,
+                    'topic_type': topic.topic_type,
+                    'hierarchy_path': topic.hierarchy_path,
+                    'depth_level': topic.depth_level
+                }
+            })
+            
+    except Exception as e:
+        logger.error(f"Create topic error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@knowledge_bp.route('/topics/<int:topic_id>', methods=['PUT'])
+@require_auth
+def update_topic(topic_id):
+    """Update an existing topic"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.models.knowledge_models import TopicHierarchy
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        with get_db_manager().get_session() as session:
+            topic = session.query(TopicHierarchy).filter(
+                TopicHierarchy.id == topic_id,
+                TopicHierarchy.user_id == db_user.id
+            ).first()
+            
+            if not topic:
+                return jsonify({'error': 'Topic not found'}), 404
+            
+            # Update fields
+            if 'name' in data:
+                topic.name = data['name']
+            if 'description' in data:
+                topic.description = data['description']
+            if 'topic_type' in data:
+                topic.topic_type = data['topic_type']
+            if 'priority' in data:
+                topic.priority = data['priority']
+            if 'status' in data:
+                topic.status = data['status']
+            if 'keywords' in data:
+                topic.keywords = data['keywords']
+            
+            topic.updated_at = datetime.utcnow()
+            session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Topic updated successfully'
+            })
+            
+    except Exception as e:
+        logger.error(f"Update topic error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# PEOPLE-TOPIC RELATIONSHIP ENDPOINTS
+# =============================================================================
+
+@knowledge_bp.route('/topics/<int:topic_id>/people', methods=['GET'])
+@require_auth
+def get_topic_people(topic_id):
+    """Get all people related to a specific topic"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.models.knowledge_models import TopicHierarchy, PersonTopicRelationship
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        with get_db_manager().get_session() as session:
+            # Verify topic exists and belongs to user
+            topic = session.query(TopicHierarchy).filter(
+                TopicHierarchy.id == topic_id,
+                TopicHierarchy.user_id == db_user.id
+            ).first()
+            
+            if not topic:
+                return jsonify({'error': 'Topic not found'}), 404
+            
+            # Get all people related to this topic
+            relationships = session.query(PersonTopicRelationship).filter(
+                PersonTopicRelationship.topic_id == topic_id
+            ).all()
+            
+            people_data = []
+            for rel in relationships:
+                person = rel.person  # Assuming relationship is set up
+                people_data.append({
+                    'person_id': rel.person_id,
+                    'name': person.name if person else 'Unknown',
+                    'email': person.email_address if person else 'Unknown',
+                    'company': person.company if person else None,
+                    'relationship_type': rel.relationship_type,
+                    'involvement_level': rel.involvement_level,
+                    'confidence': rel.confidence,
+                    'last_activity': rel.last_activity.isoformat() if rel.last_activity else None,
+                    'evidence_count': rel.evidence_count,
+                    'expertise_areas': rel.expertise_areas or [],
+                    'key_contributions': rel.key_contributions or [],
+                    'context_summary': rel.context_summary
+                })
+            
+            return jsonify({
+                'success': True,
+                'topic': {
+                    'id': topic.id,
+                    'name': topic.name,
+                    'hierarchy_path': topic.hierarchy_path
+                },
+                'people': people_data,
+                'total_count': len(people_data)
+            })
+            
+    except Exception as e:
+        logger.error(f"Get topic people error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@knowledge_bp.route('/people/<int:person_id>/topics', methods=['GET'])
+@require_auth
+def get_person_topics(person_id):
+    """Get all topics related to a specific person"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.models.knowledge_models import PersonTopicRelationship, TopicHierarchy
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        with get_db_manager().get_session() as session:
+            # Get person
+            person = get_db_manager().get_person_by_id(person_id)
+            if not person or person.user_id != db_user.id:
+                return jsonify({'error': 'Person not found'}), 404
+            
+            # Get all topics this person is related to
+            relationships = session.query(PersonTopicRelationship).filter(
+                PersonTopicRelationship.person_id == person_id
+            ).all()
+            
+            topics_data = []
+            for rel in relationships:
+                topic = session.query(TopicHierarchy).filter(
+                    TopicHierarchy.id == rel.topic_id
+                ).first()
+                
+                if topic:
+                    topics_data.append({
+                        'topic_id': rel.topic_id,
+                        'topic_name': topic.name,
+                        'topic_type': topic.topic_type,
+                        'hierarchy_path': topic.hierarchy_path,
+                        'depth_level': topic.depth_level,
+                        'relationship_type': rel.relationship_type,
+                        'involvement_level': rel.involvement_level,
+                        'confidence': rel.confidence,
+                        'last_activity': rel.last_activity.isoformat() if rel.last_activity else None,
+                        'evidence_count': rel.evidence_count,
+                        'expertise_areas': rel.expertise_areas or [],
+                        'key_contributions': rel.key_contributions or [],
+                        'context_summary': rel.context_summary
+                    })
+            
+            return jsonify({
+                'success': True,
+                'person': {
+                    'id': person.id,
+                    'name': person.name,
+                    'email': person.email_address,
+                    'company': person.company
+                },
+                'topics': topics_data,
+                'total_count': len(topics_data)
+            })
+            
+    except Exception as e:
+        logger.error(f"Get person topics error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# SOURCE TRACEABILITY ENDPOINTS
+# =============================================================================
+
+@knowledge_bp.route('/sources/<source_type>/<source_id>', methods=['GET'])
+@require_auth
+def get_source_content(source_type, source_id):
+    """Get full source content for traceability"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get source content
+        content = knowledge_engine.get_source_content(source_type, source_id, db_user.id)
+        
+        if not content:
+            return jsonify({'error': 'Source content not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'source': content
+        })
+        
+    except Exception as e:
+        logger.error(f"Get source content error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@knowledge_bp.route('/traceability/<entity_type>/<int:entity_id>', methods=['GET'])
+@require_auth
+def get_knowledge_traceability(entity_type, entity_id):
+    """Get traceability for any knowledge entity"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get traceability
+        traceability = knowledge_engine.get_knowledge_traceability(entity_type, entity_id, db_user.id)
+        
+        return jsonify({
+            'success': True,
+            'entity_type': entity_type,
+            'entity_id': entity_id,
+            'sources': [
+                {
+                    'source_type': t.source_type,
+                    'source_id': t.source_id,
+                    'snippet': t.source_content_snippet,
+                    'confidence': t.confidence,
+                    'timestamp': t.timestamp.isoformat() if t.timestamp else None,
+                    'can_access_full': t.can_access_full_content
+                }
+                for t in traceability
+            ],
+            'total_sources': len(traceability)
+        })
+        
+    except Exception as e:
+        logger.error(f"Get knowledge traceability error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# KNOWLEDGE MANAGEMENT ENDPOINTS
+# =============================================================================
+
+@knowledge_bp.route('/ingest', methods=['POST'])
+@require_auth
+def ingest_knowledge():
+    """Ingest knowledge from various sources (future: Slack, Dropbox, etc.)"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
+        from chief_of_staff_ai.models.knowledge_models import SourceType
+        
+        data = request.get_json()
+        if not data or not data.get('source_type') or not data.get('content'):
+            return jsonify({'error': 'Source type and content are required'}), 400
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Parse source type
+        try:
+            source_type = SourceType(data['source_type'])
+        except ValueError:
+            return jsonify({'error': f"Unsupported source type: {data['source_type']}"}), 400
+        
+        # Ingest knowledge
+        result = knowledge_engine.ingest_knowledge_from_source(
+            source_type=source_type,
+            content=data['content'],
+            user_id=db_user.id
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f"Knowledge ingested from {source_type.value}",
+            'extraction_results': {
+                'topics_found': len(result.topics),
+                'people_found': len(result.people),
+                'relationships_found': len(result.relationships),
+                'tasks_found': len(result.tasks),
+                'insights_generated': len(result.insights),
+                'confidence': result.confidence
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Ingest knowledge error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@knowledge_bp.route('/stats', methods=['GET'])
+@require_auth
+def get_knowledge_stats():
+    """Get comprehensive knowledge base statistics"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.models.knowledge_models import TopicHierarchy, PersonTopicRelationship, KnowledgeSource
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        with get_db_manager().get_session() as session:
+            # Get comprehensive stats
+            topics = session.query(TopicHierarchy).filter(
+                TopicHierarchy.user_id == db_user.id
+            ).all()
+            
+            relationships = session.query(PersonTopicRelationship).join(
+                TopicHierarchy
+            ).filter(
+                TopicHierarchy.user_id == db_user.id
+            ).all()
+            
+            sources = session.query(KnowledgeSource).filter(
+                KnowledgeSource.user_id == db_user.id
+            ).all()
+            
+            stats = {
+                'knowledge_base': {
+                    'total_topics': len(topics),
+                    'topic_hierarchy_depth': max([t.depth_level for t in topics]) if topics else 0,
+                    'auto_generated_topics': len([t for t in topics if t.auto_generated]),
+                    'user_created_topics': len([t for t in topics if t.user_created]),
+                    'active_topics': len([t for t in topics if t.status == 'active'])
+                },
+                'relationships': {
+                    'total_people_topic_relationships': len(relationships),
+                    'high_confidence_relationships': len([r for r in relationships if r.confidence == 'high']),
+                    'relationship_types': _count_relationship_types(relationships)
+                },
+                'sources': {
+                    'total_sources': len(sources),
+                    'by_type': _count_sources_by_type(sources),
+                    'processed_sources': len([s for s in sources if s.processing_status == 'processed']),
+                    'recent_sources': len([s for s in sources if s.created_at and (datetime.utcnow() - s.created_at).days <= 7])
+                },
+                'knowledge_quality': {
+                    'avg_topic_confidence': sum([t.confidence_score for t in topics]) / len(topics) if topics else 0,
+                    'topics_with_people': len(set([r.topic_id for r in relationships])),
+                    'coverage_percentage': (len(set([r.topic_id for r in relationships])) / len(topics) * 100) if topics else 0
+                }
+            }
+            
+            return jsonify({
+                'success': True,
+                'stats': stats,
+                'last_updated': datetime.utcnow().isoformat()
+            })
+            
+    except Exception as e:
+        logger.error(f"Get knowledge stats error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def _build_topic_tree(topics):
+    """Build hierarchical topic tree structure"""
+    topic_map = {t.id: {
+        'id': t.id,
+        'name': t.name,
+        'description': t.description,
+        'topic_type': t.topic_type,
+        'depth_level': t.depth_level,
+        'hierarchy_path': t.hierarchy_path,
+        'confidence_score': t.confidence_score,
+        'mention_count': t.mention_count,
+        'auto_generated': t.auto_generated,
+        'user_created': t.user_created,
+        'status': t.status,
+        'priority': t.priority,
+        'last_mentioned': t.last_mentioned.isoformat() if t.last_mentioned else None,
+        'children': []
+    } for t in topics}
+    
+    root_topics = []
+    
+    for topic in topics:
+        topic_data = topic_map[topic.id]
+        
+        if topic.parent_topic_id and topic.parent_topic_id in topic_map:
+            topic_map[topic.parent_topic_id]['children'].append(topic_data)
+        else:
+            root_topics.append(topic_data)
+    
+    return root_topics
+
+def _count_by_type(topics):
+    """Count topics by type"""
+    counts = {}
+    for topic in topics:
+        topic_type = topic.topic_type
+        counts[topic_type] = counts.get(topic_type, 0) + 1
+    return counts
+
+def _count_relationship_types(relationships):
+    """Count relationships by type"""
+    counts = {}
+    for rel in relationships:
+        rel_type = rel.relationship_type
+        counts[rel_type] = counts.get(rel_type, 0) + 1
+    return counts
+
+def _count_sources_by_type(sources):
+    """Count sources by type"""
+    counts = {}
+    for source in sources:
+        source_type = source.source_type
+        counts[source_type] = counts.get(source_type, 0) + 1
+    return counts 
+
+
+================================================================================
+FILE: api/routes/calendar_routes.py
+PURPOSE: API endpoints: Calendar Routes
+================================================================================
+"""
+Calendar Routes Blueprint
+========================
+
+Calendar events and meeting preparation routes.
+Extracted from main.py for better organization.
+"""
+
+import logging
+from datetime import datetime, timedelta, timezone
+from flask import Blueprint, request, jsonify, session
+from ..middleware.auth_middleware import get_current_user, require_auth
+from email.utils import parseaddr
+from chief_of_staff_ai.models.database import get_db_manager, Calendar
+
+logger = logging.getLogger(__name__)
+
+# Fix URL prefix to match frontend expectations
+calendar_bp = Blueprint('calendar', __name__, url_prefix='/api/calendar')
+
+
+def parse_name_from_email(email: str, display_name: str = None) -> str:
+    """Parse a proper name from email and display name"""
+    if display_name and len(display_name.strip()) > 0:
+        return display_name.strip()
+        
+    local_part = email.split('@')[0]
+    # Handle common formats like first.last, first_last, firstlast
+    if '.' in local_part:
+        parts = local_part.split('.')
+        return ' '.join(part.capitalize() for part in parts)
+    elif '_' in local_part:
+        parts = local_part.split('_')
+        return ' '.join(part.capitalize() for part in parts)
+    else:
+        # Try to split by camelCase
+        import re
+        parts = re.findall('[A-Z][^A-Z]*', local_part)
+        if len(parts) > 1:
+            return ' '.join(parts)
+        # Try to split by numbers
+        parts = re.split(r'\d+', local_part)
+        if len(parts) > 1:
+            return ' '.join(part.capitalize() for part in parts if part)
+        # Just capitalize the local part
+        return local_part.capitalize()
+
+
+@calendar_bp.route('/fetch', methods=['POST'])
+@require_auth
+def api_fetch_calendar():
+    """Fetch calendar events and create prep tasks"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        from ingest.calendar_fetcher import calendar_fetcher
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
+        
+        data = request.get_json() or {}
+        days_back = data.get('days_back', 3)
+        days_forward = data.get('days_forward', 14)
+        force_refresh = data.get('force_refresh', False)
+        create_prep_tasks = data.get('create_prep_tasks', False)
+        add_attendees_tier_1 = data.get('add_attendees_tier_1', True)
+        
+        user_email = user['email']
+        
+        # Get user from database
+        db_user = get_db_manager().get_user_by_email(user_email)
+        if not db_user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Fetch calendar events
+        logger.info(f"Fetching calendar events for {user_email}")
+        calendar_result = calendar_fetcher.fetch_calendar_events(
+            user_email=user_email, 
+            days_back=days_back, 
+            days_forward=days_forward,
+            force_refresh=force_refresh
+        )
+        
+        if not calendar_result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': calendar_result.get('error', 'Failed to fetch calendar events')
+            }), 500
+        
+        events = calendar_result.get('events', [])
+        events_imported = len(events)
+        
+        # Extract unique attendees
+        attendees = set()
+        for event in events:
+            if isinstance(event, dict):
+                event_attendees = event.get('attendees', [])
+                for attendee in event_attendees:
+                    email = attendee.get('email')
+                    if email and '@' in email and email != user_email:
+                        attendees.add(email.lower())
+        
+        # Add attendees to Tier 1 if requested
+        tier_1_contacts = 0
+        if add_attendees_tier_1:
+            for attendee in attendees:
+                # Create contact engagement stats for the attendee
+                stats = email_quality_filter.ContactEngagementStats(
+                    email_address=attendee,
+                    name=None,
+                    emails_received=1,
+                    emails_responded_to=1,
+                    last_email_date=datetime.now(timezone.utc),
+                    first_email_date=datetime.now(timezone.utc),
+                    response_rate=1.0,
+                    days_since_last_email=0,
+                    avg_days_between_emails=0,
+                    tier=email_quality_filter.ContactTier.TIER_1,
+                    tier_reason="Calendar attendee",
+                    should_process=True
+                )
+                email_quality_filter._contact_tiers[attendee] = stats
+                tier_1_contacts += 1
+        
+        # Create meeting preparation tasks if requested
+        prep_tasks_result = {'prep_tasks_created': 0, 'tasks': []}
+        if create_prep_tasks and events:
+            logger.info(f"Creating meeting prep tasks for {user_email}")
+            prep_tasks_result = calendar_fetcher.create_meeting_prep_tasks(db_user.id, events)
+        
+        # Save events to database
+        saved_events = []
+        for event in events:
+            if isinstance(event, dict):
+                saved_event = get_db_manager().save_calendar_event(db_user.id, event)
+                if saved_event:
+                    saved_events.append(saved_event.to_dict())
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully imported {events_imported} calendar events',
+            'events': saved_events,
+            'events_imported': events_imported,
+            'attendees_added': len(attendees),
+            'tier_1_contacts': tier_1_contacts,
+            'prep_tasks_created': prep_tasks_result.get('prep_tasks_created', 0),
+            'prep_tasks': prep_tasks_result.get('tasks', []),
+            'date_range': {
+                'start': f"{days_back} days ago",
+                'end': f"{days_forward} days ahead"
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Calendar fetch error for {user['email']}: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'error': f"Calendar fetch failed: {str(e)}",
+            'prep_tasks_created': 0
+        }), 500
+
+
+@calendar_bp.route('/events', methods=['GET'])
+@require_auth
+def api_get_calendar_events():
+    """Get calendar events"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        user_email = user['email']
+        days_forward = request.args.get('days_forward', 14, type=int)
+        limit = request.args.get('limit', 50, type=int)
+        
+        db_user = get_db_manager().get_user_by_email(user_email)
+        if not db_user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Get events from database
+        with get_db_manager().get_session() as session:
+            # Calculate date range
+            now = datetime.now(timezone.utc)
+            start_date = now
+            end_date = now + timedelta(days=days_forward)
+            
+            events = session.query(Calendar).filter(
+                Calendar.user_id == db_user.id,
+                Calendar.start_time >= start_date,
+                Calendar.start_time <= end_date
+            ).order_by(Calendar.start_time.asc()).limit(limit).all()
+            
+            # Convert to dict format and check for prep tasks
+            events_data = []
+            all_user_tasks = get_db_manager().get_user_tasks(db_user.id)
+            prep_tasks = [task for task in all_user_tasks if task.category == 'meeting_preparation']
+            
+            for event in events:
+                event_dict = event.to_dict()
+                
+                # Check if this event has associated prep tasks
+                related_prep_tasks = [task for task in prep_tasks if 
+                                    event.title and task.description and 
+                                    (event.title.lower() in task.description.lower() or 
+                                     any(word in task.description.lower() for word in event.title.lower().split() if len(word) > 3))]
+                
+                event_dict['has_prep_tasks'] = len(related_prep_tasks) > 0
+                event_dict['prep_tasks_count'] = len(related_prep_tasks)
+                
+                # Add attendee count and strategic importance
+                attendees = event.attendees or []
+                event_dict['attendee_count'] = len(attendees)
+                
+                # Calculate strategic importance based on attendees
+                importance = event.importance_score or 0.5  # Base importance
+                if attendees:
+                    tier_1_count = len([a for a in attendees if a.get('relationship_type') == 'tier_1'])
+                    importance += (tier_1_count / len(attendees)) * 0.5
+                
+                event_dict['strategic_importance'] = min(1.0, importance)
+                
+                # Determine if preparation is needed
+                event_dict['preparation_needed'] = event.preparation_needed or (
+                    len(attendees) > 2 or  # More than 2 attendees
+                    any(a.get('relationship_type') == 'tier_1' for a in attendees) or  # Any Tier 1 contact
+                    importance > 0.7  # High strategic importance
+                )
+                
+                events_data.append(event_dict)
+            
+            return jsonify({
+                'success': True,
+                'events': events_data,
+                'count': len(events_data)
+            })
+            
+    except Exception as e:
+        logger.error(f"Get calendar events error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@calendar_bp.route('/meeting-prep-tasks', methods=['GET'])
+@require_auth
+def api_get_meeting_prep_tasks():
+    """Get meeting preparation tasks"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        if not db_user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Get prep tasks that are not completed
+        all_tasks = get_db_manager().get_user_tasks(db_user.id)
+        prep_tasks = [task for task in all_tasks if 
+                     task.category == 'meeting_preparation' and 
+                     task.status in ['pending', 'open']]
+        
+        return jsonify({
+            'success': True,
+            'tasks': [task.to_dict() for task in prep_tasks],
+            'count': len(prep_tasks)
+        })
+    
+    except Exception as e:
+        logger.error(f"Get meeting prep tasks error for {user['email']}: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@calendar_bp.route('/free-time', methods=['POST'])
+@require_auth
+def api_free_time_analysis():
+    """Analyze free time in calendar"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        from ingest.calendar_fetcher import calendar_fetcher
+        
+        data = request.get_json() or {}
+        days_forward = data.get('days_forward', 7)
+        user_email = user['email']
+        
+        # Get free time analysis
+        result = calendar_fetcher.fetch_free_time_analysis(
+            user_email=user_email,
+            days_forward=days_forward
+        )
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Free time analysis error for {user['email']}: {str(e)}")
+        return jsonify({
+            'success': False, 
+            'error': f"Free time analysis failed: {str(e)}",
+            'free_slots': []
+        }), 500
+
+
+@calendar_bp.route('/process-upcoming', methods=['POST'])
+@require_auth
+def process_upcoming_meetings():
+    """Process upcoming meetings and generate preparation intelligence"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'success': False, 'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        if not db_user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Placeholder for meeting processing functionality
+        return jsonify({
+            'success': True,
+            'message': 'Meeting processing completed',
+            'meetings_processed': 0
+        })
+    
+    except Exception as e:
+        logger.error(f"Process upcoming meetings error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@calendar_bp.route('/import-and-tier', methods=['POST'])
+@require_auth
+def import_calendar_and_tier():
+    """Import calendar events and add participants to Tier 1"""
+    from chief_of_staff_ai.ingest.calendar_fetcher import calendar_fetcher
+    from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter, ContactTier
+    from models.database import get_db_manager
+    
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        data = request.get_json() or {}
+        days_back = data.get('days_back', 180)  # Default 6 months back
+        days_forward = data.get('days_forward', 90)  # Default 3 months forward
+        add_participants_tier_1 = data.get('add_participants_tier_1', True)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"📅 Importing calendar events for {user_email}")
+        
+        # Fetch calendar events
+        calendar_result = calendar_fetcher.fetch_calendar_events(
+            user_email=user_email,
+            days_back=days_back,
+            days_forward=days_forward
+        )
+        
+        if not calendar_result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': calendar_result.get('error', 'Failed to fetch calendar events')
+            }), 500
+        
+        events = calendar_result.get('events', [])
+        events_imported = len(events)
+        
+        # Extract unique participants
+        participants = set()
+        for event in events:
+            attendees = event.get('attendees', [])
+            for attendee in attendees:
+                email = attendee.get('email')
+                if email:
+                    email_addr = parseaddr(email)[1].lower()
+                    if email_addr and '@' in email_addr and email_addr != user_email:
+                        participants.add(email_addr)
+        
+        # Add participants to Tier 1
+        tier_1_contacts = 0
+        if add_participants_tier_1:
+            for participant in participants:
+                email_quality_filter._contact_tiers[participant] = ContactTier.TIER_1
+                tier_1_contacts += 1
+            
+            logger.info(f"👥 Added {tier_1_contacts} meeting participants to Tier 1")
+        
+        # Save events to database
+        with get_db_manager().get_session() as session:
+            for event in events:
+                # Save event using your existing database models/methods
+                pass  # Implement based on your database schema
+            
+            session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Successfully imported {events_imported} calendar events',
+            'events_imported': events_imported,
+            'participants_added': len(participants),
+            'tier_1_contacts': tier_1_contacts,
+            'date_range': {
+                'start': f"{days_back} days ago",
+                'end': f"{days_forward} days ahead"
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Calendar import error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to import calendar: {str(e)}'
+        }), 500
+
+
+@calendar_bp.route('/sync', methods=['POST'])
+@require_auth
+def sync_calendar():
+    """Sync calendar events and extract participants as contacts"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.ingest.calendar_fetcher import calendar_fetcher
+        
+        data = request.get_json() or {}
+        days_back = data.get('days_back', 30)
+        days_forward = data.get('days_forward', 30)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Fetch calendar events
+        result = calendar_fetcher.fetch_calendar_events(
+            user_email=user_email,
+            days_back=days_back,
+            days_forward=days_forward
+        )
+        
+        if not result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error fetching calendar events')
+            }), 400
+        
+        events = result.get('events', [])
+        
+        # Extract participants as contacts
+        participants_added = 0
+        with get_db_manager().get_session() as session:
+            for event in events:
+                for attendee in event.get('attendees', []):
+                    email = attendee.get('email')
+                    display_name = attendee.get('displayName')
+                    
+                    if email and '@' in email and email != user_email:
+                        # Parse a proper name from email/display name
+                        name = parse_name_from_email(email, display_name)
+                        
+                        # Create or update person
+                        person_data = {
+                            'email_address': email,
+                            'name': name,
+                            'last_interaction': event.get('start', {}).get('dateTime'),
+                            'relationship_type': 'Calendar Contact'
+                        }
+                        
+                        get_db_manager().create_or_update_person(db_user.id, person_data)
+                        participants_added += 1
+            
+            session.commit()
+        
+        return jsonify({
+            'success': True,
+            'events_fetched': len(events),
+            'participants_added': participants_added,
+            'message': f"Synced {len(events)} events and added {participants_added} participants as contacts"
+        })
+        
+    except Exception as e:
+        logger.error(f"Calendar sync error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@calendar_bp.route('/enhanced-calendar-events', methods=['GET'])
+@require_auth
+def get_enhanced_calendar_events():
+    """Get calendar events with enhanced metadata"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        days_ahead = int(request.args.get('days_ahead', 14))
+        days_back = int(request.args.get('days_back', 7))
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get events from database
+        with get_db_manager().get_session() as session:
+            # Calculate date range
+            now = datetime.now(timezone.utc)
+            start_date = now - timedelta(days=days_back)
+            end_date = now + timedelta(days=days_ahead)
+            
+            events = session.query(Calendar).filter(
+                Calendar.user_id == db_user.id,
+                Calendar.start_time >= start_date,
+                Calendar.start_time <= end_date
+            ).order_by(Calendar.start_time).all()
+            
+            # Convert to enhanced format
+            enhanced_events = []
+            for event in events:
+                event_dict = event.to_dict()
+                
+                # Add attendee information
+                attendees = []
+                for attendee in event.attendees:
+                    person = session.query(Person).filter(
+                        Person.user_id == db_user.id,
+                        Person.email_address == attendee['email']
+                    ).first()
+                    
+                    if person:
+                        attendee['name'] = person.name
+                        attendee['company'] = person.company
+                        attendee['relationship_type'] = person.relationship_type
+                        attendee['total_emails'] = person.total_emails
+                    
+                    attendees.append(attendee)
+                
+                event_dict['enhanced_attendees'] = attendees
+                event_dict['attendee_count'] = len(attendees)
+                
+                # Add strategic importance based on attendees
+                importance = 0.5  # Base importance
+                if attendees:
+                    tier_1_count = len([a for a in attendees if a.get('relationship_type') == 'tier_1'])
+                    importance += (tier_1_count / len(attendees)) * 0.5
+                
+                event_dict['strategic_importance'] = min(1.0, importance)
+                
+                # Determine if preparation is needed
+                event_dict['preparation_needed'] = (
+                    len(attendees) > 2 or  # More than 2 attendees
+                    any(a.get('relationship_type') == 'tier_1' for a in attendees) or  # Any Tier 1 contact
+                    importance > 0.7  # High strategic importance
+                )
+                
+                enhanced_events.append(event_dict)
+            
+            return jsonify({
+                'success': True,
+                'events': enhanced_events,
+                'count': len(enhanced_events)
+            })
+            
+    except Exception as e:
+        logger.error(f"Get enhanced calendar events error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@calendar_bp.route('/augment-with-knowledge', methods=['POST'])
+@require_auth
+def augment_meetings_with_knowledge():
+    """Augment calendar meetings with knowledge tree context"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager, CalendarEvent, Task
+        from api.routes.email_routes import get_master_knowledge_tree
+        from datetime import datetime, timedelta
+        
+        data = request.get_json() or {}
+        use_knowledge_tree = data.get('use_knowledge_tree', True)
+        add_attendee_context = data.get('add_attendee_context', True)
+        generate_preparation_tasks = data.get('generate_preparation_tasks', True)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get knowledge tree
+        if use_knowledge_tree:
+            master_tree = get_master_knowledge_tree(db_user.id)
+            if not master_tree:
+                return jsonify({
+                    'success': False,
+                    'error': 'No knowledge tree found. Please build the knowledge tree first.'
+                }), 400
+        else:
+            master_tree = None
+        
+        with get_db_manager().get_session() as session:
+            # Get upcoming meetings that need augmentation
+            now = datetime.utcnow()
+            upcoming_meetings = session.query(CalendarEvent).filter(
+                CalendarEvent.user_id == db_user.id,
+                CalendarEvent.start_time >= now,
+                CalendarEvent.start_time <= now + timedelta(days=30)  # Next 30 days
+            ).all()
+            
+            if not upcoming_meetings:
+                return jsonify({
+                    'success': True,
+                    'meetings_enhanced': 0,
+                    'message': 'No upcoming meetings found to augment'
+                })
+            
+            meetings_enhanced = 0
+            attendee_intelligence_added = 0
+            preparation_tasks_created = 0
+            strategic_meetings = 0
+            sample_meetings = []
+            
+            logger.info(f"Augmenting {len(upcoming_meetings)} meetings with knowledge tree context")
+            
+            for meeting in upcoming_meetings:
+                try:
+                    enhanced = False
+                    meeting_intelligence = meeting.business_intelligence or {}
+                    
+                    # Analyze attendees against knowledge tree
+                    attendee_intelligence = []
+                    if master_tree and add_attendee_context:
+                        for attendee in meeting.attendees or []:
+                            attendee_email = attendee.get('email', '').lower()
+                            
+                            # Find attendee in knowledge tree
+                            for person in master_tree.get('people', []):
+                                if person['email'].lower() == attendee_email:
+                                    attendee_intelligence.append({
+                                        'email': attendee_email,
+                                        'name': person.get('name', attendee.get('name', 'Unknown')),
+                                        'role': person.get('role', 'Unknown role'),
+                                        'company': person.get('company', 'Unknown company'),
+                                        'relationship_strength': person.get('relationship_strength', 0.5),
+                                        'primary_topics': person.get('primary_topics', []),
+                                        'strategic_importance': person.get('relationship_strength', 0) > 0.7
+                                    })
+                                    break
+                    
+                    if attendee_intelligence:
+                        meeting_intelligence['attendee_intelligence'] = attendee_intelligence
+                        attendee_intelligence_added += 1
+                        enhanced = True
+                        
+                        # Check if this is a strategic meeting
+                        strategic_attendees = sum(1 for att in attendee_intelligence if att['strategic_importance'])
+                        if strategic_attendees > 0:
+                            strategic_meetings += 1
+                            meeting_intelligence['is_strategic'] = True
+                    
+                    # Find related topics and projects
+                    related_items = {'topics': [], 'projects': []}
+                    if master_tree:
+                        meeting_title_lower = (meeting.title or '').lower()
+                        meeting_description_lower = (meeting.description or '').lower()
+                        
+                        # Find related topics
+                        for topic in master_tree.get('topics', []):
+                            topic_name_lower = topic['name'].lower()
+                            if (topic_name_lower in meeting_title_lower or 
+                                topic_name_lower in meeting_description_lower):
+                                related_items['topics'].append({
+                                    'name': topic['name'],
+                                    'importance': topic.get('importance', 0.5),
+                                    'description': topic.get('description', '')
+                                })
+                        
+                        # Find related projects
+                        for project in master_tree.get('projects', []):
+                            project_name_lower = project['name'].lower()
+                            if (project_name_lower in meeting_title_lower or 
+                                project_name_lower in meeting_description_lower):
+                                related_items['projects'].append({
+                                    'name': project['name'],
+                                    'status': project.get('status', 'unknown'),
+                                    'priority': project.get('priority', 'medium'),
+                                    'key_people': project.get('key_people', [])
+                                })
+                    
+                    if related_items['topics'] or related_items['projects']:
+                        meeting_intelligence['related_items'] = related_items
+                        enhanced = True
+                    
+                    # Generate preparation tasks
+                    if generate_preparation_tasks and (attendee_intelligence or related_items['topics'] or related_items['projects']):
+                        prep_tasks = []
+                        
+                        # Task: Review attendee backgrounds
+                        if attendee_intelligence:
+                            high_value_attendees = [att for att in attendee_intelligence if att['strategic_importance']]
+                            if high_value_attendees:
+                                prep_tasks.append({
+                                    'description': f"Review backgrounds of key attendees: {', '.join([att['name'] for att in high_value_attendees[:3]])}",
+                                    'category': 'meeting_prep',
+                                    'priority': 'high',
+                                    'due_date': meeting.start_time - timedelta(hours=2),
+                                    'context': f"Meeting: {meeting.title}"
+                                })
+                        
+                        # Task: Prepare topics for discussion
+                        if related_items['topics']:
+                            top_topics = related_items['topics'][:2]
+                            prep_tasks.append({
+                                'description': f"Prepare talking points for: {', '.join([t['name'] for t in top_topics])}",
+                                'category': 'meeting_prep',
+                                'priority': 'medium',
+                                'due_date': meeting.start_time - timedelta(hours=1),
+                                'context': f"Meeting: {meeting.title}"
+                            })
+                        
+                        # Task: Review project status
+                        if related_items['projects']:
+                            active_projects = [p for p in related_items['projects'] if p['status'] == 'active']
+                            if active_projects:
+                                prep_tasks.append({
+                                    'description': f"Review status updates for: {', '.join([p['name'] for p in active_projects[:2]])}",
+                                    'category': 'meeting_prep',
+                                    'priority': 'medium',
+                                    'due_date': meeting.start_time - timedelta(minutes=30),
+                                    'context': f"Meeting: {meeting.title}"
+                                })
+                        
+                        # Save preparation tasks
+                        for task_data in prep_tasks:
+                            task = Task(
+                                user_id=db_user.id,
+                                calendar_event_id=meeting.id,
+                                description=task_data['description'],
+                                category=task_data['category'],
+                                priority=task_data['priority'],
+                                due_date=task_data['due_date'],
+                                status='pending',
+                                confidence=0.9,  # High confidence for meeting prep tasks
+                                source_context=task_data['context'],
+                                business_intelligence={
+                                    'meeting_preparation': True,
+                                    'meeting_title': meeting.title,
+                                    'meeting_date': meeting.start_time.isoformat(),
+                                    'strategic_meeting': meeting_intelligence.get('is_strategic', False),
+                                    'knowledge_tree_enhanced': True
+                                }
+                            )
+                            session.add(task)
+                            preparation_tasks_created += 1
+                    
+                    # Update meeting with intelligence
+                    if enhanced:
+                        meeting_intelligence['last_augmented'] = datetime.utcnow().isoformat()
+                        meeting_intelligence['knowledge_tree_enhanced'] = True
+                        meeting.business_intelligence = meeting_intelligence
+                        meetings_enhanced += 1
+                        
+                        # Add to sample
+                        if len(sample_meetings) < 5:
+                            sample_meetings.append({
+                                'title': meeting.title,
+                                'start_time': meeting.start_time.isoformat(),
+                                'attendee_count': len(attendee_intelligence),
+                                'strategic_attendees': sum(1 for att in attendee_intelligence if att['strategic_importance']),
+                                'related_topics': len(related_items.get('topics', [])),
+                                'related_projects': len(related_items.get('projects', [])),
+                                'preparation_tasks': len([t for t in prep_tasks if 'prep_tasks' in locals()]) if 'prep_tasks' in locals() else 0
+                            })
+                
+                except Exception as e:
+                    logger.error(f"Error augmenting meeting {meeting.id}: {str(e)}")
+                    continue
+            
+            session.commit()
+            
+            return jsonify({
+                'success': True,
+                'meetings_enhanced': meetings_enhanced,
+                'attendee_intelligence_added': attendee_intelligence_added,
+                'preparation_tasks_created': preparation_tasks_created,
+                'strategic_meetings': strategic_meetings,
+                'total_meetings_processed': len(upcoming_meetings),
+                'sample_meetings': sample_meetings,
+                'knowledge_tree_used': use_knowledge_tree,
+                'message': f'Enhanced {meetings_enhanced} meetings with knowledge tree context'
+            })
+            
+    except Exception as e:
+        logger.error(f"Augment meetings with knowledge error: {str(e)}")
+        return jsonify({'error': str(e)}), 500 
+
+
+================================================================================
+KEY IMPLEMENTATION INSIGHTS
+================================================================================
+
+CRITICAL POINTS FOR REUSE:
+
+1. CONTACT TIER SYSTEM:
+   - ALL contacts from sent emails = Tier 1 (no exceptions)
+   - Use get_trusted_contacts() to get sent email recipients
+   - Simple rule: if you sent them an email, they're important
+
+2. GOOGLE OAUTH INTEGRATION:
+   - Requires Gmail API scope for reading sent emails
+   - Store refresh tokens for background processing
+   - Use gmail_auth.py for OAuth flow
+
+3. CLAUDE 4 OPUS AGENT SETUP:
+   - Model: "claude-opus-4-20250514" 
+   - Enable code execution, Files API, MCP connectors
+   - Set autonomous confidence thresholds (85%+ autonomous)
+
+4. EMAIL EXTRACTION PATTERN:
+   - Query sent emails using Gmail API
+   - Extract recipient emails and names
+   - Create TrustedContact records
+   - Sync to Person records for UI display
+
+5. DATABASE ARCHITECTURE:
+   - Users table for OAuth tokens
+   - Emails table for email content
+   - People table for contact display
+   - TrustedContacts table for sent email recipients
+
+6. API ENDPOINT PATTERN:
+   - Always check authentication first
+   - Use get_current_user() for session isolation
+   - Return JSON with success/error structure
+   - Handle database exceptions gracefully
+
+7. SIMPLE TIER LOGIC:
+   - Don't overcomplicate tier classification
+   - User request: "All sent emails = Tier 1"
+   - Implementation: return len(trusted_contacts) as tier_1_count
+
+================================================================================
+END OF KEY CODE EXPORT
+================================================================================

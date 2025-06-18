@@ -1,0 +1,69 @@
+# environment_template.txt - Strategic Intelligence Platform Configuration
+# Copy this to .env and fill in your actual values
+
+# Google OAuth Integration (KEEP THESE - WORKING)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:8080/auth/callback
+
+# Claude 4 Opus Configuration (KEEP - WORKING)
+ANTHROPIC_API_KEY=your_anthropic_key
+
+# Flask Configuration
+SECRET_KEY=your-secret-key-change-in-production
+FLASK_ENV=development
+
+# Database Configuration (NEW - MULTI-DATABASE ARCHITECTURE)
+DATABASE_TYPE=postgresql
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=chief_of_staff
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+
+# Vector Database (NEW)
+CHROMA_HOST=localhost
+CHROMA_PORT=8000
+CHROMA_AUTH_TOKEN=test-token
+EMBEDDING_MODEL=all-MiniLM-L6-v2
+
+# Graph Database (NEW)
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=password
+
+# Cache & Real-time (NEW)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# Object Storage (NEW)
+S3_ENDPOINT=http://localhost:9000
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin
+S3_BUCKET=chief-of-staff
+
+# Intelligence Settings (NEW)
+WEB_ENRICHMENT_ENABLED=true
+ENRICHMENT_BATCH_SIZE=10
+ENRICHMENT_COOLDOWN_MINUTES=5
+KNOWLEDGE_TREE_TIME_WINDOWS=[7,30,90]
+MAX_EMAILS_PER_ANALYSIS=500
+ENABLE_PREDICTIVE_ANALYSIS=true
+
+# Claude Analyst Settings (NEW)
+ANALYST_TEMPERATURE=0.3
+ANALYST_MAX_TOKENS=4000
+ENABLE_CODE_EXECUTION=true
+ENABLE_FILES_API=true
+ENABLE_MCP_CONNECTOR=true
+
+# Web Scraping (NEW)
+USER_AGENT=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
+REQUEST_TIMEOUT=30
+MAX_CONCURRENT_REQUESTS=5
+
+# Monitoring & Logging (NEW)
+LOG_LEVEL=INFO
+ENABLE_PERFORMANCE_MONITORING=true
+ENABLE_ERROR_TRACKING=true 

@@ -17,8 +17,8 @@ class EmailIntelligenceProcessor:
     """Advanced email intelligence using Claude 4 Sonnet for comprehensive understanding"""
     
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-3-5-sonnet-20241022"
+        self.claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = settings.CLAUDE_MODEL  # Now uses Claude 4 Opus from settings
         self.version = "2.2"  # Debug version with relaxed filters
         
         # Quality filtering patterns (RELAXED FOR DEBUGGING)
@@ -344,7 +344,7 @@ Focus on building comprehensive business knowledge. Extract people and tasks gen
                 try:
                     logger.info(f"Calling Claude API for comprehensive analysis of email {email.gmail_id}, attempt {attempt + 1}")
                     
-                    message = self.client.messages.create(
+                    message = self.claude_client.messages.create(
                         model=self.model,
                         max_tokens=3000,
                         temperature=0.1,

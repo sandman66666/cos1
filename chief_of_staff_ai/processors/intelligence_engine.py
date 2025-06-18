@@ -40,8 +40,10 @@ class IntelligenceEngine:
     """The core intelligence engine that makes everything useful"""
     
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-3-5-sonnet-20241022"
+        from config.settings import settings
+        
+        self.claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = settings.CLAUDE_MODEL  # Now uses Claude 4 Opus from settings
         
     def generate_meeting_intelligence(self, user_id: int, event: Calendar) -> Optional[MeetingIntelligence]:
         """Generate comprehensive meeting intelligence with preparation tasks"""
@@ -239,7 +241,7 @@ Return a JSON object with this structure:
 
 Focus on generating actionable preparation tasks and discussion topics that will help make this meeting successful. Be specific and practical."""
 
-            message = self.client.messages.create(
+            message = self.claude_client.messages.create(
                 model=self.model,
                 max_tokens=3000,
                 temperature=0.1,

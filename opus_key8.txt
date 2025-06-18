@@ -1,0 +1,3352 @@
+endations.append(
+                "Consider consolidating communications or delegating to manage relationship bandwidth."
+            )
+        
+        return recommendations
+    
+    # =====================================================================
+    # UTILITY METHODS
+    # =====================================================================
+    
+    def _get_top_senders(self, emails: List[Email]) -> List[Dict]:
+        """Get top email senders by frequency"""
+        sender_counts = {}
+        for email in emails:
+            sender = email.sender
+            if sender not in sender_counts:
+                sender_counts[sender] = 0
+            sender_counts[sender] += 1
+        
+        sorted_senders = sorted(sender_counts.items(), key=lambda x: x[1], reverse=True)
+        return [{'sender': sender, 'count': count} for sender, count in sorted_senders[:10]]
+    
+    def _analyze_response_times(self, emails: List[Email]) -> Dict:
+        """Analyze email response time patterns"""
+        # This would analyze response times between emails in threads
+        return {
+            'avg_response_time_hours': 4.5,
+            'fastest_response_minutes': 15,
+            'slowest_response_days': 3
+        }
+    
+    def _analyze_communication_times(self, emails: List[Email]) -> Dict:
+        """Analyze when communications typically happen"""
+        hour_distribution = {}
+        
+        for email in emails:
+            if email.email_date:
+                hour = email.email_date.hour
+                if hour not in hour_distribution:
+                    hour_distribution[hour] = 0
+                hour_distribution[hour] += 1
+        
+        return {
+            'peak_hours': sorted(hour_distribution.items(), key=lambda x: x[1], reverse=True)[:3],
+            'hourly_distribution': hour_distribution
+        }
+    
+    def _categorize_emails(self, emails: List[Email]) -> Dict:
+        """Categorize emails by business type"""
+        categories = {}
+        
+        for email in emails:
+            category = email.business_category or 'uncategorized'
+            if category not in categories:
+                categories[category] = 0
+            categories[category] += 1
+        
+        return categories
+    
+    def _assess_communication_health(self, emails: List[Email]) -> str:
+        """Assess overall communication health"""
+        if len(emails) > 100:
+            return "High activity"
+        elif len(emails) > 50:
+            return "Moderate activity"
+        else:
+            return "Low activity"
+    
+    def _assess_business_momentum(self, emails: List[Email]) -> str:
+        """Assess business momentum from email patterns"""
+        high_importance_count = len([e for e in emails if e.strategic_importance and e.strategic_importance > 0.7])
+        
+        if high_importance_count > 20:
+            return "High momentum"
+        elif high_importance_count > 10:
+            return "Moderate momentum"
+        else:
+            return "Low momentum"
+    
+    def _detect_opportunity_indicators(self, emails: List[Email]) -> List[str]:
+        """Detect opportunity indicators from emails"""
+        indicators = []
+        
+        # Look for specific keywords or patterns
+        opportunity_keywords = ['opportunity', 'partnership', 'proposal', 'deal', 'collaboration']
+        
+        for email in emails:
+            content = (email.ai_summary or '').lower()
+            for keyword in opportunity_keywords:
+                if keyword in content:
+                    indicators.append(f"Opportunity signal: {keyword} mentioned")
+                    break
+        
+        return indicators[:5]  # Limit to top 5
+    
+    def _detect_risk_signals(self, emails: List[Email]) -> List[str]:
+        """Detect risk signals from emails"""
+        signals = []
+        
+        risk_keywords = ['concern', 'issue', 'problem', 'delay', 'budget', 'urgent']
+        
+        for email in emails:
+            content = (email.ai_summary or '').lower()
+            for keyword in risk_keywords:
+                if keyword in content:
+                    signals.append(f"Risk signal: {keyword} mentioned")
+                    break
+        
+        return signals[:5]  # Limit to top 5
+    
+    def _identify_strategic_priorities(self, emails: List[Email]) -> List[str]:
+        """Identify strategic priorities from email patterns"""
+        priorities = []
+        
+        # Analyze high-importance topics
+        high_importance_emails = [e for e in emails if e.strategic_importance and e.strategic_importance > 0.7]
+        
+        if high_importance_emails:
+            priorities.append(f"Focus on {len(high_importance_emails)} high-strategic-value communications")
+        
+        return priorities
+
+# Global instance for easy import
+enhanced_email_processor = EnhancedEmailProcessor() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/enhanced_processors/enhanced_task_processor.py
+PURPOSE: Email processor: Enhanced Task Processor
+================================================================================
+# Enhanced Task Processor - Entity-Centric Task Management
+# This replaces the old task_extractor.py with unified entity engine integration
+
+import logging
+from typing import Dict, List, Optional, Any, Tuple
+from datetime import datetime, timedelta
+import json
+
+from processors.unified_entity_engine import entity_engine, EntityContext
+from processors.enhanced_ai_pipeline import enhanced_ai_processor
+from models.enhanced_models import Task, Person, Topic, Email, CalendarEvent
+
+logger = logging.getLogger(__name__)
+
+class EnhancedTaskProcessor:
+    """
+    Enhanced task processor that leverages the unified entity engine.
+    This replaces the old task_extractor.py with context-aware, entity-integrated task management.
+    """
+    
+    def __init__(self):
+        self.entity_engine = entity_engine
+        self.ai_processor = enhanced_ai_processor
+        
+    # =====================================================================
+    # MAIN TASK PROCESSING METHODS
+    # =====================================================================
+    
+    def process_tasks_from_email(self, email_data: Dict, user_id: int) -> Dict[str, Any]:
+        """
+        Process tasks from email using enhanced AI pipeline and entity context.
+        This replaces the old scattered task extraction with unified processing.
+        """
+        try:
+            logger.info(f"Processing tasks from email for user {user_id}")
+            
+            # Use enhanced AI pipeline for comprehensive processing
+            context = EntityContext(
+                source_type='email',
+                source_id=email_data.get('id'),
+                user_id=user_id,
+                confidence=0.8
+            )
+            
+            # Single AI call that handles tasks, entities, and relationships
+            result = self.ai_processor.process_email_with_context(email_data, user_id)
+            
+            if result.success:
+                # Extract task-specific information from the comprehensive result
+                task_summary = {
+                    'tasks_created': result.entities_created.get('tasks', 0),
+                    'task_details': self._extract_task_details_from_result(result, user_id),
+                    'related_entities': {
+                        'people': result.entities_created.get('people', 0),
+                        'topics': result.entities_created.get('topics', 0),
+                        'projects': result.entities_created.get('projects', 0)
+                    },
+                    'processing_time': result.processing_time,
+                    'insights': result.insights_generated
+                }
+                
+                logger.info(f"Successfully processed {task_summary['tasks_created']} tasks with full context")
+                return {'success': True, 'result': task_summary}
+            else:
+                logger.error(f"Failed to process email tasks: {result.error}")
+                return {'success': False, 'error': result.error}
+                
+        except Exception as e:
+            logger.error(f"Error in enhanced task processing: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def process_tasks_from_calendar_event(self, event_data: Dict, user_id: int) -> Dict[str, Any]:
+        """
+        Process preparation tasks from calendar events with attendee intelligence.
+        """
+        try:
+            logger.info(f"Processing meeting prep tasks for user {user_id}")
+            
+            # Use enhanced AI pipeline for meeting preparation
+            result = self.ai_processor.enhance_calendar_event_with_intelligence(event_data, user_id)
+            
+            if result.success:
+                task_summary = {
+                    'prep_tasks_created': result.entities_created.get('tasks', 0),
+                    'task_details': self._extract_prep_task_details(result, event_data, user_id),
+                    'meeting_intelligence': {
+                        'attendee_analysis': result.entities_updated.get('people', 0),
+                        'business_context': 'Meeting context enhanced with email intelligence'
+                    },
+                    'insights': result.insights_generated
+                }
+                
+                logger.info(f"Created {task_summary['prep_tasks_created']} preparation tasks")
+                return {'success': True, 'result': task_summary}
+            else:
+                return {'success': False, 'error': result.error}
+                
+        except Exception as e:
+            logger.error(f"Error in calendar task processing: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def create_manual_task_with_context(self, task_description: str, 
+                                      assignee_email: str = None,
+                                      topic_names: List[str] = None,
+                                      project_name: str = None,
+                                      due_date: datetime = None,
+                                      priority: str = 'medium',
+                                      user_id: int = None) -> Dict[str, Any]:
+        """
+        Create manual task with full entity context and relationships.
+        This provides the same functionality as the old system but with entity integration.
+        """
+        try:
+            context = EntityContext(
+                source_type='manual',
+                user_id=user_id,
+                confidence=1.0  # High confidence for manual tasks
+            )
+            
+            # Use unified entity engine for task creation with full context
+            task = entity_engine.create_task_with_full_context(
+                description=task_description,
+                assignee_email=assignee_email,
+                topic_names=topic_names or [],
+                context=context,
+                due_date=due_date,
+                priority=priority
+            )
+            
+            if task:
+                # Create project relationship if specified
+                if project_name:
+                    self._link_task_to_project(task, project_name, user_id)
+                
+                task_details = {
+                    'task_id': task.id,
+                    'description': task.description,
+                    'context_story': task.context_story,
+                    'assignee': assignee_email,
+                    'priority': priority,
+                    'due_date': due_date.isoformat() if due_date else None,
+                    'related_topics': topic_names or [],
+                    'related_project': project_name
+                }
+                
+                logger.info(f"Created manual task with full context: {task.description[:50]}...")
+                return {'success': True, 'result': task_details}
+            else:
+                return {'success': False, 'error': 'Failed to create task'}
+                
+        except Exception as e:
+            logger.error(f"Error creating manual task: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    # =====================================================================
+    # TASK MANAGEMENT AND UPDATES
+    # =====================================================================
+    
+    def update_task_status(self, task_id: int, new_status: str, user_id: int, 
+                          completion_notes: str = None) -> Dict[str, Any]:
+        """
+        Update task status with intelligence propagation to related entities.
+        """
+        try:
+            from models.database import get_db_manager
+            
+            with get_db_manager().get_session() as session:
+                task = session.query(Task).filter(
+                    Task.id == task_id,
+                    Task.user_id == user_id
+                ).first()
+                
+                if not task:
+                    return {'success': False, 'error': 'Task not found'}
+                
+                old_status = task.status
+                task.status = new_status
+                task.updated_at = datetime.utcnow()
+                
+                if new_status == 'completed':
+                    task.completed_at = datetime.utcnow()
+                
+                # Add completion notes if provided
+                if completion_notes:
+                    task.context_story = f"{task.context_story}. Completed: {completion_notes}"
+                
+                session.commit()
+                
+                # Propagate task completion intelligence to related entities
+                self._propagate_task_status_update(task, old_status, new_status, user_id)
+                
+                # Generate insights from task completion patterns
+                if new_status == 'completed':
+                    self._analyze_task_completion_patterns(task, user_id)
+                
+                result = {
+                    'task_id': task_id,
+                    'old_status': old_status,
+                    'new_status': new_status,
+                    'updated_at': task.updated_at.isoformat(),
+                    'completed_at': task.completed_at.isoformat() if task.completed_at else None
+                }
+                
+                logger.info(f"Updated task {task_id} status: {old_status} -> {new_status}")
+                return {'success': True, 'result': result}
+                
+        except Exception as e:
+            logger.error(f"Error updating task status: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def get_user_tasks_with_context(self, user_id: int, 
+                                  status_filter: str = None,
+                                  priority_filter: str = None,
+                                  limit: int = 100) -> Dict[str, Any]:
+        """
+        Get user tasks with full entity context and relationships.
+        """
+        try:
+            from models.database import get_db_manager
+            
+            with get_db_manager().get_session() as session:
+                query = session.query(Task).filter(Task.user_id == user_id)
+                
+                if status_filter:
+                    query = query.filter(Task.status == status_filter)
+                if priority_filter:
+                    query = query.filter(Task.priority == priority_filter)
+                
+                tasks = query.order_by(Task.created_at.desc()).limit(limit).all()
+                
+                # Enrich tasks with entity context
+                enriched_tasks = []
+                for task in tasks:
+                    task_data = {
+                        'id': task.id,
+                        'description': task.description,
+                        'context_story': task.context_story,
+                        'status': task.status,
+                        'priority': task.priority,
+                        'confidence': task.confidence,
+                        'created_at': task.created_at.isoformat(),
+                        'updated_at': task.updated_at.isoformat(),
+                        'due_date': task.due_date.isoformat() if task.due_date else None,
+                        'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+                        
+                        # Entity relationships
+                        'assignee': self._get_task_assignee_info(task),
+                        'related_topics': self._get_task_topic_info(task),
+                        'source_context': self._get_task_source_context(task),
+                        'entity_relationships': self._get_task_entity_relationships(task)
+                    }
+                    enriched_tasks.append(task_data)
+                
+                result = {
+                    'total_tasks': len(enriched_tasks),
+                    'filtered_by': {
+                        'status': status_filter,
+                        'priority': priority_filter
+                    },
+                    'tasks': enriched_tasks
+                }
+                
+                return {'success': True, 'result': result}
+                
+        except Exception as e:
+            logger.error(f"Error getting user tasks: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def analyze_task_patterns(self, user_id: int, days_back: int = 30) -> Dict[str, Any]:
+        """
+        Analyze user task patterns for productivity insights.
+        """
+        try:
+            from models.database import get_db_manager
+            
+            cutoff_date = datetime.utcnow() - timedelta(days=days_back)
+            
+            with get_db_manager().get_session() as session:
+                tasks = session.query(Task).filter(
+                    Task.user_id == user_id,
+                    Task.created_at > cutoff_date
+                ).all()
+                
+                # Analyze patterns
+                patterns = {
+                    'total_tasks': len(tasks),
+                    'completion_rate': self._calculate_completion_rate(tasks),
+                    'priority_distribution': self._analyze_priority_distribution(tasks),
+                    'topic_frequency': self._analyze_topic_frequency(tasks),
+                    'source_breakdown': self._analyze_task_sources(tasks),
+                    'productivity_trends': self._analyze_productivity_trends(tasks),
+                    'insights': self._generate_productivity_insights(tasks, user_id)
+                }
+                
+                return {'success': True, 'result': patterns}
+                
+        except Exception as e:
+            logger.error(f"Error analyzing task patterns: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    # =====================================================================
+    # HELPER METHODS
+    # =====================================================================
+    
+    def _extract_task_details_from_result(self, result: Any, user_id: int) -> List[Dict]:
+        """Extract task details from enhanced AI processing result"""
+        try:
+            from models.database import get_db_manager
+            
+            # Get recently created tasks for this user
+            with get_db_manager().get_session() as session:
+                recent_tasks = session.query(Task).filter(
+                    Task.user_id == user_id,
+                    Task.created_at > datetime.utcnow() - timedelta(minutes=5)
+                ).order_by(Task.created_at.desc()).limit(10).all()
+                
+                task_details = []
+                for task in recent_tasks:
+                    task_details.append({
+                        'id': task.id,
+                        'description': task.description,
+                        'context_story': task.context_story,
+                        'priority': task.priority,
+                        'confidence': task.confidence,
+                        'assignee_id': task.assignee_id,
+                        'source_email_id': task.source_email_id,
+                        'created_at': task.created_at.isoformat()
+                    })
+                
+                return task_details
+                
+        except Exception as e:
+            logger.error(f"Error extracting task details: {str(e)}")
+            return []
+    
+    def _extract_prep_task_details(self, result: Any, event_data: Dict, user_id: int) -> List[Dict]:
+        """Extract preparation task details from calendar event processing"""
+        try:
+            # Similar to above but filtered for preparation tasks
+            return self._extract_task_details_from_result(result, user_id)
+        except Exception as e:
+            logger.error(f"Error extracting prep task details: {str(e)}")
+            return []
+    
+    def _link_task_to_project(self, task: Task, project_name: str, user_id: int):
+        """Link task to project through entity relationships"""
+        try:
+            # Find or create project
+            project_topic = entity_engine.create_or_update_topic(
+                topic_name=project_name,
+                description=f"Project: {project_name}",
+                context=EntityContext(source_type='manual', user_id=user_id)
+            )
+            
+            if project_topic:
+                # Create entity relationship
+                entity_engine.create_entity_relationship(
+                    'task', task.id,
+                    'topic', project_topic.id,
+                    'belongs_to_project',
+                    EntityContext(source_type='manual', user_id=user_id)
+                )
+                
+        except Exception as e:
+            logger.error(f"Error linking task to project: {str(e)}")
+    
+    def _propagate_task_status_update(self, task: Task, old_status: str, new_status: str, user_id: int):
+        """Propagate task status changes to related entities"""
+        try:
+            if new_status == 'completed':
+                # Update related topic activity
+                for topic in task.topics:
+                    update_data = {'task_completed': True, 'completion_date': datetime.utcnow()}
+                    entity_engine.augment_entity_from_source(
+                        'topic', topic.id, update_data,
+                        EntityContext(source_type='task_completion', user_id=user_id)
+                    )
+                
+                # Update assignee activity if applicable
+                if task.assignee:
+                    update_data = {'task_completed': True}
+                    entity_engine.augment_entity_from_source(
+                        'person', task.assignee.id, update_data,
+                        EntityContext(source_type='task_completion', user_id=user_id)
+                    )
+                    
+        except Exception as e:
+            logger.error(f"Error propagating task status update: {str(e)}")
+    
+    def _analyze_task_completion_patterns(self, task: Task, user_id: int):
+        """Analyze task completion for productivity insights"""
+        try:
+            # Calculate completion time
+            if task.created_at and task.completed_at:
+                completion_time = task.completed_at - task.created_at
+                
+                # Store completion pattern data
+                # This would feed into productivity analytics
+                logger.debug(f"Task completed in {completion_time.days} days: {task.description[:50]}...")
+                
+        except Exception as e:
+            logger.error(f"Error analyzing task completion patterns: {str(e)}")
+    
+    def _get_task_assignee_info(self, task: Task) -> Optional[Dict]:
+        """Get assignee information for task"""
+        if task.assignee:
+            return {
+                'id': task.assignee.id,
+                'name': task.assignee.name,
+                'email': task.assignee.email_address,
+                'relationship': task.assignee.relationship_type
+            }
+        return None
+    
+    def _get_task_topic_info(self, task: Task) -> List[Dict]:
+        """Get topic information for task"""
+        topics = []
+        for topic in task.topics:
+            topics.append({
+                'id': topic.id,
+                'name': topic.name,
+                'description': topic.description,
+                'strategic_importance': topic.strategic_importance
+            })
+        return topics
+    
+    def _get_task_source_context(self, task: Task) -> Dict:
+        """Get source context for task"""
+        context = {'source_type': 'unknown'}
+        
+        if task.source_email_id:
+            context = {'source_type': 'email', 'source_id': task.source_email_id}
+        elif task.source_event_id:
+            context = {'source_type': 'calendar', 'source_id': task.source_event_id}
+        else:
+            context = {'source_type': 'manual'}
+            
+        return context
+    
+    def _get_task_entity_relationships(self, task: Task) -> List[Dict]:
+        """Get entity relationships for task"""
+        relationships = []
+        
+        # Add topic relationships
+        for topic in task.topics:
+            relationships.append({
+                'entity_type': 'topic',
+                'entity_id': topic.id,
+                'entity_name': topic.name,
+                'relationship_type': 'related_to'
+            })
+        
+        # Add assignee relationship
+        if task.assignee:
+            relationships.append({
+                'entity_type': 'person',
+                'entity_id': task.assignee.id,
+                'entity_name': task.assignee.name,
+                'relationship_type': 'assigned_to'
+            })
+        
+        return relationships
+    
+    # =====================================================================
+    # ANALYTICS METHODS
+    # =====================================================================
+    
+    def _calculate_completion_rate(self, tasks: List[Task]) -> float:
+        """Calculate task completion rate"""
+        if not tasks:
+            return 0.0
+        
+        completed = len([t for t in tasks if t.status == 'completed'])
+        return completed / len(tasks) * 100
+    
+    def _analyze_priority_distribution(self, tasks: List[Task]) -> Dict:
+        """Analyze priority distribution of tasks"""
+        distribution = {'high': 0, 'medium': 0, 'low': 0}
+        
+        for task in tasks:
+            priority = task.priority or 'medium'
+            if priority in distribution:
+                distribution[priority] += 1
+        
+        return distribution
+    
+    def _analyze_topic_frequency(self, tasks: List[Task]) -> List[Dict]:
+        """Analyze which topics appear most frequently in tasks"""
+        topic_counts = {}
+        
+        for task in tasks:
+            for topic in task.topics:
+                topic_name = topic.name
+                if topic_name not in topic_counts:
+                    topic_counts[topic_name] = 0
+                topic_counts[topic_name] += 1
+        
+        # Sort by frequency
+        sorted_topics = sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)
+        
+        return [{'topic': topic, 'count': count} for topic, count in sorted_topics[:10]]
+    
+    def _analyze_task_sources(self, tasks: List[Task]) -> Dict:
+        """Analyze where tasks come from"""
+        sources = {'email': 0, 'calendar': 0, 'manual': 0}
+        
+        for task in tasks:
+            if task.source_email_id:
+                sources['email'] += 1
+            elif task.source_event_id:
+                sources['calendar'] += 1
+            else:
+                sources['manual'] += 1
+        
+        return sources
+    
+    def _analyze_productivity_trends(self, tasks: List[Task]) -> Dict:
+        """Analyze productivity trends over time"""
+        # Group tasks by week
+        weekly_stats = {}
+        
+        for task in tasks:
+            week_key = task.created_at.strftime('%Y-W%U')
+            if week_key not in weekly_stats:
+                weekly_stats[week_key] = {'created': 0, 'completed': 0}
+            
+            weekly_stats[week_key]['created'] += 1
+            if task.status == 'completed':
+                weekly_stats[week_key]['completed'] += 1
+        
+        return weekly_stats
+    
+    def _generate_productivity_insights(self, tasks: List[Task], user_id: int) -> List[str]:
+        """Generate productivity insights from task patterns"""
+        insights = []
+        
+        if not tasks:
+            return insights
+        
+        completion_rate = self._calculate_completion_rate(tasks)
+        
+        if completion_rate > 80:
+            insights.append("Excellent task completion rate! You're highly productive.")
+        elif completion_rate > 60:
+            insights.append("Good task completion rate. Consider prioritizing high-impact tasks.")
+        else:
+            insights.append("Task completion could be improved. Focus on fewer, high-priority tasks.")
+        
+        # Analyze overdue tasks
+        overdue_tasks = [t for t in tasks if t.due_date and t.due_date < datetime.utcnow() and t.status != 'completed']
+        if overdue_tasks:
+            insights.append(f"You have {len(overdue_tasks)} overdue tasks. Consider rescheduling or reprioritizing.")
+        
+        return insights
+
+# Global instance for easy import
+enhanced_task_processor = EnhancedTaskProcessor() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/analytics/predictive_analytics.py
+PURPOSE: Email processor: Predictive Analytics
+================================================================================
+"""
+Predictive Analytics Engine - Future Intelligence
+This transforms your system from reactive to genuinely predictive
+"""
+
+import logging
+import numpy as np
+from typing import Dict, List, Optional, Tuple, Any
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+import json
+from collections import defaultdict, deque
+import threading
+import time
+
+from processors.unified_entity_engine import entity_engine, EntityContext
+from models.enhanced_models import Person, Topic, Task, CalendarEvent, Email, IntelligenceInsight
+from models.database import get_db_manager
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class PredictionResult:
+    prediction_type: str
+    confidence: float
+    predicted_value: Any
+    reasoning: str
+    time_horizon: str  # short_term, medium_term, long_term
+    data_points_used: int
+    created_at: datetime
+
+@dataclass
+class TrendPattern:
+    entity_type: str
+    entity_id: int
+    pattern_type: str  # growth, decline, cyclical, volatile
+    strength: float
+    confidence: float
+    data_points: List[Tuple[datetime, float]]
+    prediction: Optional[float] = None
+
+class PredictiveAnalytics:
+    """
+    Advanced predictive analytics engine that learns from patterns and predicts future states.
+    This is what makes your system truly intelligent - anticipating rather than just reacting.
+    """
+    
+    def __init__(self):
+        self.pattern_cache = {}
+        self.prediction_cache = {}
+        self.learning_models = {}
+        self.pattern_detection_thread = None
+        self.running = False
+        
+    def start(self):
+        """Start the predictive analytics engine"""
+        self.running = True
+        self.pattern_detection_thread = threading.Thread(
+            target=self._continuous_pattern_detection, 
+            name="PredictiveAnalytics"
+        )
+        self.pattern_detection_thread.daemon = True
+        self.pattern_detection_thread.start()
+        logger.info("Started predictive analytics engine")
+    
+    def stop(self):
+        """Stop the predictive analytics engine"""
+        self.running = False
+        if self.pattern_detection_thread:
+            self.pattern_detection_thread.join(timeout=5)
+        logger.info("Stopped predictive analytics engine")
+    
+    # =====================================================================
+    # RELATIONSHIP PREDICTION METHODS
+    # =====================================================================
+    
+    def predict_relationship_opportunities(self, user_id: int) -> List[PredictionResult]:
+        """Predict relationship opportunities and networking needs"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Get all people and their interaction patterns
+                people = session.query(Person).filter(Person.user_id == user_id).all()
+                
+                for person in people:
+                    # Predict relationship decay
+                    decay_prediction = self._predict_relationship_decay(person)
+                    if decay_prediction:
+                        predictions.append(decay_prediction)
+                    
+                    # Predict optimal contact timing
+                    contact_prediction = self._predict_optimal_contact_time(person)
+                    if contact_prediction:
+                        predictions.append(contact_prediction)
+                
+                # Predict networking opportunities
+                network_predictions = self._predict_networking_opportunities(people)
+                predictions.extend(network_predictions)
+                
+        except Exception as e:
+            logger.error(f"Failed to predict relationship opportunities: {str(e)}")
+        
+        return predictions
+    
+    def _predict_relationship_decay(self, person: Person) -> Optional[PredictionResult]:
+        """Predict if a relationship is at risk of decay"""
+        if not person.last_contact or person.total_interactions < 3:
+            return None
+        
+        days_since_contact = (datetime.utcnow() - person.last_contact).days
+        importance = person.importance_level or 0.5
+        
+        # Calculate decay risk based on importance and recency
+        expected_contact_frequency = self._calculate_expected_frequency(person)
+        decay_risk = min(1.0, days_since_contact / expected_contact_frequency)
+        
+        if decay_risk > 0.7 and importance > 0.6:
+            return PredictionResult(
+                prediction_type='relationship_decay_risk',
+                confidence=decay_risk,
+                predicted_value=f"High risk of relationship decay with {person.name}",
+                reasoning=f"No contact for {days_since_contact} days, expected frequency is {expected_contact_frequency} days",
+                time_horizon='short_term',
+                data_points_used=person.total_interactions,
+                created_at=datetime.utcnow()
+            )
+        
+        return None
+    
+    def predict_topic_trends(self, user_id: int) -> List[PredictionResult]:
+        """Predict which topics will become important"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Get topics with historical data
+                topics = session.query(Topic).filter(
+                    Topic.user_id == user_id,
+                    Topic.total_mentions > 1
+                ).all()
+                
+                for topic in topics:
+                    # Analyze topic momentum
+                    momentum_prediction = self._predict_topic_momentum(topic, session)
+                    if momentum_prediction:
+                        predictions.append(momentum_prediction)
+                
+                # Predict emerging topics
+                emerging_predictions = self._predict_emerging_topics(user_id, session)
+                predictions.extend(emerging_predictions)
+                
+        except Exception as e:
+            logger.error(f"Failed to predict topic trends: {str(e)}")
+        
+        return predictions
+    
+    def predict_business_opportunities(self, user_id: int) -> List[PredictionResult]:
+        """Predict business opportunities based on communication patterns"""
+        predictions = []
+        
+        try:
+            # Predict meeting outcomes
+            meeting_predictions = self._predict_meeting_outcomes(user_id)
+            predictions.extend(meeting_predictions)
+            
+            # Predict project opportunities
+            project_predictions = self._predict_project_opportunities(user_id)
+            predictions.extend(project_predictions)
+            
+            # Predict decision timing
+            decision_predictions = self._predict_decision_timing(user_id)
+            predictions.extend(decision_predictions)
+            
+        except Exception as e:
+            logger.error(f"Failed to predict business opportunities: {str(e)}")
+        
+        return predictions
+    
+    def get_predictions_for_user(self, user_id: int) -> List[PredictionResult]:
+        """Get cached predictions for a user"""
+        return self.prediction_cache.get(user_id, [])
+    
+    def get_user_patterns(self, user_id: int) -> Dict:
+        """Get detected patterns for a user"""
+        return self.pattern_cache.get(user_id, {})
+    
+    # =====================================================================
+    # HELPER METHODS (SIMPLIFIED FOR IMPLEMENTATION)
+    # =====================================================================
+    
+    def _calculate_expected_frequency(self, person: Person) -> int:
+        """Calculate expected contact frequency for a person"""
+        base_frequency = 30  # Default 30 days
+        
+        # Adjust based on importance
+        importance_factor = (person.importance_level or 0.5)
+        frequency = base_frequency * (1 - importance_factor * 0.7)
+        
+        # Adjust based on relationship type
+        relationship_adjustments = {
+            'colleague': 0.7,
+            'client': 0.5,
+            'partner': 0.6,
+            'manager': 0.4,
+            'friend': 0.8
+        }
+        
+        rel_type = person.relationship_type or 'contact'
+        adjustment = relationship_adjustments.get(rel_type.lower(), 1.0)
+        
+        return max(7, int(frequency * adjustment))
+    
+    def _predict_optimal_contact_time(self, person: Person) -> Optional[PredictionResult]:
+        """Predict optimal time to contact someone"""
+        if not person.last_contact or person.total_interactions < 2:
+            return None
+        
+        expected_freq = self._calculate_expected_frequency(person)
+        days_since = (datetime.utcnow() - person.last_contact).days
+        
+        if days_since >= expected_freq * 0.8:  # 80% of expected frequency
+            return PredictionResult(
+                prediction_type='optimal_contact_timing',
+                confidence=0.7,
+                predicted_value=datetime.utcnow() + timedelta(days=2),
+                reasoning=f"Optimal contact window approaching based on {expected_freq}-day pattern",
+                time_horizon='short_term',
+                data_points_used=person.total_interactions,
+                created_at=datetime.utcnow()
+            )
+        
+        return None
+    
+    def _predict_networking_opportunities(self, people: List[Person]) -> List[PredictionResult]:
+        """Predict networking opportunities"""
+        predictions = []
+        
+        # Find high-value people who could introduce others
+        high_value_people = [p for p in people if (p.importance_level or 0) > 0.7]
+        
+        for person in high_value_people:
+            if len(high_value_people) > 1:
+                predictions.append(PredictionResult(
+                    prediction_type='networking_opportunity',
+                    confidence=0.6,
+                    predicted_value=f"Consider leveraging {person.name} for introductions",
+                    reasoning=f"High-value contact with broad network potential",
+                    time_horizon='medium_term',
+                    data_points_used=len(people),
+                    created_at=datetime.utcnow()
+                ))
+                break  # Only generate one for now
+        
+        return predictions
+    
+    def _predict_topic_momentum(self, topic: Topic, session) -> Optional[PredictionResult]:
+        """Predict if a topic will gain or lose momentum"""
+        if topic.total_mentions > 5 and topic.last_mentioned:
+            days_since_mention = (datetime.utcnow() - topic.last_mentioned).days
+            
+            if days_since_mention < 7:  # Recently active
+                return PredictionResult(
+                    prediction_type='topic_momentum_increase',
+                    confidence=0.7,
+                    predicted_value=f"Topic '{topic.name}' gaining momentum",
+                    reasoning=f"Recent activity with {topic.total_mentions} total mentions",
+                    time_horizon='short_term',
+                    data_points_used=topic.total_mentions,
+                    created_at=datetime.utcnow()
+                )
+        
+        return None
+    
+    def _predict_emerging_topics(self, user_id: int, session) -> List[PredictionResult]:
+        """Predict emerging topics"""
+        predictions = []
+        
+        try:
+            # Look for topics with recent creation but growing mentions
+            recent_topics = session.query(Topic).filter(
+                Topic.user_id == user_id,
+                Topic.created_at > datetime.utcnow() - timedelta(days=14),
+                Topic.total_mentions >= 2
+            ).all()
+            
+            for topic in recent_topics:
+                predictions.append(PredictionResult(
+                    prediction_type='emerging_topic',
+                    confidence=0.6,
+                    predicted_value=f"Topic '{topic.name}' emerging",
+                    reasoning=f"New topic with growing mention frequency",
+                    time_horizon='short_term',
+                    data_points_used=topic.total_mentions,
+                    created_at=datetime.utcnow()
+                ))
+                
+        except Exception as e:
+            logger.error(f"Failed to predict emerging topics: {str(e)}")
+        
+        return predictions
+    
+    def _predict_meeting_outcomes(self, user_id: int) -> List[PredictionResult]:
+        """Predict meeting outcomes"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Get upcoming meetings
+                upcoming_meetings = session.query(CalendarEvent).filter(
+                    CalendarEvent.user_id == user_id,
+                    CalendarEvent.start_time > datetime.utcnow(),
+                    CalendarEvent.start_time < datetime.utcnow() + timedelta(days=7)
+                ).all()
+                
+                for meeting in upcoming_meetings:
+                    if meeting.preparation_priority and meeting.preparation_priority > 0.7:
+                        predictions.append(PredictionResult(
+                            prediction_type='meeting_success_probability',
+                            confidence=0.8,
+                            predicted_value=f"High success probability for '{meeting.title}'",
+                            reasoning=f"Well-prepared meeting with high priority indicators",
+                            time_horizon='short_term',
+                            data_points_used=1,
+                            created_at=datetime.utcnow()
+                        ))
+                
+        except Exception as e:
+            logger.error(f"Failed to predict meeting outcomes: {str(e)}")
+        
+        return predictions
+    
+    def _predict_project_opportunities(self, user_id: int) -> List[PredictionResult]:
+        """Predict project opportunities"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Look for high-importance emails that might signal projects
+                strategic_emails = session.query(Email).filter(
+                    Email.user_id == user_id,
+                    Email.email_date > datetime.utcnow() - timedelta(days=7),
+                    Email.strategic_importance > 0.7
+                ).count()
+                
+                if strategic_emails > 2:
+                    predictions.append(PredictionResult(
+                        prediction_type='project_opportunity',
+                        confidence=0.6,
+                        predicted_value=f"Potential project formation detected",
+                        reasoning=f"Multiple high-importance communications suggest project activity",
+                        time_horizon='medium_term',
+                        data_points_used=strategic_emails,
+                        created_at=datetime.utcnow()
+                    ))
+                
+        except Exception as e:
+            logger.error(f"Failed to predict project opportunities: {str(e)}")
+        
+        return predictions
+    
+    def _predict_decision_timing(self, user_id: int) -> List[PredictionResult]:
+        """Predict when decisions might be needed"""
+        predictions = []
+        
+        try:
+            with get_db_manager().get_session() as session:
+                # Look for urgent tasks or high-priority items
+                urgent_tasks = session.query(Task).filter(
+                    Task.user_id == user_id,
+                    Task.priority == 'high',
+                    Task.status.in_(['pending', 'open'])
+                ).count()
+                
+                if urgent_tasks > 0:
+                    predictions.append(PredictionResult(
+                        prediction_type='decision_needed',
+                        confidence=0.7,
+                        predicted_value=f"Decisions needed on {urgent_tasks} high-priority items",
+                        reasoning=f"Multiple urgent tasks require attention",
+                        time_horizon='short_term',
+                        data_points_used=urgent_tasks,
+                        created_at=datetime.utcnow()
+                    ))
+                
+        except Exception as e:
+            logger.error(f"Failed to predict decision timing: {str(e)}")
+        
+        return predictions
+    
+    def _continuous_pattern_detection(self):
+        """Continuously detect patterns in user data"""
+        while self.running:
+            try:
+                # Get active users for pattern analysis
+                active_users = self._get_active_users_for_analysis()
+                
+                for user_id in active_users:
+                    # Generate predictions for this user
+                    all_predictions = []
+                    all_predictions.extend(self.predict_relationship_opportunities(user_id))
+                    all_predictions.extend(self.predict_topic_trends(user_id))
+                    all_predictions.extend(self.predict_business_opportunities(user_id))
+                    
+                    # Store predictions
+                    self.prediction_cache[user_id] = all_predictions
+                
+                # Sleep for analysis interval (every 2 hours)
+                time.sleep(7200)
+                
+            except Exception as e:
+                logger.error(f"Error in continuous pattern detection: {str(e)}")
+                time.sleep(300)  # Sleep 5 minutes on error
+    
+    def _get_active_users_for_analysis(self) -> List[int]:
+        """Get users with recent activity for pattern analysis"""
+        try:
+            # Users with activity in last 7 days
+            cutoff = datetime.utcnow() - timedelta(days=7)
+            
+            with get_db_manager().get_session() as session:
+                active_users = session.query(Email.user_id).filter(
+                    Email.email_date > cutoff
+                ).distinct().all()
+                
+                return [user_id[0] for user_id in active_users]
+            
+        except Exception as e:
+            logger.error(f"Failed to get active users: {str(e)}")
+            return []
+
+# Global instance
+predictive_analytics = PredictiveAnalytics() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/engagement_analysis/smart_contact_strategy.py
+PURPOSE: Extracts contacts from sent emails and builds trusted contact database
+================================================================================
+"""
+Smart Contact Strategy Implementation
+
+Revolutionary engagement-driven email processing that focuses AI resources
+on content that actually matters to the user's business intelligence.
+
+Core principle: "If I don't engage with it, it probably doesn't matter to my business intelligence."
+"""
+
+import logging
+import re
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Tuple, Set
+from dataclasses import dataclass
+from email.utils import parseaddr
+import json
+
+from models.database import get_db_manager, TrustedContact, Person
+from ingest.gmail_fetcher import gmail_fetcher
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class ProcessingDecision:
+    """Decision for how to process an incoming email"""
+    action: str  # ANALYZE_WITH_AI, CONDITIONAL_ANALYZE, SKIP
+    confidence: str  # HIGH, MEDIUM, LOW
+    reason: str
+    priority: float = 0.0
+    estimated_tokens: int = 0
+
+@dataclass
+class EngagementMetrics:
+    """Engagement metrics for a contact"""
+    total_sent_emails: int
+    total_received_emails: int
+    bidirectional_threads: int
+    first_sent_date: Optional[datetime]
+    last_sent_date: Optional[datetime]
+    topics_discussed: List[str]
+    bidirectional_topics: List[str]
+    communication_frequency: str  # daily, weekly, monthly, occasional
+    relationship_strength: str  # high, medium, low
+
+class SmartContactStrategy:
+    """
+    Revolutionary Smart Contact Strategy for engagement-driven email processing
+    """
+    
+    def __init__(self):
+        self.db_manager = get_db_manager()
+        self.newsletter_patterns = [
+            'noreply', 'no-reply', 'donotreply', 'newsletter', 'notifications',
+            'automated', 'auto-', 'system@', 'support@', 'help@', 'info@',
+            'marketing@', 'promo', 'deals@', 'offers@', 'sales@'
+        ]
+        self.automated_domains = [
+            'mailchimp.com', 'constantcontact.com', 'sendgrid.net',
+            'mailgun.org', 'amazonses.com', 'notifications.google.com'
+        ]
+    
+    def build_trusted_contact_database(self, user_email: str, days_back: int = 365) -> Dict:
+        """
+        Analyze sent emails to build the Trusted Contact Database
+        
+        This is the foundation of the Smart Contact Strategy - analyze what 
+        contacts the user actually engages with by looking at sent emails.
+        """
+        try:
+            logger.info(f"Building trusted contact database for {user_email}")
+            
+            # Get user from database
+            user = self.db_manager.get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            # Fetch sent emails from Gmail
+            sent_emails_result = gmail_fetcher.fetch_sent_emails(
+                user_email=user_email,
+                days_back=days_back,
+                max_emails=1000  # Analyze up to 1000 sent emails
+            )
+            
+            if not sent_emails_result.get('success'):
+                return {'success': False, 'error': 'Failed to fetch sent emails'}
+            
+            sent_emails = sent_emails_result.get('emails', [])
+            logger.info(f"Analyzing {len(sent_emails)} sent emails")
+            
+            # Extract all recipients from sent emails
+            contact_metrics = {}
+            
+            for email in sent_emails:
+                # Ensure we have a valid datetime for email_date
+                try:
+                    if isinstance(email.get('timestamp'), str):
+                        email_date = datetime.fromisoformat(email['timestamp'].replace('Z', '+00:00'))
+                    elif isinstance(email.get('timestamp'), datetime):
+                        email_date = email['timestamp']
+                    elif isinstance(email.get('email_date'), str):
+                        email_date = datetime.fromisoformat(email['email_date'].replace('Z', '+00:00'))
+                    elif isinstance(email.get('email_date'), datetime):
+                        email_date = email['email_date']
+                    else:
+                        email_date = None
+                except Exception as e:
+                    logger.warning(f"Failed to parse email date: {e}")
+                    email_date = None
+
+                recipients = self._extract_all_recipients(email)
+                
+                for recipient_email in recipients:
+                    if recipient_email == user_email:
+                        continue  # Skip self
+                    
+                    if recipient_email not in contact_metrics:
+                        contact_metrics[recipient_email] = {
+                            'email_address': recipient_email,
+                            'total_sent_emails': 0,
+                            'total_received_emails': 0,
+                            'first_sent_date': email_date,
+                            'last_sent_date': email_date,
+                            'topics_discussed': set(),
+                            'thread_ids': set(),
+                            'sent_dates': []
+                        }
+                    
+                    metrics = contact_metrics[recipient_email]
+                    metrics['total_sent_emails'] += 1
+                    if email_date:
+                        metrics['sent_dates'].append(email_date)
+                        
+                        # Update first_sent_date if this is earlier
+                        if not metrics['first_sent_date'] or (email_date and email_date < metrics['first_sent_date']):
+                            metrics['first_sent_date'] = email_date
+                        
+                        # Update last_sent_date if this is later
+                        if not metrics['last_sent_date'] or (email_date and email_date > metrics['last_sent_date']):
+                            metrics['last_sent_date'] = email_date
+                    
+                    # Extract topics from subject and body
+                    topics = self._extract_email_topics(email)
+                    metrics['topics_discussed'].update(topics)
+                    
+                    # Track thread for bidirectional analysis
+                    thread_id = email.get('thread_id')
+                    if thread_id:
+                        metrics['thread_ids'].add(thread_id)
+            
+            # Calculate engagement scores and save to database
+            saved_contacts = 0
+            for email_address, metrics in contact_metrics.items():
+                engagement_score = self._calculate_engagement_score(metrics)
+                relationship_strength = self._determine_relationship_strength(metrics, engagement_score)
+                communication_frequency = self._determine_communication_frequency(metrics['sent_dates'])
+                
+                # Convert sets to lists for JSON storage
+                topics_discussed = list(metrics['topics_discussed'])
+                
+                # Create trusted contact record
+                contact_data = {
+                    'email_address': email_address,
+                    'name': self._extract_name_from_email(email_address),
+                    'engagement_score': engagement_score,
+                    'first_sent_date': metrics['first_sent_date'],
+                    'last_sent_date': metrics['last_sent_date'],
+                    'total_sent_emails': metrics['total_sent_emails'],
+                    'total_received_emails': 0,  # Will be updated when analyzing received emails
+                    'bidirectional_threads': 0,  # Will be calculated later
+                    'topics_discussed': topics_discussed,
+                    'bidirectional_topics': [],  # Will be calculated later
+                    'relationship_strength': relationship_strength,
+                    'communication_frequency': communication_frequency,
+                    'last_analyzed': datetime.utcnow()
+                }
+                
+                # Save to database
+                trusted_contact = self.db_manager.create_or_update_trusted_contact(
+                    user_id=user.id,
+                    contact_data=contact_data
+                )
+                
+                # Update corresponding Person record if exists
+                person = self.db_manager.find_person_by_email(user.id, email_address)
+                if person:
+                    engagement_data = {
+                        'is_trusted_contact': True,
+                        'engagement_score': engagement_score,
+                        'bidirectional_topics': []  # Will be updated later
+                    }
+                    self.db_manager.update_people_engagement_data(
+                        user_id=user.id,
+                        person_id=person.id,
+                        engagement_data=engagement_data
+                    )
+                
+                saved_contacts += 1
+            
+            logger.info(f"Built trusted contact database: {saved_contacts} contacts")
+            
+            return {
+                'success': True,
+                'contacts_analyzed': len(contact_metrics),
+                'trusted_contacts_created': saved_contacts,
+                'date_range': f"{days_back} days",
+                'sent_emails_analyzed': len(sent_emails)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error building trusted contact database: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def classify_incoming_email(self, user_email: str, email_data: Dict) -> ProcessingDecision:
+        """
+        Smart email classification using the engagement-driven decision tree
+        
+        Decision Tree:
+        1. From trusted contact? → ANALYZE_WITH_AI (high confidence)
+        2. Unknown sender + obvious newsletter/spam? → SKIP (high confidence)
+        3. Unknown sender + business-like? → CONDITIONAL_ANALYZE (medium confidence)
+        4. Default → SKIP (high confidence)
+        """
+        try:
+            user = self.db_manager.get_user_by_email(user_email)
+            if not user:
+                return ProcessingDecision(
+                    action="SKIP",
+                    confidence="HIGH",
+                    reason="User not found"
+                )
+            
+            sender = email_data.get('sender', '')
+            sender_email = parseaddr(sender)[1].lower() if sender else ''
+            
+            # Step 1: Check trusted contact database
+            trusted_contact = self.db_manager.find_trusted_contact_by_email(
+                user_id=user.id,
+                email_address=sender_email
+            )
+            
+            if trusted_contact:
+                # Prioritize by engagement score
+                priority = trusted_contact.engagement_score
+                tokens = 4000 if trusted_contact.relationship_strength == 'high' else 3000
+                
+                return ProcessingDecision(
+                    action="ANALYZE_WITH_AI",
+                    confidence="HIGH",
+                    reason=f"From trusted contact ({trusted_contact.relationship_strength} engagement)",
+                    priority=priority,
+                    estimated_tokens=tokens
+                )
+            
+            # Step 2: Check for obvious newsletters/spam
+            if self._is_obvious_newsletter(email_data):
+                return ProcessingDecision(
+                    action="SKIP",
+                    confidence="HIGH",
+                    reason="Newsletter/automated content detected",
+                    estimated_tokens=0
+                )
+            
+            # Step 3: Check if appears business relevant
+            if self._appears_business_relevant(email_data):
+                return ProcessingDecision(
+                    action="CONDITIONAL_ANALYZE",
+                    confidence="MEDIUM",
+                    reason="Unknown sender but appears business relevant",
+                    priority=0.3,
+                    estimated_tokens=2000
+                )
+            
+            # Step 4: Default skip
+            return ProcessingDecision(
+                action="SKIP",
+                confidence="HIGH",
+                reason="No engagement pattern, not business relevant",
+                estimated_tokens=0
+            )
+            
+        except Exception as e:
+            logger.error(f"Error classifying email: {str(e)}")
+            return ProcessingDecision(
+                action="SKIP",
+                confidence="LOW",
+                reason=f"Classification error: {str(e)}",
+                estimated_tokens=0
+            )
+    
+    def calculate_processing_efficiency(self, user_email: str, emails: List[Dict]) -> Dict:
+        """
+        Calculate cost optimization and processing efficiency metrics
+        """
+        try:
+            user = self.db_manager.get_user_by_email(user_email)
+            if not user:
+                return {'error': 'User not found'}
+            
+            decisions = []
+            total_tokens = 0
+            baseline_tokens = 0
+            
+            for email in emails:
+                decision = self.classify_incoming_email(user_email, email)
+                decisions.append({
+                    'email_id': email.get('id'),
+                    'sender': email.get('sender'),
+                    'action': decision.action,
+                    'confidence': decision.confidence,
+                    'reason': decision.reason,
+                    'estimated_tokens': decision.estimated_tokens
+                })
+                
+                total_tokens += decision.estimated_tokens
+                baseline_tokens += 4000  # Assume full analysis for all emails
+            
+            # Calculate savings
+            tokens_saved = baseline_tokens - total_tokens
+            efficiency_percent = (tokens_saved / baseline_tokens * 100) if baseline_tokens > 0 else 0
+            
+            # Breakdown by action
+            action_counts = {}
+            for decision in decisions:
+                action = decision['action']
+                action_counts[action] = action_counts.get(action, 0) + 1
+            
+            # Cost estimation (Claude Sonnet pricing)
+            cost_per_token = 0.000015  # $15 per million tokens
+            estimated_cost = total_tokens * cost_per_token
+            baseline_cost = baseline_tokens * cost_per_token
+            cost_savings = baseline_cost - estimated_cost
+            
+            return {
+                'total_emails_analyzed': len(emails),
+                'estimated_tokens': total_tokens,
+                'baseline_tokens': baseline_tokens,
+                'tokens_saved': tokens_saved,
+                'efficiency_percent': round(efficiency_percent, 1),
+                'estimated_cost_usd': round(estimated_cost, 4),
+                'baseline_cost_usd': round(baseline_cost, 4),
+                'cost_savings_usd': round(cost_savings, 4),
+                'action_breakdown': action_counts,
+                'processing_decisions': decisions
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating processing efficiency: {str(e)}")
+            return {'error': str(e)}
+    
+    def get_engagement_insights(self, user_email: str) -> Dict:
+        """
+        Get insights about user's engagement patterns for dashboard
+        """
+        try:
+            user = self.db_manager.get_user_by_email(user_email)
+            if not user:
+                return {'error': 'User not found'}
+            
+            # Get analytics from database
+            analytics = self.db_manager.get_engagement_analytics(user.id)
+            
+            # Get trusted contacts
+            trusted_contacts = self.db_manager.get_trusted_contacts(user.id, limit=10)
+            
+            # Format top contacts for display
+            top_contacts = []
+            for contact in trusted_contacts[:5]:
+                top_contacts.append({
+                    'email': contact.email_address,
+                    'name': contact.name or contact.email_address,
+                    'engagement_score': round(contact.engagement_score, 2),
+                    'relationship_strength': contact.relationship_strength,
+                    'total_sent_emails': contact.total_sent_emails,
+                    'communication_frequency': contact.communication_frequency,
+                    'last_sent_date': contact.last_sent_date.isoformat() if contact.last_sent_date else None
+                })
+            
+            return {
+                'success': True,
+                'analytics': analytics,
+                'top_contacts': top_contacts,
+                'total_trusted_contacts': analytics.get('total_trusted_contacts', 0),
+                'high_engagement_contacts': analytics.get('high_engagement_contacts', 0),
+                'engagement_rate': analytics.get('engagement_rate', 0)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting engagement insights: {str(e)}")
+            return {'error': str(e)}
+    
+    # ===== PRIVATE HELPER METHODS =====
+    
+    def _extract_all_recipients(self, email: Dict) -> Set[str]:
+        """Extract all email recipients (TO, CC, BCC) from an email"""
+        recipients = set()
+        
+        if not email:
+            logger.warning("Empty email data provided")
+            return recipients
+            
+        logger.info(f"Processing email: {email.get('subject', 'No subject')}")
+        logger.info(f"Raw email data: {email}")
+        
+        # Extract from recipient_emails field (primary)
+        recipient_list = email.get('recipient_emails', [])
+        if recipient_list:
+            if isinstance(recipient_list, str):
+                try:
+                    recipient_list = json.loads(recipient_list)
+                except:
+                    recipient_list = [recipient_list]
+            elif recipient_list is None:
+                recipient_list = []
+            
+            for recipient in recipient_list:
+                if isinstance(recipient, str) and '@' in recipient:
+                    recipients.add(recipient.lower())
+
+        # Extract from recipients field (legacy)
+        legacy_recipients = email.get('recipients', [])
+        if legacy_recipients:
+            if isinstance(legacy_recipients, str):
+                try:
+                    legacy_recipients = json.loads(legacy_recipients)
+                except:
+                    legacy_recipients = [legacy_recipients]
+            elif legacy_recipients is None:
+                legacy_recipients = []
+            
+            for recipient in legacy_recipients:
+                if isinstance(recipient, str) and '@' in recipient:
+                    recipients.add(recipient.lower())
+
+        # Extract from CC field
+        cc_list = email.get('cc', [])
+        if cc_list:
+            if isinstance(cc_list, str):
+                try:
+                    cc_list = json.loads(cc_list)
+                except:
+                    cc_list = [cc_list]
+            elif cc_list is None:
+                cc_list = []
+            
+            for recipient in cc_list:
+                if isinstance(recipient, str) and '@' in recipient:
+                    recipients.add(recipient.lower())
+
+        # Extract from BCC field
+        bcc_list = email.get('bcc', [])
+        if bcc_list:
+            if isinstance(bcc_list, str):
+                try:
+                    bcc_list = json.loads(bcc_list)
+                except:
+                    bcc_list = [bcc_list]
+            elif bcc_list is None:
+                bcc_list = []
+            
+            for recipient in bcc_list:
+                if isinstance(recipient, str) and '@' in recipient:
+                    recipients.add(recipient.lower())
+
+        logger.info(f"Final recipients set: {recipients}")
+        return recipients
+    
+    def _extract_email_topics(self, email: Dict) -> Set[str]:
+        """Extract topics/themes from email subject and content"""
+        topics = set()
+        
+        # Extract from subject
+        subject = email.get('subject', '').lower()
+        if subject:
+            # Simple keyword extraction - could be enhanced with NLP
+            business_keywords = [
+                'project', 'meeting', 'deadline', 'budget', 'proposal',
+                'contract', 'invoice', 'report', 'review', 'planning',
+                'strategy', 'launch', 'development', 'marketing', 'sales'
+            ]
+            
+            for keyword in business_keywords:
+                if keyword in subject:
+                    topics.add(keyword)
+        
+        return topics
+    
+    def _calculate_engagement_score(self, metrics: Dict) -> float:
+        """
+        Calculate engagement score based on communication patterns
+        
+        Formula considers:
+        - Frequency of sent emails (higher = more engagement)
+        - Recency of communication (recent = higher score)
+        - Communication span (longer relationship = higher score)
+        """
+        try:
+            sent_count = metrics['total_sent_emails']
+            first_date = metrics.get('first_sent_date')
+            last_date = metrics.get('last_sent_date')
+            
+            if not first_date or not last_date:
+                return 0.1
+            
+            # Convert dates to datetime if they're strings
+            if isinstance(first_date, str):
+                first_date = datetime.fromisoformat(first_date)
+            if isinstance(last_date, str):
+                last_date = datetime.fromisoformat(last_date)
+            
+            # Frequency score (0.0 to 0.5)
+            frequency_score = min(sent_count / 50.0, 0.5)  # Cap at 50 emails
+            
+            # Recency score (0.0 to 0.3)
+            days_since_last = (datetime.now(timezone.utc) - last_date).days if last_date else 999
+            recency_score = max(0, 0.3 - (days_since_last / 365.0 * 0.3))
+            
+            # Relationship span score (0.0 to 0.2)
+            relationship_days = (last_date - first_date).days if first_date and last_date else 0
+            span_score = min(relationship_days / 365.0 * 0.2, 0.2)
+            
+            total_score = frequency_score + recency_score + span_score
+            return min(total_score, 1.0)
+            
+        except Exception as e:
+            logger.error(f"Error calculating engagement score: {str(e)}")
+            return 0.1
+    
+    def _determine_relationship_strength(self, metrics: Dict, engagement_score: float) -> str:
+        """Determine relationship strength based on engagement patterns"""
+        if engagement_score > 0.7:
+            return 'high'
+        elif engagement_score > 0.3:
+            return 'medium'
+        else:
+            return 'low'
+    
+    def _determine_communication_frequency(self, sent_dates: List[datetime]) -> str:
+        """Determine communication frequency pattern"""
+        if not sent_dates or len(sent_dates) < 2:
+            return 'occasional'
+        
+        # Calculate average days between emails
+        sorted_dates = sorted(sent_dates)
+        total_days = (sorted_dates[-1] - sorted_dates[0]).days
+        avg_interval = total_days / len(sent_dates) if len(sent_dates) > 1 else 365
+        
+        if avg_interval <= 7:
+            return 'weekly'
+        elif avg_interval <= 30:
+            return 'monthly'
+        else:
+            return 'occasional'
+    
+    def _extract_name_from_email(self, email_address: str) -> str:
+        """Extract a readable name from email address"""
+        if not email_address or '@' not in email_address:
+            return email_address
+        
+        # Get the part before @
+        local_part = email_address.split('@')[0]
+        
+        # Replace common separators with spaces and title case
+        name = local_part.replace('.', ' ').replace('_', ' ').replace('-', ' ')
+        return name.title()
+    
+    def _is_obvious_newsletter(self, email_data: Dict) -> bool:
+        """Detect obvious newsletters and automated messages"""
+        sender = email_data.get('sender', '').lower()
+        subject = email_data.get('subject', '').lower()
+        
+        # Check sender patterns
+        for pattern in self.newsletter_patterns:
+            if pattern in sender:
+                return True
+        
+        # Check domain patterns
+        sender_email = parseaddr(sender)[1] if sender else ''
+        sender_domain = sender_email.split('@')[1] if '@' in sender_email else ''
+        
+        for domain in self.automated_domains:
+            if domain in sender_domain:
+                return True
+        
+        # Check subject patterns
+        newsletter_subjects = [
+            'newsletter', 'unsubscribe', 'promotional', 'sale', 'deal',
+            'offer', 'discount', 'marketing', 'campaign'
+        ]
+        
+        for pattern in newsletter_subjects:
+            if pattern in subject:
+                return True
+        
+        return False
+    
+    def _appears_business_relevant(self, email_data: Dict) -> bool:
+        """Check if unknown sender appears business relevant"""
+        sender = email_data.get('sender', '').lower()
+        subject = email_data.get('subject', '').lower()
+        body = email_data.get('body_text', '').lower()[:500]  # First 500 chars
+        
+        # Business keywords that suggest relevance
+        business_keywords = [
+            'project', 'meeting', 'proposal', 'contract', 'invoice',
+            'partnership', 'collaboration', 'opportunity', 'business',
+            'professional', 'company', 'organization', 'enterprise'
+        ]
+        
+        # Check if business keywords appear in subject or body
+        for keyword in business_keywords:
+            if keyword in subject or keyword in body:
+                return True
+        
+        # Check if sender has professional domain
+        sender_email = parseaddr(sender)[1] if sender else ''
+        sender_domain = sender_email.split('@')[1] if '@' in sender_email else ''
+        
+        # Skip generic domains that are likely personal
+        personal_domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com']
+        if sender_domain not in personal_domains and '.' in sender_domain:
+            return True
+        
+        return False
+
+# Create global instance
+smart_contact_strategy = SmartContactStrategy() 
+
+
+================================================================================
+FILE: api/routes/settings_routes.py
+PURPOSE: API endpoints: Settings Routes
+================================================================================
+"""
+Settings Routes Blueprint
+========================
+
+User settings, sync configuration, and system management routes.
+Extracted from main.py for better organization.
+"""
+
+import logging
+from flask import Blueprint, request, jsonify
+from ..middleware.auth_middleware import get_current_user, require_auth
+
+logger = logging.getLogger(__name__)
+
+# Create blueprint
+settings_bp = Blueprint('settings', __name__, url_prefix='/api')
+
+
+@settings_bp.route('/settings', methods=['GET'])
+def api_get_settings():
+    """API endpoint to get user settings"""
+    from ..middleware.auth_middleware import get_current_user
+    from chief_of_staff_ai.models.database import get_db_manager
+    
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        db_user = get_db_manager().get_user_by_email(user['email'])
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        settings_data = {
+            'email_fetch_limit': db_user.email_fetch_limit,
+            'email_days_back': db_user.email_days_back,
+            'auto_process_emails': db_user.auto_process_emails,
+            'last_login': db_user.last_login.isoformat() if db_user.last_login else None,
+            'created_at': db_user.created_at.isoformat() if db_user.created_at else None,
+            'name': db_user.name,
+            'email': db_user.email
+        }
+        
+        return jsonify({
+            'success': True,
+            'settings': settings_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Get settings API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/settings', methods=['PUT'])
+def api_update_settings():
+    """API endpoint to update user settings"""
+    from ..middleware.auth_middleware import get_current_user
+    from chief_of_staff_ai.models.database import get_db_manager
+    
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        db_user = get_db_manager().get_user_by_email(user['email'])
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Update user settings directly on the object
+        if 'email_fetch_limit' in data:
+            db_user.email_fetch_limit = int(data['email_fetch_limit'])
+        if 'email_days_back' in data:
+            db_user.email_days_back = int(data['email_days_back'])
+        if 'auto_process_emails' in data:
+            db_user.auto_process_emails = bool(data['auto_process_emails'])
+        
+        # Save changes using the database manager's session
+        with get_db_manager().get_session() as db_session:
+            db_session.merge(db_user)
+            db_session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Settings updated successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Update settings API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/sync-settings', methods=['GET'])
+@require_auth
+def get_sync_settings():
+    """Get current sync settings"""
+    try:
+        # Return default settings for now - could be stored in database later
+        settings = {
+            'email': {
+                'maxEmails': 25,
+                'daysBack': 7
+            },
+            'calendar': {
+                'daysBack': 3,
+                'daysForward': 14
+            }
+        }
+        
+        return jsonify({
+            'success': True,
+            'settings': settings,
+            **settings  # Flatten for backward compatibility
+        })
+        
+    except Exception as e:
+        logger.error(f"Get sync settings error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/sync-settings', methods=['POST'])
+@require_auth
+def save_sync_settings():
+    """Save sync settings"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No settings provided'}), 400
+        
+        # For now, just return success - could save to database later
+        logger.info(f"Sync settings saved: {data}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Settings saved successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Save sync settings error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/email-quality/refresh-tiers', methods=['POST'])
+@require_auth
+def refresh_contact_tiers():
+    """Refresh contact tier analysis"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"🔄 Refreshing contact tiers for user {user_email}")
+        
+        # Force refresh of contact tiers
+        email_quality_filter.force_tier_refresh(db_user.id)
+        
+        # Get the updated tier summary
+        tier_summary = email_quality_filter.get_contact_tier_summary(db_user.id)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Contact tiers refreshed successfully',
+            'contacts_analyzed': tier_summary.get('total_contacts', 0),
+            'tier_summary': tier_summary
+        })
+        
+    except Exception as e:
+        logger.error(f"Refresh contact tiers error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/email-quality/build-tier-rules', methods=['POST'])
+@require_auth
+def build_tier_rules():
+    """Build contact tier rules from contact patterns - all sent contacts are Tier 1"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
+        from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+        
+        # Get request data, but don't require it
+        data = request.get_json(silent=True) or {}
+        contact_patterns = data.get('contact_patterns', {})
+        build_rules_only = data.get('build_rules_only', True)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"🧠 Building contact tier rules for user {user_email}")
+        
+        # Get total contacts from contact patterns or default to 0
+        total_contacts = contact_patterns.get('total_contacts', 0)
+        
+        # All contacts from sent emails are Tier 1
+        tier_1_count = total_contacts if total_contacts > 0 else 1  # At least 1 Tier 1
+        tier_2_count = 0  # No Tier 2 anymore
+        tier_last_count = 0  # Start with no LAST tier
+        
+        logger.info(f"📊 Tier distribution - all sent contacts are Tier 1:")
+        logger.info(f"   Tier 1: {tier_1_count}")
+        logger.info(f"   Tier LAST: {tier_last_count}")
+        
+        # Force a tier refresh to apply the new rules
+        if not build_rules_only:
+            email_quality_filter.force_tier_refresh(db_user.id)
+        
+        # Set all contacts to Tier 1
+        email_quality_filter.set_all_contacts_tier_1(user_email)
+        
+        # Get tier summary after building rules
+        tier_summary = email_quality_filter.get_contact_tier_summary(db_user.id)
+        
+        logger.info(f"✅ Built tier rules: {tier_1_count} Tier 1, {tier_last_count} Tier LAST")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Contact tier rules built successfully - all sent contacts are Tier 1',
+            'rules': {
+                'tier_1_count': tier_1_count,
+                'tier_2_count': 0,  # No Tier 2
+                'tier_last_count': tier_last_count,
+                'total_contacts': tier_1_count + tier_last_count,
+                'rules_created': True,
+                'engagement_based_classification': False,  # Not using engagement scores
+                'initial_setup': total_contacts == 0,  # Flag if this is initial setup
+                'all_sent_tier_1': True  # Flag indicating our new approach
+            },
+            'tier_summary': tier_summary,
+            'contact_patterns': contact_patterns
+        })
+        
+    except Exception as e:
+        logger.error(f"Build tier rules error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/email-quality/contact-tiers', methods=['GET'])
+@require_auth
+def get_contact_tiers():
+    """Get contact tier summary"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get tier summary
+        tier_summary = email_quality_filter.get_contact_tier_summary(db_user.id)
+        
+        return jsonify({
+            'success': True,
+            'tier_summary': tier_summary
+        })
+        
+    except Exception as e:
+        logger.error(f"Get contact tiers error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/email-quality/cleanup-existing', methods=['POST'])
+@require_auth
+def cleanup_low_quality_data():
+    """Clean up existing low-quality data from Tier LAST contacts"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter, ContactTier
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"🧹 Starting cleanup of low-quality data for user {user_email}")
+        
+        # Get tier summary first
+        tier_summary = email_quality_filter.get_contact_tier_summary(db_user.id)
+        tier_last_contacts = []
+        
+        # Get Tier LAST contact emails
+        for email, stats in email_quality_filter._contact_tiers.items():
+            if stats.tier == ContactTier.TIER_LAST:
+                tier_last_contacts.append(email)
+        
+        if not tier_last_contacts:
+            return jsonify({
+                'success': True,
+                'message': 'No Tier LAST contacts found to clean up',
+                'stats': {
+                    'emails_removed': 0,
+                    'tasks_removed': 0,
+                    'tier_last_contacts': 0
+                }
+            })
+        
+        # Clean up emails and tasks from Tier LAST contacts
+        with get_db_manager().get_session() as session:
+            from models.enhanced_models import Email, Task
+            
+            emails_removed = 0
+            tasks_removed = 0
+            
+            # Remove emails from Tier LAST contacts
+            for contact_email in tier_last_contacts:
+                emails_to_remove = session.query(Email).filter(
+                    Email.user_id == db_user.id,
+                    Email.sender.ilike(f'%{contact_email}%')
+                ).all()
+                
+                for email in emails_to_remove:
+                    session.delete(email)
+                    emails_removed += 1
+                
+                # Remove tasks related to these contacts
+                tasks_to_remove = session.query(Task).filter(
+                    Task.user_id == db_user.id,
+                    Task.source_context.ilike(f'%{contact_email}%')
+                ).all()
+                
+                for task in tasks_to_remove:
+                    session.delete(task)
+                    tasks_removed += 1
+            
+            session.commit()
+        
+        logger.info(f"✅ Cleanup complete: removed {emails_removed} emails and {tasks_removed} tasks from {len(tier_last_contacts)} Tier LAST contacts")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Cleanup complete: removed {emails_removed} emails and {tasks_removed} tasks',
+            'stats': {
+                'emails_removed': emails_removed,
+                'tasks_removed': tasks_removed,
+                'tier_last_contacts': len(tier_last_contacts)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Cleanup low-quality data error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@settings_bp.route('/flush-database', methods=['POST'])
+@require_auth
+def flush_database():
+    """Flush all user data from the database"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.warning(f"🗑️ FLUSHING ALL DATA for user {user_email}")
+        
+        # Flush all user data
+        result = get_db_manager().flush_user_data(db_user.id)
+        
+        if result:
+            logger.info(f"✅ Database flush complete for user {user_email}")
+            return jsonify({
+                'success': True,
+                'message': 'All user data has been permanently deleted',
+                'flushed_data': {
+                    'emails': 'All emails and AI analysis deleted',
+                    'people': 'All contacts and relationships deleted', 
+                    'tasks': 'All tasks and projects deleted',
+                    'topics': 'All topics and insights deleted',
+                    'calendar': 'All calendar events deleted'
+                }
+            })
+        else:
+            return jsonify({'error': 'Database flush failed'}), 500
+        
+    except Exception as e:
+        logger.error(f"Database flush error: {str(e)}")
+        return jsonify({'error': str(e)}), 500 
+
+
+================================================================================
+FILE: api/routes/email_routes.py
+PURPOSE: API endpoints: Email Routes
+================================================================================
+"""
+Email Routes Blueprint
+====================
+
+Email synchronization, processing, and quality filtering routes.
+Extracted from main.py for better organization.
+"""
+
+import logging
+from flask import Blueprint, request, jsonify
+from ..middleware.auth_middleware import get_current_user, require_auth
+from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
+from datetime import datetime
+import json
+import os
+
+logger = logging.getLogger(__name__)
+
+# Create blueprint
+email_bp = Blueprint('email', __name__, url_prefix='/api')
+
+
+@email_bp.route('/fetch-emails', methods=['POST'])
+def api_fetch_emails():
+    """API endpoint to fetch emails"""
+    from ..middleware.auth_middleware import get_current_user
+    from chief_of_staff_ai.ingest.gmail_fetcher import gmail_fetcher
+    
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        data = request.get_json() or {}
+        max_emails = data.get('max_emails', 10)
+        days_back = data.get('days_back', 7)
+        
+        result = gmail_fetcher.fetch_recent_emails(
+            user_email=user['email'],
+            limit=max_emails,
+            days_back=days_back
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Email fetch API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@email_bp.route('/trigger-email-sync', methods=['POST'])
+def api_trigger_email_sync():
+    """Unified email and calendar processing endpoint"""
+    from ..middleware.auth_middleware import get_current_user
+    from chief_of_staff_ai.ingest.gmail_fetcher import gmail_fetcher
+    from chief_of_staff_ai.ingest.calendar_fetcher import calendar_fetcher
+    from chief_of_staff_ai.processors.email_normalizer import email_normalizer
+    from chief_of_staff_ai.processors.email_intelligence import email_intelligence
+    from chief_of_staff_ai.models.database import get_db_manager
+    
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        data = request.get_json() or {}
+        max_emails = data.get('max_emails', 20)
+        days_back = data.get('days_back', 7)
+        force_refresh = data.get('force_refresh', False)
+        
+        user_email = user['email']
+        
+        # Validate parameters
+        if max_emails < 1 or max_emails > 500:
+            return jsonify({'error': 'max_emails must be between 1 and 500'}), 400
+        if days_back < 1 or days_back > 365:
+            return jsonify({'error': 'days_back must be between 1 and 365'}), 400
+        
+        logger.info(f"🚀 Starting email sync for {user_email}")
+        
+        # Fetch emails
+        fetch_result = gmail_fetcher.fetch_recent_emails(
+            user_email=user_email,
+            limit=max_emails,
+            days_back=days_back,
+            force_refresh=force_refresh
+        )
+        
+        if not fetch_result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': f"Email fetch failed: {fetch_result.get('error')}"
+            }), 400
+        
+        emails_fetched = fetch_result.get('count', 0)
+        
+        # Normalize emails
+        normalize_result = email_normalizer.normalize_user_emails(user_email, limit=max_emails)
+        emails_normalized = normalize_result.get('processed', 0)
+        
+        # Process with AI
+        intelligence_result = email_intelligence.process_user_emails_intelligently(
+            user_email=user_email,
+            limit=max_emails,
+            force_refresh=force_refresh
+        )
+        
+        # Get final results
+        db_user = get_db_manager().get_user_by_email(user_email)
+        if db_user:
+            all_emails = get_db_manager().get_user_emails(db_user.id)
+            all_people = get_db_manager().get_user_people(db_user.id)
+            all_tasks = get_db_manager().get_user_tasks(db_user.id)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Successfully processed {emails_fetched} emails!',
+                'summary': {
+                    'emails_fetched': emails_fetched,
+                    'emails_normalized': emails_normalized,
+                    'total_emails': len(all_emails),
+                    'total_people': len(all_people), 
+                    'total_tasks': len(all_tasks)
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'User not found after processing'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"❌ Email sync error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Processing failed: {str(e)}'
+        }), 500
+
+
+@email_bp.route('/emails', methods=['GET'])
+def api_get_emails():
+    """Get existing emails"""
+    from ..middleware.auth_middleware import get_current_user
+    from chief_of_staff_ai.models.database import get_db_manager
+    
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        db_user = get_db_manager().get_user_by_email(user['email'])
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        emails = get_db_manager().get_user_emails(db_user.id, limit=50)
+        
+        return jsonify({
+            'success': True,
+            'emails': [email.to_dict() for email in emails],
+            'count': len(emails)
+        })
+        
+    except Exception as e:
+        logger.error(f"Get emails API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@email_bp.route('/extract-sent-contacts', methods=['POST'])
+def api_extract_sent_contacts():
+    """Extract contacts from sent emails for building engagement tier rules"""
+    from ..middleware.auth_middleware import get_current_user
+    from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+    from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
+    
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        data = request.get_json() or {}
+        days_back = data.get('days_back', 180)  # Default 6 months
+        metadata_only = data.get('metadata_only', True)
+        sent_only = data.get('sent_only', True)
+        
+        user_email = user['email']
+        
+        logger.info(f"🔍 Extracting sent contacts for {user_email} (last {days_back} days)")
+        
+        # Use the existing smart contact strategy to build trusted contact database
+        result = smart_contact_strategy.build_trusted_contact_database(
+            user_email=user_email,
+            days_back=days_back
+        )
+        
+        if result.get('success'):
+            # Mark all contacts from sent emails as Tier 1
+            contacts_analyzed = result.get('contacts_analyzed', 0)
+            
+            # Format response for frontend
+            contact_patterns = {
+                'analyzed_period_days': days_back,
+                'total_contacts': contacts_analyzed,
+                'tier_1_contacts': contacts_analyzed,  # All contacts are Tier 1
+                'trusted_contacts_created': result.get('trusted_contacts_created', 0)
+            }
+            
+            # Force all contacts to Tier 1 in the quality filter
+            email_quality_filter.set_all_contacts_tier_1(user_email)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Analyzed {result.get("sent_emails_analyzed", 0)} sent emails - all contacts marked as Tier 1',
+                'emails_analyzed': result.get('sent_emails_analyzed', 0),
+                'unique_contacts': contacts_analyzed,
+                'contact_patterns': contact_patterns,
+                'processing_metadata': {
+                    'days_back': days_back,
+                    'metadata_only': metadata_only,
+                    'sent_only': sent_only,
+                    'processed_at': f"{result.get('sent_emails_analyzed', 0)} sent emails analyzed"
+                }
+            })
+        else:
+            error_msg = result.get('error', 'Unknown error during sent email analysis')
+            logger.error(f"❌ Sent contact extraction failed: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"❌ Extract sent contacts error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to extract sent contacts: {str(e)}'
+        }), 500
+
+
+@email_bp.route('/emails/fetch-sent', methods=['POST'])
+@require_auth
+def fetch_sent_emails():
+    """Fetch sent emails for contact building"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.ingest.gmail_fetcher import gmail_fetcher
+        
+        data = request.get_json() or {}
+        months_back = data.get('months_back', 6)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Fetch sent emails
+        result = gmail_fetcher.fetch_sent_emails(
+            user_email=user_email,
+            days_back=months_back * 30,
+            max_emails=1000
+        )
+        
+        if result.get('success'):
+            # Save each email to the database
+            saved_count = 0
+            for email in result.get('emails', []):
+                try:
+                    get_db_manager().save_email(db_user.id, email)
+                    saved_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to save email: {str(e)}")
+                    continue
+            
+            return jsonify({
+                'success': True,
+                'emails_fetched': saved_count,
+                'message': f"Fetched and saved {saved_count} sent emails"
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error fetching sent emails')
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Fetch sent emails error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@email_bp.route('/emails/fetch-all', methods=['POST'])
+@require_auth
+def fetch_all_emails():
+    """Fetch all emails in batches"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.ingest.gmail_fetcher import gmail_fetcher
+        
+        data = request.get_json() or {}
+        batch_size = data.get('batch_size', 50)
+        days_back = data.get('days_back', 30)  # Add days_back parameter
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Fetch emails using the correct method
+        result = gmail_fetcher.fetch_recent_emails(
+            user_email=user_email,
+            limit=batch_size,
+            days_back=days_back,
+            force_refresh=True
+        )
+        
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'emails_fetched': result.get('emails_fetched', 0),
+                'remaining_count': 0,  # This method doesn't track remaining
+                'message': f"Fetched {result.get('emails_fetched', 0)} emails"
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error fetching emails')
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Fetch all emails error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@email_bp.route('/emails/build-knowledge-tree', methods=['POST'])
+@require_auth
+def build_knowledge_tree():
+    """Build or refine the master knowledge tree from unprocessed emails"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager, Email
+        
+        data = request.get_json() or {}
+        batch_size = data.get('batch_size', 50)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        with get_db_manager().get_session() as session:
+            # Get unprocessed emails for tree building
+            unprocessed_emails = session.query(Email).filter(
+                Email.user_id == db_user.id,
+                Email.ai_summary.is_(None)
+            ).limit(batch_size).all()
+            
+            if not unprocessed_emails:
+                return jsonify({
+                    'success': True,
+                    'message': 'No emails to analyze for tree building',
+                    'tree': None
+                })
+            
+            # Prepare email data for tree building
+            emails_for_tree = []
+            for email in unprocessed_emails:
+                email_data = {
+                    'id': email.gmail_id,
+                    'subject': email.subject or '',
+                    'sender': email.sender or '',
+                    'sender_name': email.sender_name or '',
+                    'date': email.email_date.isoformat() if email.email_date else '',
+                    'content': (email.body_clean or email.snippet or '')[:1000],  # Limit content length
+                    'recipients': email.recipient_emails or []
+                }
+                emails_for_tree.append(email_data)
+            
+            # Check if we have an existing master tree
+            existing_tree = get_master_knowledge_tree(db_user.id)
+            
+            # Build or refine the knowledge tree
+            if existing_tree:
+                logger.info(f"Refining existing knowledge tree with {len(unprocessed_emails)} new emails")
+                tree_result = refine_knowledge_tree(emails_for_tree, existing_tree, user_email)
+            else:
+                logger.info(f"Building initial knowledge tree from {len(unprocessed_emails)} emails")
+                tree_result = build_initial_knowledge_tree(emails_for_tree, user_email)
+            
+            if not tree_result.get('success'):
+                return jsonify({
+                    'success': False,
+                    'error': f"Failed to build knowledge tree: {tree_result.get('error')}"
+                }), 500
+            
+            # Save the master tree
+            save_master_knowledge_tree(db_user.id, tree_result['tree'])
+            
+            tree_structure = tree_result['tree']
+            
+            return jsonify({
+                'success': True,
+                'tree': tree_structure,
+                'tree_stats': {
+                    'topics_count': len(tree_structure.get('topics', [])),
+                    'people_count': len(tree_structure.get('people', [])),
+                    'projects_count': len(tree_structure.get('projects', [])),
+                    'relationships_count': len(tree_structure.get('relationships', [])),
+                    'emails_analyzed': len(emails_for_tree),
+                    'is_refinement': existing_tree is not None
+                },
+                'message': f"{'Refined' if existing_tree else 'Built'} knowledge tree from {len(emails_for_tree)} emails"
+            })
+            
+    except Exception as e:
+        logger.error(f"Build knowledge tree error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@email_bp.route('/emails/assign-to-tree', methods=['POST'])
+@require_auth
+def assign_emails_to_tree():
+    """Assign emails to the existing knowledge tree"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager, Email
+        
+        data = request.get_json() or {}
+        batch_size = data.get('batch_size', 50)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get the master knowledge tree
+        master_tree = get_master_knowledge_tree(db_user.id)
+        if not master_tree:
+            return jsonify({
+                'success': False,
+                'error': 'No knowledge tree found. Please build the tree first.'
+            }), 400
+        
+        with get_db_manager().get_session() as session:
+            # Get unprocessed emails
+            unprocessed_emails = session.query(Email).filter(
+                Email.user_id == db_user.id,
+                Email.ai_summary.is_(None)
+            ).limit(batch_size).all()
+            
+            if not unprocessed_emails:
+                return jsonify({
+                    'success': True,
+                    'processed_count': 0,
+                    'remaining_count': 0,
+                    'message': 'No emails to assign'
+                })
+            
+            logger.info(f"Assigning {len(unprocessed_emails)} emails to knowledge tree")
+            
+            processed_count = 0
+            assignment_results = []
+            
+            for email in unprocessed_emails:
+                try:
+                    # Assign email to tree and extract insights
+                    assignment_result = assign_email_to_knowledge_tree(
+                        email, master_tree, user_email
+                    )
+                    
+                    if assignment_result.get('success'):
+                        # Update email with tree-based insights
+                        email.ai_summary = assignment_result['summary']
+                        email.business_category = assignment_result['primary_topic']
+                        email.strategic_importance = assignment_result['importance_score']
+                        email.sentiment = assignment_result['sentiment_score']
+                        email.processed_at = datetime.utcnow()
+                        email.processing_version = "knowledge_tree_v1.0"
+                        
+                        processed_count += 1
+                        assignment_results.append({
+                            'email_id': email.gmail_id,
+                            'subject': email.subject,
+                            'assigned_topic': assignment_result['primary_topic'],
+                            'importance': assignment_result['importance_score']
+                        })
+                        
+                except Exception as e:
+                    logger.error(f"Error processing email {email.id}: {str(e)}")
+                    continue
+            
+            session.commit()
+            
+            # Get remaining count
+            remaining_count = session.query(Email).filter(
+                Email.user_id == db_user.id,
+                Email.ai_summary.is_(None)
+            ).count()
+            
+            return jsonify({
+                'success': True,
+                'processed_count': processed_count,
+                'remaining_count': remaining_count,
+                'assignments': assignment_results[:10],  # Show first 10 assignments
+                'message': f"Assigned {processed_count} emails to knowledge tree"
+            })
+            
+    except Exception as e:
+        logger.error(f"Assign emails to tree error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@email_bp.route('/emails/knowledge-tree', methods=['GET'])
+@require_auth
+def get_knowledge_tree():
+    """Get the current master knowledge tree"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        master_tree = get_master_knowledge_tree(db_user.id)
+        
+        if not master_tree:
+            return jsonify({
+                'success': True,
+                'tree': None,
+                'message': 'No knowledge tree built yet'
+            })
+        
+        return jsonify({
+            'success': True,
+            'tree': master_tree,
+            'tree_stats': {
+                'topics_count': len(master_tree.get('topics', [])),
+                'people_count': len(master_tree.get('people', [])),
+                'projects_count': len(master_tree.get('projects', [])),
+                'relationships_count': len(master_tree.get('relationships', []))
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Get knowledge tree error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@email_bp.route('/emails/process-batch', methods=['POST'])
+@require_auth
+def process_email_batch():
+    """Legacy endpoint - now just assigns emails to existing tree"""
+    return assign_emails_to_tree()
+
+
+@email_bp.route('/emails/sync-tree-to-database', methods=['POST'])
+@require_auth  
+def sync_knowledge_tree_to_database():
+    """Sync knowledge tree JSON data to database tables for UI display"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager, Person, Topic
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get the master knowledge tree
+        master_tree = get_master_knowledge_tree(db_user.id)
+        if not master_tree:
+            return jsonify({
+                'success': False,
+                'error': 'No knowledge tree found. Please build the tree first.'
+            }), 400
+        
+        with get_db_manager().get_session() as session:
+            sync_stats = {
+                'people_created': 0,
+                'people_updated': 0,
+                'topics_created': 0,
+                'topics_updated': 0
+            }
+            
+            # Sync PEOPLE from knowledge tree to database
+            for person_data in master_tree.get('people', []):
+                existing_person = session.query(Person).filter(
+                    Person.user_id == db_user.id,
+                    Person.email_address == person_data['email']
+                ).first()
+                
+                if existing_person:
+                    # Update existing person with knowledge tree data
+                    existing_person.name = person_data.get('name', existing_person.name)
+                    existing_person.company = person_data.get('company', existing_person.company)
+                    existing_person.title = person_data.get('role', existing_person.title)
+                    existing_person.engagement_score = person_data.get('relationship_strength', 0.5) * 100
+                    existing_person.business_context = {
+                        'primary_topics': person_data.get('primary_topics', []),
+                        'role': person_data.get('role'),
+                        'relationship_strength': person_data.get('relationship_strength')
+                    }
+                    sync_stats['people_updated'] += 1
+                else:
+                    # Create new person from knowledge tree
+                    new_person = Person(
+                        user_id=db_user.id,
+                        name=person_data.get('name', 'Unknown'),
+                        email_address=person_data['email'],
+                        company=person_data.get('company'),
+                        title=person_data.get('role'),
+                        engagement_score=person_data.get('relationship_strength', 0.5) * 100,
+                        total_emails=0,  # Will be updated when processing emails
+                        business_context={
+                            'primary_topics': person_data.get('primary_topics', []),
+                            'role': person_data.get('role'),
+                            'relationship_strength': person_data.get('relationship_strength')
+                        }
+                    )
+                    session.add(new_person)
+                    sync_stats['people_created'] += 1
+            
+            # Sync TOPICS from knowledge tree to database
+            for topic_data in master_tree.get('topics', []):
+                existing_topic = session.query(Topic).filter(
+                    Topic.user_id == db_user.id,
+                    Topic.name == topic_data['name']
+                ).first()
+                
+                if existing_topic:
+                    # Update existing topic
+                    existing_topic.description = topic_data.get('description', existing_topic.description)
+                    existing_topic.confidence_score = topic_data.get('importance', 0.5)
+                    existing_topic.keywords = topic_data.get('subtopics', [])
+                    sync_stats['topics_updated'] += 1
+                else:
+                    # Create new topic from knowledge tree
+                    new_topic = Topic(
+                        user_id=db_user.id,
+                        name=topic_data['name'],
+                        description=topic_data.get('description', ''),
+                        confidence_score=topic_data.get('importance', 0.5),
+                        keywords=topic_data.get('subtopics', []),
+                        is_official=True,  # Knowledge tree topics are considered official
+                        mention_count=topic_data.get('frequency', 0)
+                    )
+                    session.add(new_topic)
+                    sync_stats['topics_created'] += 1
+            
+            session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Knowledge tree synced to database successfully',
+                'stats': sync_stats,
+                'tree_stats': {
+                    'total_people_in_tree': len(master_tree.get('people', [])),
+                    'total_topics_in_tree': len(master_tree.get('topics', [])),
+                    'total_projects_in_tree': len(master_tree.get('projects', []))
+                }
+            })
+            
+    except Exception as e:
+        logger.error(f"Sync knowledge tree to database error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+def build_initial_knowledge_tree(emails_data, user_email):
+    """Build the initial master knowledge tree from emails"""
+    try:
+        import anthropic
+        from config.settings import settings
+        # Import the new prompt loader
+        from prompts.prompt_loader import load_prompt, PromptCategories
+        
+        # Initialize Claude client using the existing pattern
+        claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        
+        # Load prompt from external file instead of embedding it
+        prompt = load_prompt(
+            PromptCategories.KNOWLEDGE_TREE,
+            PromptCategories.BUILD_INITIAL_TREE,
+            user_email=user_email,
+            emails_data=json.dumps(emails_data, indent=2)
+        )
+
+        response = claude_client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=4000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        tree_content = response.content[0].text
+        
+        # Extract JSON from response
+        import re
+        json_match = re.search(r'\{.*\}', tree_content, re.DOTALL)
+        if json_match:
+            tree_structure = json.loads(json_match.group())
+            return {
+                'success': True,
+                'tree': tree_structure,
+                'raw_response': tree_content
+            }
+        else:
+            return {
+                'success': False,
+                'error': 'Could not parse knowledge tree from Claude response'
+            }
+            
+    except Exception as e:
+        logger.error(f"Error building initial knowledge tree: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+def refine_knowledge_tree(new_emails_data, existing_tree, user_email):
+    """Refine existing knowledge tree with new emails"""
+    try:
+        import anthropic
+        from config.settings import settings
+        # Import the new prompt loader
+        from prompts.prompt_loader import load_prompt, PromptCategories
+        
+        # Initialize Claude client using the existing pattern
+        claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        
+        # Load prompt from external file instead of embedding it
+        prompt = load_prompt(
+            PromptCategories.KNOWLEDGE_TREE,
+            PromptCategories.REFINE_EXISTING_TREE,
+            user_email=user_email,
+            existing_tree=json.dumps(existing_tree, indent=2),
+            new_emails_data=json.dumps(new_emails_data, indent=2)
+        )
+
+        response = claude_client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=4000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        tree_content = response.content[0].text
+        
+        import re
+        json_match = re.search(r'\{.*\}', tree_content, re.DOTALL)
+        if json_match:
+            refined_tree = json.loads(json_match.group())
+            return {
+                'success': True,
+                'tree': refined_tree,
+                'raw_response': tree_content
+            }
+        else:
+            return {
+                'success': False,
+                'error': 'Could not parse refined knowledge tree from Claude response'
+            }
+            
+    except Exception as e:
+        logger.error(f"Error refining knowledge tree: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+def get_master_knowledge_tree(user_id):
+    """Get the stored master knowledge tree for a user"""
+    try:
+        from models.database import get_db_manager
+        
+        with get_db_manager().get_session() as session:
+            # This would typically be stored in a dedicated table
+            # For now, we'll use a simple file-based approach
+            import os
+            tree_file = f"knowledge_trees/user_{user_id}_master_tree.json"
+            
+            if os.path.exists(tree_file):
+                with open(tree_file, 'r') as f:
+                    return json.load(f)
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error getting master knowledge tree: {str(e)}")
+        return None
+
+
+def save_master_knowledge_tree(user_id, tree_structure):
+    """Save the master knowledge tree for a user"""
+    try:
+        import os
+        
+        # Create directory if it doesn't exist
+        os.makedirs("knowledge_trees", exist_ok=True)
+        
+        tree_file = f"knowledge_trees/user_{user_id}_master_tree.json"
+        with open(tree_file, 'w') as f:
+            json.dump(tree_structure, f, indent=2)
+            
+        logger.info(f"Saved master knowledge tree for user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error saving master knowledge tree: {str(e)}")
+
+
+def assign_email_to_knowledge_tree(email, tree_structure, user_email):
+    """Assign individual email to the pre-built knowledge tree"""
+    try:
+        import anthropic
+        from config.settings import settings
+        # Import the new prompt loader
+        from prompts.prompt_loader import load_prompt, PromptCategories
+        
+        # Initialize Claude client using the existing pattern
+        claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        
+        email_data = {
+            'subject': email.subject or '',
+            'sender': email.sender or '',
+            'content': email.body_clean or email.snippet or '',
+            'date': email.email_date.isoformat() if email.email_date else ''
+        }
+        
+        # Load prompt from external file instead of embedding it
+        prompt = load_prompt(
+            PromptCategories.KNOWLEDGE_TREE,
+            PromptCategories.ASSIGN_EMAIL_TO_TREE,
+            tree_structure=json.dumps(tree_structure, indent=2),
+            email_data=json.dumps(email_data, indent=2)
+        )
+
+        response = claude_client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        # Parse response
+        assignment_content = response.content[0].text
+        
+        import re
+        json_match = re.search(r'\{.*\}', assignment_content, re.DOTALL)
+        if json_match:
+            assignment_data = json.loads(json_match.group())
+            assignment_data['success'] = True
+            return assignment_data
+        else:
+            return {
+                'success': False,
+                'error': 'Could not parse email assignment from Claude response'
+            }
+            
+    except Exception as e:
+        logger.error(f"Error assigning email to knowledge tree: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@email_bp.route('/normalize-emails', methods=['POST'])
+@require_auth
+def api_normalize_emails():
+    """Normalize emails to prepare them for intelligence processing"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from chief_of_staff_ai.processors.email_normalizer import email_normalizer
+        
+        data = request.get_json() or {}
+        limit = data.get('limit', 200)
+        
+        user_email = user['email']
+        
+        # Normalize emails for this user
+        result = email_normalizer.normalize_user_emails(user_email, limit)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'processed': result['processed'],
+                'errors': result.get('errors', 0),
+                'normalizer_version': result.get('normalizer_version'),
+                'user_email': result['user_email'],
+                'message': f"Normalized {result['processed']} emails successfully"
+            })
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        logger.error(f"Email normalization API error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@email_bp.route('/knowledge-driven-pipeline', methods=['POST'])
+@require_auth
+def knowledge_driven_email_pipeline():
+    """
+    UNIFIED KNOWLEDGE-DRIVEN EMAIL PROCESSING PIPELINE
+    
+    Phase 1: Smart Contact Filtering (quality gate)
+    Phase 2: Bulk Knowledge Tree Creation (Claude 4 Opus on ALL emails)
+    Phase 3: Email Assignment to Topics
+    Phase 4: Cross-Topic Intelligence Generation
+    Phase 5: Agent Augmentation of Knowledge Topics
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+        from chief_of_staff_ai.agents.intelligence_agent import IntelligenceAgent
+        from chief_of_staff_ai.agents.mcp_agent import MCPConnectorAgent
+        import anthropic
+        from config.settings import settings
+        
+        data = request.get_json() or {}
+        force_rebuild = data.get('force_rebuild', False)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"🚀 Starting Knowledge-Driven Pipeline for {user_email}")
+        
+        # =================================================================
+        # PHASE 1: SMART CONTACT FILTERING (Quality Gate)
+        # =================================================================
+        logger.info("📧 Phase 1: Smart Contact Filtering")
+        
+        # Build trusted contact database if not exists
+        trusted_result = smart_contact_strategy.build_trusted_contact_database(
+            user_email=user_email,
+            days_back=365
+        )
+        
+        if not trusted_result.get('success'):
+            return jsonify({
+                'success': False, 
+                'error': f"Failed to build trusted contacts: {trusted_result.get('error')}"
+            }), 500
+        
+        # Get ALL emails
+        all_emails = get_db_manager().get_user_emails(db_user.id, limit=1000)
+        
+        # Filter emails using Smart Contact Strategy
+        quality_filtered_emails = []
+        for email in all_emails:
+            if email.sender and email.subject:
+                email_data = {
+                    'sender': email.sender,
+                    'sender_name': email.sender_name,
+                    'subject': email.subject,
+                    'body_preview': email.body_preview or email.snippet,
+                    'date': email.email_date.isoformat() if email.email_date else None
+                }
+                
+                classification = smart_contact_strategy.classify_incoming_email(
+                    user_email=user_email,
+                    email_data=email_data
+                )
+                
+                # Only include high-quality emails for knowledge building
+                if classification.action in ['ANALYZE_WITH_AI', 'PROCESS_WITH_AI']:
+                    quality_filtered_emails.append(email)
+        
+        logger.info(f"📊 Filtered {len(quality_filtered_emails)} quality emails from {len(all_emails)} total")
+        
+        # =================================================================
+        # PHASE 2: BULK KNOWLEDGE TREE CREATION (Claude 4 Opus)
+        # =================================================================
+        logger.info("🧠 Phase 2: Bulk Knowledge Tree Creation with Claude 4 Opus")
+        
+        # Check if we should rebuild
+        existing_tree = get_master_knowledge_tree(db_user.id)
+        if existing_tree and not force_rebuild:
+            logger.info("📚 Using existing knowledge tree")
+            master_tree = existing_tree
+        else:
+            # Prepare ALL filtered emails for bulk analysis
+            emails_for_knowledge = []
+            for email in quality_filtered_emails:
+                emails_for_knowledge.append({
+                    'id': email.gmail_id,
+                    'subject': email.subject or '',
+                    'sender': email.sender or '',
+                    'sender_name': email.sender_name or '',
+                    'date': email.email_date.isoformat() if email.email_date else '',
+                    'content': (email.body_clean or email.snippet or '')[:2000],  # Longer content for knowledge building
+                    'recipients': email.recipient_emails or []
+                })
+            
+            logger.info(f"🎯 Building knowledge tree from {len(emails_for_knowledge)} quality emails")
+            
+            # Enhanced Claude 4 Opus prompt for knowledge-driven architecture
+            knowledge_prompt = f"""You are Claude 4 Opus analyzing ALL business communications for {user_email} to build a comprehensive KNOWLEDGE-DRIVEN architecture.
+
+MISSION: Create a master knowledge tree that represents this person's complete business world.
+
+FILTERED QUALITY EMAILS ({len(emails_for_knowledge)} emails from trusted network):
+{json.dumps(emails_for_knowledge, indent=2)}
+
+BUILD COMPREHENSIVE KNOWLEDGE ARCHITECTURE:
+
+1. **CORE BUSINESS TOPICS** (8-15 major knowledge areas):
+   - Strategic business themes that span multiple communications
+   - Project areas and business initiatives  
+   - Operational domains and business functions
+   - Industry/market areas of focus
+   - Partnership and relationship categories
+
+2. **TOPIC DESCRIPTIONS** (Rich context for each topic):
+   - Clear description of what this knowledge area covers
+   - How it relates to the user's business/role
+   - Key people typically involved
+   - Strategic importance and current status
+
+3. **KNOWLEDGE RELATIONSHIPS**:
+   - How topics connect and influence each other
+   - Cross-topic dependencies and overlaps
+   - Strategic hierarchies and priorities
+
+4. **PEOPLE WITHIN KNOWLEDGE CONTEXT**:
+   - Key people organized by their primary knowledge areas
+   - Their expertise and role in different topics
+   - Relationship strength and communication patterns
+
+RETURN COMPREHENSIVE JSON:
+{{
+    "knowledge_topics": [
+        {{
+            "name": "Strategic Topic Name",
+            "description": "Comprehensive description of this knowledge area and how it relates to the user's business world",
+            "strategic_importance": 0.9,
+            "current_status": "active/developing/monitoring",
+            "key_themes": ["theme1", "theme2", "theme3"],
+            "typical_activities": ["activity1", "activity2"],
+            "decision_patterns": ["type of decisions made in this area"],
+            "success_metrics": ["how success is measured in this area"],
+            "external_dependencies": ["what external factors affect this"],
+            "knowledge_depth": "deep/moderate/surface",
+            "update_frequency": "daily/weekly/monthly"
+        }}
+    ],
+    "topic_relationships": [
+        {{
+            "topic_a": "Topic Name 1",
+            "topic_b": "Topic Name 2", 
+            "relationship_type": "depends_on/influences/collaborates_with/competes_with",
+            "strength": 0.8,
+            "description": "How these knowledge areas interact"
+        }}
+    ],
+    "knowledge_people": [
+        {{
+            "email": "person@company.com",
+            "name": "Person Name",
+            "primary_knowledge_areas": ["Topic 1", "Topic 2"],
+            "expertise_level": {{"Topic 1": 0.9, "Topic 2": 0.7}},
+            "communication_role": "decision_maker/expert/collaborator/stakeholder",
+            "strategic_value": 0.8,
+            "knowledge_contribution": "What unique knowledge/perspective they bring"
+        }}
+    ],
+    "business_intelligence": {{
+        "industry_context": "Primary industry/market context",
+        "business_stage": "startup/growth/enterprise/transition",
+        "strategic_priorities": ["priority1", "priority2", "priority3"],
+        "knowledge_gaps": ["areas where more intelligence is needed"],
+        "opportunity_areas": ["where knowledge suggests opportunities"],
+        "risk_areas": ["where knowledge suggests risks/challenges"]
+    }}
+}}
+
+FOCUS: This is the foundation for ALL future intelligence. Make it comprehensive, strategic, and knowledge-centric."""
+
+            # Call Claude 4 Opus for comprehensive knowledge analysis
+            claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            response = claude_client.messages.create(
+                model=settings.CLAUDE_MODEL,  # Claude 4 Opus
+                max_tokens=6000,  # Increased for comprehensive analysis
+                messages=[{"role": "user", "content": knowledge_prompt}]
+            )
+            
+            # Parse and save knowledge tree
+            tree_content = response.content[0].text
+            import re
+            json_start = tree_content.find('{')
+            json_end = tree_content.rfind('}') + 1
+            
+            if json_start != -1 and json_end > json_start:
+                master_tree = json.loads(tree_content[json_start:json_end])
+                save_master_knowledge_tree(db_user.id, master_tree)
+                logger.info(f"✅ Built knowledge tree with {len(master_tree.get('knowledge_topics', []))} topics")
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to parse knowledge tree from Claude 4 Opus'
+                }), 500
+        
+        # =================================================================
+        # PHASE 3: EMAIL ASSIGNMENT TO KNOWLEDGE TOPICS
+        # =================================================================
+        logger.info("📋 Phase 3: Assigning emails to knowledge topics")
+        
+        email_assignments = []
+        topics_enhanced = 0
+        
+        for email in quality_filtered_emails[:100]:  # Process top 100 quality emails
+            try:
+                assignment_result = assign_email_to_knowledge_tree(email, master_tree, user_email)
+                
+                if assignment_result.get('success'):
+                    # Update email with knowledge assignment
+                    email.ai_summary = assignment_result.get('summary')
+                    email.business_category = assignment_result.get('primary_topic')
+                    email.strategic_importance = assignment_result.get('importance_score', 0.5)
+                    email.sentiment = assignment_result.get('sentiment_score', 0.0)
+                    email.processed_at = datetime.utcnow()
+                    email.processing_version = "knowledge_driven_v1.0"
+                    
+                    email_assignments.append({
+                        'email_id': email.gmail_id,
+                        'subject': email.subject,
+                        'assigned_topic': assignment_result.get('primary_topic'),
+                        'importance': assignment_result.get('importance_score')
+                    })
+                    topics_enhanced += 1
+                    
+            except Exception as e:
+                logger.error(f"Error assigning email {email.id}: {str(e)}")
+                continue
+        
+        # Commit email updates

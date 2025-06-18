@@ -13,10 +13,37 @@ from googleapiclient.errors import HttpError
 from auth.gmail_auth import gmail_auth
 from models.database import get_db_manager, Email
 from config.settings import settings
-from processors.realtime_processing import realtime_processor, EventType
-from processors.enhanced_ai_pipeline import enhanced_ai_processor
-from processors.unified_entity_engine import entity_engine, EntityContext
-from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
+
+# Optional compatibility imports
+try:
+    from chief_of_staff_ai.processors.realtime_processing import realtime_processor, EventType
+    REALTIME_PROCESSOR_AVAILABLE = True
+except ImportError:
+    realtime_processor = None
+    EventType = None
+    REALTIME_PROCESSOR_AVAILABLE = False
+
+try:
+    from chief_of_staff_ai.processors.enhanced_ai_pipeline import enhanced_ai_processor
+    ENHANCED_AI_AVAILABLE = True
+except ImportError:
+    enhanced_ai_processor = None
+    ENHANCED_AI_AVAILABLE = False
+
+try:
+    from chief_of_staff_ai.processors.unified_entity_engine import entity_engine, EntityContext
+    ENTITY_ENGINE_AVAILABLE = True
+except ImportError:
+    entity_engine = None
+    EntityContext = None
+    ENTITY_ENGINE_AVAILABLE = False
+
+try:
+    from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
+    EMAIL_FILTER_AVAILABLE = True
+except ImportError:
+    email_quality_filter = None
+    EMAIL_FILTER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,3174 @@
+  except Exception as e:
+            logger.error(f"Failed to store email intelligence: {str(e)}")
+    
+    def _convert_sentiment_to_float(self, sentiment):
+        """Convert sentiment string to float value for database storage"""
+        if isinstance(sentiment, (int, float)):
+            return float(sentiment)
+        
+        if isinstance(sentiment, str):
+            sentiment_lower = sentiment.lower()
+            if sentiment_lower in ['positive', 'good', 'happy']:
+                return 0.7
+            elif sentiment_lower in ['negative', 'bad', 'sad', 'angry']:
+                return -0.7
+            elif sentiment_lower in ['neutral', 'mixed', 'balanced']:
+                return 0.0
+            else:
+                # Try to parse as float
+                try:
+                    return float(sentiment)
+                except ValueError:
+                    return 0.0
+        
+        return 0.0  # Default neutral
+    
+    # =====================================================================
+    # MEETING ENHANCEMENT METHODS (simplified for space)
+    # =====================================================================
+    
+    def _analyze_event_attendees(self, event_data: Dict, user_id: int) -> Dict:
+        """Analyze meeting attendees and find existing relationships"""
+        # Implementation for attendee analysis
+        return {'known_attendees': [], 'unknown_attendees': [], 'relationship_strength': 0.0}
+    
+    def _find_related_email_intelligence(self, attendee_intelligence: Dict, user_id: int) -> Dict:
+        """Find email intelligence related to meeting attendees"""
+        # Implementation for finding related email context
+        return {'recent_communications': [], 'shared_topics': []}
+    
+    def _prepare_meeting_enhancement_prompt(self, event_data: Dict, attendee_intelligence: Dict, email_context: Dict) -> str:
+        """Prepare prompt for meeting enhancement with intelligence"""
+        return f"Analyze meeting: {event_data.get('title', '')} with context"
+    
+    def _call_claude_meeting_enhancement(self, prompt: str) -> Optional[str]:
+        """Call Claude for meeting enhancement analysis"""
+        try:
+            message = self.client.messages.create(
+                model=self.model,
+                max_tokens=3000,
+                temperature=0.1,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return message.content[0].text.strip()
+        except Exception as e:
+            logger.error(f"Failed to call Claude for meeting enhancement: {str(e)}")
+            return None
+    
+    def _parse_meeting_enhancement(self, response: str) -> Dict:
+        """Parse Claude's meeting enhancement response"""
+        try:
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            if json_start != -1 and json_end > 0:
+                return json.loads(response[json_start:json_end])
+        except:
+            pass
+        return {}
+    
+    def _update_event_intelligence(self, event_data: Dict, enhancement: Dict, user_id: int):
+        """Update calendar event with intelligence"""
+        # Implementation for updating event intelligence
+        pass
+    
+    # =====================================================================
+    # UTILITY METHODS
+    # =====================================================================
+    
+    def _parse_due_date_hint(self, hint: str) -> Optional[datetime]:
+        """Parse due date hint into actual datetime"""
+        from dateutil import parser as date_parser
+        try:
+            return date_parser.parse(hint, fuzzy=True)
+        except:
+            return None
+    
+    def _find_entity_id(self, entity_info: Dict, user_id: int) -> Optional[int]:
+        """Find actual entity ID from analysis data"""
+        try:
+            from models.database import get_db_manager
+            
+            entity_type = entity_info.get('type')
+            identifier = entity_info.get('identifier')
+            
+            if not entity_type or not identifier:
+                return None
+            
+            with get_db_manager().get_session() as session:
+                if entity_type == 'person':
+                    entity = session.query(Person).filter(
+                        Person.user_id == user_id,
+                        Person.email_address == identifier
+                    ).first()
+                elif entity_type == 'topic':
+                    entity = session.query(Topic).filter(
+                        Topic.user_id == user_id,
+                        Topic.name == identifier
+                    ).first()
+                elif entity_type == 'project':
+                    entity = session.query(Project).filter(
+                        Project.user_id == user_id,
+                        Project.name == identifier
+                    ).first()
+                else:
+                    return None
+                
+                return entity.id if entity else None
+                
+        except Exception as e:
+            logger.error(f"Failed to find entity ID: {str(e)}")
+            return None
+    
+    def _augment_existing_project(self, project: Project, project_data: Dict, session) -> bool:
+        """Augment existing project with new information"""
+        updated = False
+        
+        new_info = project_data.get('new_information')
+        if new_info:
+            if project.description:
+                project.description = f"{project.description}. {new_info}"
+            else:
+                project.description = new_info
+            updated = True
+        
+        status_update = project_data.get('status_update')
+        if status_update:
+            project.updated_at = datetime.utcnow()
+            updated = True
+        
+        return updated
+    
+    def _create_new_project(self, project_data: Dict, context: EntityContext, session) -> Optional[Project]:
+        """Create new project from analysis"""
+        try:
+            project = Project(
+                user_id=context.user_id,
+                name=project_data['name'],
+                description=project_data.get('description'),
+                status='active',
+                priority=project_data.get('priority', 'medium'),
+                created_at=datetime.utcnow()
+            )
+            
+            session.add(project)
+            return project
+            
+        except Exception as e:
+            logger.error(f"Failed to create new project: {str(e)}")
+            return None
+
+# Global instance
+enhanced_ai_processor = EnhancedAIProcessor() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/integration_manager.py
+PURPOSE: Email processor: Integration Manager
+================================================================================
+# Integration Manager - Unified Processor Coordination
+# This coordinates between all enhanced processors and provides unified interfaces
+
+import logging
+from typing import Dict, List, Optional, Any, Union
+from datetime import datetime, timezone
+from dataclasses import dataclass
+
+# Import enhanced processors
+from processors.enhanced_processors.enhanced_task_processor import enhanced_task_processor
+from processors.enhanced_processors.enhanced_email_processor import enhanced_email_processor
+from processors.enhanced_processors.enhanced_data_normalizer import enhanced_data_normalizer
+
+# Import unified processors
+from processors.unified_entity_engine import entity_engine, EntityContext
+from processors.enhanced_ai_pipeline import enhanced_ai_processor
+from processors.realtime_processor import realtime_processor
+
+# Import adapter layer for backward compatibility
+from processors.adapter_layer import task_extractor, email_intelligence, email_normalizer
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class ProcessingPlan:
+    """Plan for processing various types of data"""
+    data_type: str
+    processing_steps: List[str]
+    expected_entities: List[str]
+    real_time: bool
+    priority: int
+
+class IntegrationManager:
+    """
+    Central integration manager that coordinates all processors.
+    This is the main interface for the application to interact with processors.
+    """
+    
+    def __init__(self):
+        # Enhanced processors
+        self.task_processor = enhanced_task_processor
+        self.email_processor = enhanced_email_processor
+        self.data_normalizer = enhanced_data_normalizer
+        
+        # Unified processors
+        self.entity_engine = entity_engine
+        self.ai_processor = enhanced_ai_processor
+        self.realtime_processor = realtime_processor
+        
+        # Adapter layer for backward compatibility
+        self.legacy_task_extractor = task_extractor
+        self.legacy_email_intelligence = email_intelligence
+        self.legacy_email_normalizer = email_normalizer
+        
+        # Processing statistics
+        self.processing_stats = {
+            'emails_processed': 0,
+            'tasks_created': 0,
+            'entities_created': 0,
+            'insights_generated': 0,
+            'processing_time_total': 0.0
+        }
+        
+        logger.info("Integration Manager initialized with enhanced processor architecture")
+    
+    # =====================================================================
+    # UNIFIED PROCESSING INTERFACES
+    # =====================================================================
+    
+    def process_email_complete(self, email_data: Dict, user_id: int, 
+                             real_time: bool = True, 
+                             legacy_mode: bool = False) -> Dict[str, Any]:
+        """
+        Complete email processing with full entity creation and intelligence.
+        This is the main email processing interface.
+        """
+        try:
+            start_time = datetime.utcnow()
+            
+            if legacy_mode:
+                # Use legacy adapters for backward compatibility
+                logger.info(f"Processing email in legacy mode for user {user_id}")
+                result = self._process_email_legacy_mode(email_data, user_id)
+            else:
+                # Use enhanced processors
+                logger.info(f"Processing email with enhanced processors for user {user_id}")
+                result = self._process_email_enhanced_mode(email_data, user_id, real_time)
+            
+            # Update processing statistics
+            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            self._update_processing_stats('email', result, processing_time)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in complete email processing: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'processing_mode': 'legacy' if legacy_mode else 'enhanced'
+            }
+    
+    def process_calendar_event_complete(self, event_data: Dict, user_id: int,
+                                      real_time: bool = True) -> Dict[str, Any]:
+        """
+        Complete calendar event processing with meeting preparation.
+        """
+        try:
+            start_time = datetime.utcnow()
+            
+            # Step 1: Normalize calendar data
+            logger.info(f"Processing calendar event for user {user_id}")
+            normalization_result = self.data_normalizer.normalize_calendar_data(event_data)
+            
+            if not normalization_result.success:
+                return {
+                    'success': False,
+                    'error': f"Calendar normalization failed: {normalization_result.issues_found}"
+                }
+            
+            normalized_event = normalization_result.normalized_data
+            
+            # Step 2: Process with enhanced processors
+            if real_time:
+                # Queue for real-time processing
+                self.realtime_processor.process_new_calendar_event(normalized_event, user_id)
+                result = {
+                    'success': True,
+                    'status': 'queued_for_realtime',
+                    'event_id': normalized_event.get('google_event_id'),
+                    'message': 'Calendar event queued for real-time processing'
+                }
+            else:
+                # Process immediately
+                ai_result = self.ai_processor.enhance_calendar_event_with_intelligence(
+                    normalized_event, user_id
+                )
+                
+                # Create preparation tasks
+                task_result = self.task_processor.process_tasks_from_calendar_event(
+                    normalized_event, user_id
+                )
+                
+                result = {
+                    'success': True,
+                    'event_processing': ai_result,
+                    'task_processing': task_result,
+                    'normalized_event': normalized_event
+                }
+            
+            # Update statistics
+            processing_time = (datetime.utcnow() - start_time).total_seconds()
+            self._update_processing_stats('calendar', result, processing_time)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in calendar event processing: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def create_manual_task_complete(self, task_description: str, user_id: int,
+                                  assignee_email: str = None,
+                                  topic_names: List[str] = None,
+                                  project_name: str = None,
+                                  due_date: datetime = None,
+                                  priority: str = 'medium') -> Dict[str, Any]:
+        """
+        Complete manual task creation with entity relationships.
+        """
+        try:
+            result = self.task_processor.create_manual_task_with_context(
+                task_description=task_description,
+                assignee_email=assignee_email,
+                topic_names=topic_names,
+                project_name=project_name,
+                due_date=due_date,
+                priority=priority,
+                user_id=user_id
+            )
+            
+            # Update statistics
+            if result['success']:
+                self.processing_stats['tasks_created'] += 1
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in manual task creation: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    # =====================================================================
+    # BATCH PROCESSING INTERFACES
+    # =====================================================================
+    
+    def process_email_batch(self, email_list: List[Dict], user_id: int,
+                           batch_size: int = 10,
+                           real_time: bool = False) -> Dict[str, Any]:
+        """
+        Process multiple emails in optimized batches.
+        """
+        try:
+            logger.info(f"Processing email batch of {len(email_list)} emails for user {user_id}")
+            
+            # Use enhanced email processor for batch processing
+            result = self.email_processor.process_email_batch(email_list, user_id, batch_size)
+            
+            # Update statistics
+            if result['success']:
+                batch_result = result['result']
+                self.processing_stats['emails_processed'] += batch_result['processed']
+                self.processing_stats['processing_time_total'] += batch_result['batch_summary']['processing_time']
+                
+                # Update entity stats
+                entities_created = batch_result['batch_summary']['total_entities_created']
+                for entity_type, count in entities_created.items():
+                    if entity_type == 'tasks':
+                        self.processing_stats['tasks_created'] += count
+                    self.processing_stats['entities_created'] += count
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in email batch processing: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    # =====================================================================
+    # ANALYTICS AND INSIGHTS
+    # =====================================================================
+    
+    def generate_user_insights(self, user_id: int, analysis_type: str = 'comprehensive') -> Dict[str, Any]:
+        """
+        Generate comprehensive user insights from all data sources.
+        """
+        try:
+            insights = {
+                'user_id': user_id,
+                'analysis_type': analysis_type,
+                'generated_at': datetime.utcnow().isoformat(),
+                'insights': {}
+            }
+            
+            if analysis_type in ['comprehensive', 'email']:
+                # Email pattern analysis
+                email_insights = self.email_processor.analyze_email_patterns(user_id)
+                if email_insights['success']:
+                    insights['insights']['email_patterns'] = email_insights['result']
+            
+            if analysis_type in ['comprehensive', 'tasks']:
+                # Task pattern analysis
+                task_insights = self.task_processor.analyze_task_patterns(user_id)
+                if task_insights['success']:
+                    insights['insights']['task_patterns'] = task_insights['result']
+            
+            if analysis_type in ['comprehensive', 'proactive']:
+                # Proactive insights from entity engine
+                proactive_insights = self.entity_engine.generate_proactive_insights(user_id)
+                insights['insights']['proactive_insights'] = [
+                    {
+                        'type': insight.insight_type,
+                        'title': insight.title,
+                        'description': insight.description,
+                        'priority': insight.priority,
+                        'confidence': insight.confidence
+                    }
+                    for insight in proactive_insights
+                ]
+            
+            return {
+                'success': True,
+                'result': insights
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating user insights: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def get_processing_statistics(self) -> Dict[str, Any]:
+        """
+        Get comprehensive processing statistics.
+        """
+        return {
+            'success': True,
+            'result': {
+                'processing_stats': self.processing_stats.copy(),
+                'processor_status': {
+                    'enhanced_processors_active': True,
+                    'legacy_adapters_available': True,
+                    'real_time_processing': self.realtime_processor.running,
+                    'entity_engine_active': True
+                },
+                'performance_metrics': {
+                    'avg_processing_time': (
+                        self.processing_stats['processing_time_total'] / 
+                        max(1, self.processing_stats['emails_processed'])
+                    ),
+                    'entities_per_email': (
+                        self.processing_stats['entities_created'] / 
+                        max(1, self.processing_stats['emails_processed'])
+                    )
+                }
+            }
+        }
+    
+    # =====================================================================
+    # LEGACY COMPATIBILITY METHODS
+    # =====================================================================
+    
+    def get_legacy_task_extractor(self):
+        """Get legacy task extractor for backward compatibility"""
+        return self.legacy_task_extractor
+    
+    def get_legacy_email_intelligence(self):
+        """Get legacy email intelligence for backward compatibility"""
+        return self.legacy_email_intelligence
+    
+    def get_legacy_email_normalizer(self):
+        """Get legacy email normalizer for backward compatibility"""
+        return self.legacy_email_normalizer
+    
+    # =====================================================================
+    # REAL-TIME PROCESSING CONTROL
+    # =====================================================================
+    
+    def start_realtime_processing(self, num_workers: int = 3):
+        """Start real-time processing"""
+        try:
+            self.realtime_processor.start(num_workers)
+            logger.info(f"Started real-time processing with {num_workers} workers")
+            return {'success': True, 'message': 'Real-time processing started'}
+        except Exception as e:
+            logger.error(f"Failed to start real-time processing: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def stop_realtime_processing(self):
+        """Stop real-time processing"""
+        try:
+            self.realtime_processor.stop()
+            logger.info("Stopped real-time processing")
+            return {'success': True, 'message': 'Real-time processing stopped'}
+        except Exception as e:
+            logger.error(f"Failed to stop real-time processing: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def register_insight_callback(self, user_id: int, callback_function):
+        """Register callback for real-time insight delivery"""
+        self.realtime_processor.register_insight_callback(user_id, callback_function)
+        logger.info(f"Registered insight callback for user {user_id}")
+    
+    # =====================================================================
+    # PRIVATE HELPER METHODS
+    # =====================================================================
+    
+    def _process_email_enhanced_mode(self, email_data: Dict, user_id: int, real_time: bool) -> Dict[str, Any]:
+        """Process email using enhanced processors"""
+        # Step 1: Normalize email data
+        normalization_result = self.data_normalizer.normalize_email_data(email_data)
+        
+        if not normalization_result.success:
+            return {
+                'success': False,
+                'error': f"Email normalization failed: {normalization_result.issues_found}",
+                'processing_mode': 'enhanced'
+            }
+        
+        normalized_email = normalization_result.normalized_data
+        
+        # Step 2: Process with enhanced email processor
+        processing_result = self.email_processor.process_email_comprehensive(
+            normalized_email, user_id, real_time
+        )
+        
+        # Add normalization info to result
+        if processing_result['success']:
+            processing_result['normalization'] = {
+                'quality_score': normalization_result.quality_score,
+                'issues_found': normalization_result.issues_found
+            }
+        
+        processing_result['processing_mode'] = 'enhanced'
+        return processing_result
+    
+    def _process_email_legacy_mode(self, email_data: Dict, user_id: int) -> Dict[str, Any]:
+        """Process email using legacy adapters"""
+        # Step 1: Normalize with legacy adapter
+        normalized_email = self.legacy_email_normalizer.normalize_gmail_email(email_data)
+        
+        if normalized_email.get('error'):
+            return {
+                'success': False,
+                'error': normalized_email.get('error_message'),
+                'processing_mode': 'legacy'
+            }
+        
+        # Step 2: Extract tasks
+        task_result = self.legacy_task_extractor.extract_tasks_from_email(normalized_email, user_id)
+        
+        # Step 3: Process with email intelligence
+        intelligence_result = self.legacy_email_intelligence.process_email(normalized_email, user_id)
+        
+        # Combine results
+        combined_result = {
+            'success': True,
+            'processing_mode': 'legacy',
+            'normalized_email': normalized_email,
+            'task_extraction': task_result,
+            'email_intelligence': intelligence_result
+        }
+        
+        return combined_result
+    
+    def _update_processing_stats(self, data_type: str, result: Dict, processing_time: float):
+        """Update internal processing statistics"""
+        self.processing_stats['processing_time_total'] += processing_time
+        
+        if data_type == 'email' and result.get('success'):
+            self.processing_stats['emails_processed'] += 1
+            
+            # Count entities if available
+            if 'processing_summary' in result.get('result', {}):
+                entities_created = result['result']['processing_summary'].get('entities_created', {})
+                for entity_type, count in entities_created.items():
+                    if entity_type == 'tasks':
+                        self.processing_stats['tasks_created'] += count
+                    self.processing_stats['entities_created'] += count
+                
+                insights_count = result['result']['processing_summary'].get('insights_generated', 0)
+                self.processing_stats['insights_generated'] += insights_count
+
+# =====================================================================
+# GLOBAL INTEGRATION MANAGER INSTANCE
+# =====================================================================
+
+# Create global integration manager instance
+integration_manager = IntegrationManager()
+
+# Export for easy import
+__all__ = ['integration_manager', 'IntegrationManager', 'ProcessingPlan']
+
+logger.info("Integration Manager module loaded - unified processor coordination active") 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/intelligence_engine.py
+PURPOSE: Email processor: Intelligence Engine
+================================================================================
+# Enhanced Intelligence Engine - The Core That Makes Everything Useful
+# This generates meaningful meeting preparation, attendee intelligence, and proactive insights
+
+import json
+import logging
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Tuple
+import anthropic
+from dataclasses import dataclass
+
+from config.settings import settings
+from models.database import get_db_manager, Calendar, Person, Email, Task, IntelligenceInsight, EntityRelationship
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class AttendeeIntelligence:
+    """Rich intelligence about meeting attendees"""
+    name: str
+    email: str
+    relationship_score: float
+    recent_communications: List[Dict]
+    business_context: str
+    preparation_notes: str
+    conversation_starters: List[str]
+
+@dataclass
+class MeetingIntelligence:
+    """Comprehensive meeting intelligence"""
+    meeting_title: str
+    business_context: str
+    attendee_intelligence: List[AttendeeIntelligence]
+    preparation_tasks: List[Dict]
+    discussion_topics: List[Dict]
+    strategic_importance: float
+    success_probability: float
+    outcome_predictions: List[str]
+
+class IntelligenceEngine:
+    """The core intelligence engine that makes everything useful"""
+    
+    def __init__(self):
+        from config.settings import settings
+        
+        self.claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = settings.CLAUDE_MODEL  # Now uses Claude 4 Opus from settings
+        
+    def generate_meeting_intelligence(self, user_id: int, event: Calendar) -> Optional[MeetingIntelligence]:
+        """Generate comprehensive meeting intelligence with preparation tasks"""
+        try:
+            logger.info(f"Generating meeting intelligence for: {event.title}")
+            
+            # Step 1: Gather attendee intelligence
+            attendee_intelligence = self._gather_attendee_intelligence(user_id, event)
+            
+            # Step 2: Find related email context
+            email_context = self._find_meeting_email_context(user_id, event, attendee_intelligence)
+            
+            # Step 3: Generate AI-powered meeting analysis
+            meeting_analysis = self._generate_ai_meeting_analysis(event, attendee_intelligence, email_context)
+            
+            if not meeting_analysis:
+                return None
+                
+            # Step 4: Create preparation tasks based on analysis
+            prep_tasks = self._create_preparation_tasks(user_id, event, meeting_analysis, attendee_intelligence)
+            
+            # Step 5: Generate proactive insights
+            self._create_meeting_insights(user_id, event, meeting_analysis, attendee_intelligence)
+            
+            return MeetingIntelligence(
+                meeting_title=event.title or "Unknown Meeting",
+                business_context=meeting_analysis.get('business_context', ''),
+                attendee_intelligence=attendee_intelligence,
+                preparation_tasks=prep_tasks,
+                discussion_topics=meeting_analysis.get('discussion_topics', []),
+                strategic_importance=meeting_analysis.get('strategic_importance', 0.5),
+                success_probability=meeting_analysis.get('success_probability', 0.5),
+                outcome_predictions=meeting_analysis.get('outcome_predictions', [])
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to generate meeting intelligence: {str(e)}")
+            return None
+    
+    def _gather_attendee_intelligence(self, user_id: int, event: Calendar) -> List[AttendeeIntelligence]:
+        """Gather rich intelligence about meeting attendees"""
+        attendees = []
+        
+        if not event.attendee_emails:
+            return attendees
+            
+        db_manager = get_db_manager()
+        
+        for email in event.attendee_emails:
+            if not email:
+                continue
+                
+            # Find person in database
+            person = db_manager.find_person_by_email(user_id, email)
+            
+            if person:
+                # Get recent communications
+                recent_comms = self._get_recent_communications(user_id, email)
+                
+                # Calculate relationship score
+                relationship_score = self._calculate_relationship_score(person, recent_comms)
+                
+                # Generate business context
+                business_context = self._generate_person_business_context(person, recent_comms)
+                
+                # Generate preparation notes
+                prep_notes = self._generate_preparation_notes(person, recent_comms, event)
+                
+                # Generate conversation starters
+                conversation_starters = self._generate_conversation_starters(person, recent_comms)
+                
+                attendee_intel = AttendeeIntelligence(
+                    name=person.name,
+                    email=email,
+                    relationship_score=relationship_score,
+                    recent_communications=recent_comms,
+                    business_context=business_context,
+                    preparation_notes=prep_notes,
+                    conversation_starters=conversation_starters
+                )
+                attendees.append(attendee_intel)
+            else:
+                # Unknown attendee - still provide basic intelligence
+                attendee_intel = AttendeeIntelligence(
+                    name=email.split('@')[0].replace('.', ' ').title(),
+                    email=email,
+                    relationship_score=0.1,
+                    recent_communications=[],
+                    business_context=f"New contact from {email.split('@')[1]}",
+                    preparation_notes=f"First meeting with {email} - opportunity to build new relationship",
+                    conversation_starters=[f"How did you get involved with this project?", "What's your role at {email.split('@')[1]}?"]
+                )
+                attendees.append(attendee_intel)
+        
+        return attendees
+    
+    def _find_meeting_email_context(self, user_id: int, event: Calendar, attendees: List[AttendeeIntelligence]) -> Dict:
+        """Find email context related to this meeting"""
+        db_manager = get_db_manager()
+        
+        with db_manager.get_session() as session:
+            # Look for emails mentioning meeting topics or from attendees
+            attendee_emails = [a.email for a in attendees]
+            
+            # Get emails from attendees in the last 30 days
+            cutoff_date = datetime.utcnow() - timedelta(days=30)
+            
+            related_emails = session.query(Email).filter(
+                Email.user_id == user_id,
+                Email.sender.in_(attendee_emails),
+                Email.email_date > cutoff_date
+            ).order_by(Email.email_date.desc()).limit(10).all()
+            
+            # Also look for emails mentioning meeting title keywords
+            if event.title:
+                title_keywords = [word.lower() for word in event.title.split() if len(word) > 3]
+                if title_keywords:
+                    keyword_emails = session.query(Email).filter(
+                        Email.user_id == user_id,
+                        Email.email_date > cutoff_date
+                    ).all()
+                    
+                    # Filter by keyword matching
+                    keyword_matches = []
+                    for email in keyword_emails:
+                        content = f"{email.subject or ''} {email.ai_summary or ''}".lower()
+                        if any(keyword in content for keyword in title_keywords):
+                            keyword_matches.append(email)
+                    
+                    related_emails.extend(keyword_matches[:5])  # Add top 5 keyword matches
+            
+            session.expunge_all()
+            
+            return {
+                'related_emails': related_emails,
+                'attendee_communications': len(related_emails),
+                'recent_topics': self._extract_topics_from_emails(related_emails),
+                'key_decisions': self._extract_decisions_from_emails(related_emails),
+                'shared_context': self._extract_shared_context(related_emails)
+            }
+    
+    def _generate_ai_meeting_analysis(self, event: Calendar, attendees: List[AttendeeIntelligence], email_context: Dict) -> Optional[Dict]:
+        """Generate AI-powered meeting analysis"""
+        try:
+            # Prepare context for Claude
+            meeting_context = self._prepare_meeting_context(event, attendees, email_context)
+            
+            system_prompt = """You are an expert executive assistant AI that specializes in meeting preparation and business intelligence. Your goal is to generate actionable meeting intelligence that will help the user have more effective, productive meetings.
+
+Analyze the meeting and attendee information to provide:
+
+1. **Business Context**: What is this meeting really about? What are the underlying business objectives?
+2. **Strategic Importance**: How important is this meeting to business success?
+3. **Preparation Tasks**: Specific, actionable tasks the user should complete before the meeting
+4. **Discussion Topics**: Key topics to discuss based on recent communications and relationships
+5. **Success Probability**: Likelihood this meeting will achieve its objectives
+6. **Outcome Predictions**: Likely outcomes and next steps from this meeting
+
+Focus on being practical and actionable. Generate insights that will actually help the user succeed in this meeting.
+
+Return a JSON object with this structure:
+{
+    "business_context": "Detailed explanation of what this meeting is really about and why it matters",
+    "strategic_importance": 0.8,
+    "preparation_tasks": [
+        {
+            "task": "Specific preparation task",
+            "rationale": "Why this is important",
+            "priority": "high|medium|low",
+            "time_needed": "15 minutes",
+            "category": "research|review|prepare_materials|contact_followup"
+        }
+    ],
+    "discussion_topics": [
+        {
+            "topic": "Key discussion topic",
+            "context": "Background based on recent communications",
+            "talking_points": ["Specific point 1", "Specific point 2"],
+            "priority": "high|medium|low"
+        }
+    ],
+    "success_probability": 0.7,
+    "outcome_predictions": [
+        "Likely outcome 1 based on context",
+        "Potential challenge to prepare for"
+    ],
+    "attendee_dynamics": "Analysis of how attendees might interact",
+    "key_opportunities": ["Opportunity 1", "Opportunity 2"],
+    "potential_obstacles": ["Challenge 1", "Challenge 2"]
+}"""
+
+            user_prompt = f"""Analyze this meeting and generate comprehensive preparation intelligence:
+
+{meeting_context}
+
+Focus on generating actionable preparation tasks and discussion topics that will help make this meeting successful. Be specific and practical."""
+
+            message = self.claude_client.messages.create(
+                model=self.model,
+                max_tokens=3000,
+                temperature=0.1,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}]
+            )
+            
+            response_text = message.content[0].text.strip()
+            
+            # Parse JSON response
+            json_start = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
+            
+            if json_start != -1 and json_end > json_start:
+                json_text = response_text[json_start:json_end]
+                return json.loads(json_text)
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to generate AI meeting analysis: {str(e)}")
+            return None
+    
+    def _create_preparation_tasks(self, user_id: int, event: Calendar, analysis: Dict, attendees: List[AttendeeIntelligence]) -> List[Dict]:
+        """Create specific preparation tasks based on meeting analysis"""
+        db_manager = get_db_manager()
+        created_tasks = []
+        
+        # Get preparation tasks from AI analysis
+        prep_tasks = analysis.get('preparation_tasks', [])
+        
+        for task_info in prep_tasks:
+            # Calculate due date (before meeting)
+            meeting_time = event.start_time
+            if meeting_time:
+                # Tasks should be completed 1-2 hours before meeting
+                due_time = meeting_time - timedelta(hours=2)
+            else:
+                due_time = datetime.utcnow() + timedelta(hours=24)
+            
+            task_data = {
+                'description': task_info.get('task', 'Meeting preparation task'),
+                'category': 'meeting_prep',
+                'priority': task_info.get('priority', 'medium'),
+                'due_date': due_time,
+                'due_date_text': f"Before {event.title}",
+                'source_text': f"AI-generated preparation for: {event.title}",
+                'context': f"{task_info.get('rationale', '')} | Time needed: {task_info.get('time_needed', '15 minutes')}",
+                'confidence': 0.9,
+                'comprehensive_context_story': self._generate_task_context_story(task_info, event, attendees),
+                'detailed_task_meaning': self._generate_task_meaning(task_info, event),
+                'comprehensive_importance_analysis': self._generate_task_importance(task_info, event, analysis),
+                'comprehensive_origin_details': f"Generated by AI for meeting '{event.title}' scheduled for {event.start_time}"
+            }
+            
+            task = db_manager.create_or_update_task(user_id, task_data)
+            if task:
+                created_tasks.append(task.to_dict())
+        
+        return created_tasks
+    
+    def _create_meeting_insights(self, user_id: int, event: Calendar, analysis: Dict, attendees: List[AttendeeIntelligence]):
+        """Create proactive insights about the meeting"""
+        db_manager = get_db_manager()
+        
+        # Meeting preparation insight
+        if analysis.get('strategic_importance', 0) > 0.6:
+            insight_data = {
+                'insight_type': 'meeting_prep',
+                'title': f"High-value meeting preparation needed: {event.title}",
+                'description': f"This meeting has high strategic importance ({analysis.get('strategic_importance', 0):.1f}/1.0). {analysis.get('business_context', '')}",
+                'priority': 'high' if analysis.get('strategic_importance', 0) > 0.8 else 'medium',
+                'confidence': 0.9,
+                'related_entity_type': 'event',
+                'related_entity_id': event.id,
+                'action_required': True,
+                'action_due_date': event.start_time - timedelta(hours=2) if event.start_time else None,
+                'expires_at': event.start_time
+            }
+            db_manager.create_intelligence_insight(user_id, insight_data)
+        
+        # Relationship insights
+        for attendee in attendees:
+            if attendee.relationship_score > 0.7:
+                insight_data = {
+                    'insight_type': 'relationship_opportunity',
+                    'title': f"Strong relationship opportunity with {attendee.name}",
+                    'description': f"You have a strong relationship with {attendee.name} (score: {attendee.relationship_score:.1f}). {attendee.preparation_notes}",
+                    'priority': 'medium',
+                    'confidence': 0.8,
+                    'related_entity_type': 'person',
+                    'expires_at': event.start_time + timedelta(days=1)
+                }
+                db_manager.create_intelligence_insight(user_id, insight_data)
+    
+    def generate_proactive_insights(self, user_id: int) -> List[IntelligenceInsight]:
+        """Generate proactive business insights"""
+        db_manager = get_db_manager()
+        insights = []
+        
+        # Check for upcoming meetings needing preparation
+        upcoming_meetings = db_manager.get_upcoming_meetings_needing_prep(user_id, 48)
+        
+        for meeting in upcoming_meetings:
+            hours_until = (meeting.start_time - datetime.utcnow()).total_seconds() / 3600
+            
+            if hours_until > 0 and hours_until < 24:
+                insight_data = {
+                    'insight_type': 'meeting_prep',
+                    'title': f"Meeting preparation needed: {meeting.title}",
+                    'description': f"Meeting in {hours_until:.1f} hours. Preparation recommended based on meeting importance and attendees.",
+                    'priority': 'high' if hours_until < 4 else 'medium',
+                    'confidence': 0.9,
+                    'related_entity_type': 'event',
+                    'related_entity_id': meeting.id,
+                    'action_required': True,
+                    'action_due_date': meeting.start_time - timedelta(hours=1),
+                    'expires_at': meeting.start_time
+                }
+                insight = db_manager.create_intelligence_insight(user_id, insight_data)
+                insights.append(insight)
+        
+        # Check for relationship maintenance opportunities
+        self._generate_relationship_insights(user_id, insights)
+        
+        # Check for topic momentum opportunities
+        self._generate_topic_insights(user_id, insights)
+        
+        return insights
+    
+    def _generate_relationship_insights(self, user_id: int, insights: List[IntelligenceInsight]):
+        """Generate relationship maintenance insights"""
+        db_manager = get_db_manager()
+        
+        # Find people who haven't been contacted recently but have high engagement
+        with db_manager.get_session() as session:
+            cutoff_date = datetime.utcnow() - timedelta(days=14)
+            
+            inactive_relationships = session.query(Person).filter(
+                Person.user_id == user_id,
+                Person.importance_level > 0.7,
+                Person.last_interaction < cutoff_date
+            ).limit(5).all()
+            
+            for person in inactive_relationships:
+                days_since = (datetime.utcnow() - person.last_interaction).days
+                
+                insight_data = {
+                    'insight_type': 'relationship_maintenance',
+                    'title': f"Reconnect with {person.name}",
+                    'description': f"It's been {days_since} days since your last interaction with {person.name} ({person.company or 'important contact'}). Consider reaching out to maintain this valuable relationship.",
+                    'priority': 'medium',
+                    'confidence': 0.7,
+                    'related_entity_type': 'person',
+                    'related_entity_id': person.id,
+                    'action_required': True
+                }
+                insight = db_manager.create_intelligence_insight(user_id, insight_data)
+                insights.append(insight)
+    
+    def _generate_topic_insights(self, user_id: int, insights: List[IntelligenceInsight]):
+        """Generate topic momentum insights"""
+        db_manager = get_db_manager()
+        
+        # Find topics with recent momentum
+        with db_manager.get_session() as session:
+            recent_date = datetime.utcnow() - timedelta(days=7)
+            
+            # Get recent emails with topics
+            recent_emails = session.query(Email).filter(
+                Email.user_id == user_id,
+                Email.email_date > recent_date,
+                Email.topics.isnot(None)
+            ).all()
+            
+            # Count topic mentions
+            topic_counts = {}
+            for email in recent_emails:
+                if email.topics:
+                    for topic in email.topics:
+                        topic_counts[topic] = topic_counts.get(topic, 0) + 1
+            
+            # Find trending topics
+            for topic, count in topic_counts.items():
+                if count >= 3:  # Mentioned in 3+ emails this week
+                    insight_data = {
+                        'insight_type': 'topic_momentum',
+                        'title': f"Trending topic: {topic}",
+                        'description': f"'{topic}' has been mentioned in {count} recent communications. This might be a good time to take action or follow up on this topic.",
+                        'priority': 'medium',
+                        'confidence': 0.6,
+                        'action_required': False
+                    }
+                    insight = db_manager.create_intelligence_insight(user_id, insight_data)
+                    insights.append(insight)
+    
+    # Helper methods for context generation
+    def _prepare_meeting_context(self, event: Calendar, attendees: List[AttendeeIntelligence], email_context: Dict) -> str:
+        """Prepare meeting context for AI analysis"""
+        context = f"""MEETING ANALYSIS REQUEST
+
+Meeting Details:
+- Title: {event.title or 'Unknown'}
+- Date/Time: {event.start_time}
+- Duration: {(event.end_time - event.start_time).total_seconds() / 3600:.1f} hours
+- Location: {event.location or 'Not specified'}
+- Description: {event.description or 'No description'}
+
+Attendees ({len(attendees)} people):"""
+
+        for attendee in attendees:
+            context += f"\n- {attendee.name} ({attendee.email})"
+            context += f"\n  * Relationship Score: {attendee.relationship_score:.1f}/1.0"
+            context += f"\n  * Business Context: {attendee.business_context}"
+            if attendee.recent_communications:
+                context += f"\n  * Recent Communications: {len(attendee.recent_communications)} emails"
+
+        context += f"\n\nEmail Context:"
+        context += f"\n- Related emails found: {email_context.get('attendee_communications', 0)}"
+        if email_context.get('recent_topics'):
+            context += f"\n- Recent topics: {', '.join(email_context['recent_topics'][:5])}"
+        if email_context.get('key_decisions'):
+            context += f"\n- Key decisions mentioned: {', '.join(email_context['key_decisions'][:3])}"
+
+        return context
+    
+    def _get_recent_communications(self, user_id: int, email: str) -> List[Dict]:
+        """Get recent communications with a person"""
+        db_manager = get_db_manager()
+        
+        with db_manager.get_session() as session:
+            cutoff_date = datetime.utcnow() - timedelta(days=30)
+            
+            emails = session.query(Email).filter(
+                Email.user_id == user_id,
+                Email.sender == email,
+                Email.email_date > cutoff_date
+            ).order_by(Email.email_date.desc()).limit(5).all()
+            
+            return [
+                {
+                    'subject': email.subject,
+                    'date': email.email_date,
+                    'summary': email.ai_summary,
+                    'strategic_importance': email.strategic_importance or 0.5
+                }
+                for email in emails
+            ]
+    
+    def _calculate_relationship_score(self, person: Person, recent_comms: List[Dict]) -> float:
+        """Calculate relationship strength score"""
+        base_score = person.importance_level or 0.5
+        
+        # Boost for recent communications
+        comm_boost = min(0.3, len(recent_comms) * 0.1)
+        
+        # Boost for strategic communications
+        strategic_boost = 0
+        for comm in recent_comms:
+            if comm.get('strategic_importance', 0) > 0.7:
+                strategic_boost += 0.1
+        
+        return min(1.0, base_score + comm_boost + strategic_boost)
+    
+    def _generate_person_business_context(self, person: Person, recent_comms: List[Dict]) -> str:
+        """Generate business context for a person"""
+        context_parts = []
+        
+        if person.title and person.company:
+            context_parts.append(f"{person.title} at {person.company}")
+        elif person.company:
+            context_parts.append(f"Works at {person.company}")
+        elif person.title:
+            context_parts.append(f"{person.title}")
+        
+        if person.relationship_type:
+            context_parts.append(f"Relationship: {person.relationship_type}")
+        
+        if recent_comms:
+            recent_topics = []
+            for comm in recent_comms[:2]:
+                if comm.get('summary'):
+                    recent_topics.append(comm['summary'][:100])
+            if recent_topics:
+                context_parts.append(f"Recent discussions: {'; '.join(recent_topics)}")
+        
+        return '. '.join(context_parts) if context_parts else "Professional contact"
+    
+    def _generate_preparation_notes(self, person: Person, recent_comms: List[Dict], event: Calendar) -> str:
+        """Generate preparation notes for meeting with this person"""
+        notes = []
+        
+        if recent_comms:
+            notes.append(f"Recent context: {recent_comms[0].get('summary', 'Previous communication')}")
+        
+        if person.key_topics:
+            topics = person.key_topics[:3] if isinstance(person.key_topics, list) else [str(person.key_topics)]
+            notes.append(f"Key interests: {', '.join(topics)}")
+        
+        if person.notes:
+            notes.append(f"Background: {person.notes[:150]}")
+        
+        return '. '.join(notes) if notes else f"First documented meeting with {person.name}"
+    
+    def _generate_conversation_starters(self, person: Person, recent_comms: List[Dict]) -> List[str]:
+        """Generate conversation starters"""
+        starters = ["How has your week been?"]
+        
+        if recent_comms and recent_comms[0].get('summary'):
+            starters.append(f"Following up on {recent_comms[0]['summary'][:50]}...")
+        
+        if person.company:
+            starters.append(f"How are things going at {person.company}?")
+        
+        if person.key_topics and isinstance(person.key_topics, list):
+            if person.key_topics:
+                starters.append(f"Any updates on {person.key_topics[0]}?")
+        
+        return starters[:3]
+    
+    def _extract_topics_from_emails(self, emails: List[Email]) -> List[str]:
+        """Extract topics from emails"""
+        topics = set()
+        for email in emails:
+            if email.topics and isinstance(email.topics, list):
+                topics.update(email.topics[:3])
+        return list(topics)[:5]
+    
+    def _extract_decisions_from_emails(self, emails: List[Email]) -> List[str]:
+        """Extract key decisions from emails"""
+        decisions = []
+        for email in emails:
+            if email.key_insights and isinstance(email.key_insights, dict):
+                email_decisions = email.key_insights.get('key_decisions', [])
+                if isinstance(email_decisions, list):
+                    decisions.extend(email_decisions[:2])
+        return decisions[:3]
+    
+    def _extract_shared_context(self, emails: List[Email]) -> str:
+        """Extract shared context from emails"""
+        if not emails:
+            return "No recent shared context found"
+        
+        summaries = [email.ai_summary for email in emails[:3] if email.ai_summary]
+        if summaries:
+            return f"Recent shared discussions: {' | '.join(summaries[:2])}"
+        
+        return "Recent communications available"
+    
+    def _generate_task_context_story(self, task_info: Dict, event: Calendar, attendees: List[AttendeeIntelligence]) -> str:
+        """Generate comprehensive context story for preparation task"""
+        story_parts = []
+        
+        story_parts.append(f"📅 **Meeting Preparation Task for:** {event.title}")
+        story_parts.append(f"⏰ **Meeting Time:** {event.start_time.strftime('%A, %B %d at %I:%M %p')}")
+        
+        if attendees:
+            attendee_names = [a.name for a in attendees[:3]]
+            story_parts.append(f"👥 **Key Attendees:** {', '.join(attendee_names)}")
+        
+        story_parts.append(f"🎯 **Task Purpose:** {task_info.get('rationale', 'Meeting preparation')}")
+        story_parts.append(f"⏱️ **Time Investment:** {task_info.get('time_needed', '15 minutes')}")
+        
+        return "\n".join(story_parts)
+    
+    def _generate_task_meaning(self, task_info: Dict, event: Calendar) -> str:
+        """Generate detailed task meaning"""
+        meaning_parts = []
+        
+        meaning_parts.append(f"📋 **What You Need to Do:** {task_info.get('task', 'Complete preparation task')}")
+        meaning_parts.append(f"🎯 **Why This Matters:** {task_info.get('rationale', 'This preparation will help ensure meeting success')}")
+        meaning_parts.append(f"📅 **Context:** This task should be completed before your meeting '{event.title}'")
+        
+        category = task_info.get('category', 'general')
+        if category == 'research':
+            meaning_parts.append("🔍 **Action Type:** Research and information gathering")
+        elif category == 'review':
+            meaning_parts.append("📖 **Action Type:** Review and analysis of existing materials")
+        elif category == 'prepare_materials':
+            meaning_parts.append("📁 **Action Type:** Prepare documents or presentation materials")
+        elif category == 'contact_followup':
+            meaning_parts.append("📞 **Action Type:** Reach out to contacts for information or confirmation")
+        
+        return "\n".join(meaning_parts)
+    
+    def _generate_task_importance(self, task_info: Dict, event: Calendar, analysis: Dict) -> str:
+        """Generate comprehensive importance analysis"""
+        importance_parts = []
+        
+        priority = task_info.get('priority', 'medium')
+        if priority == 'high':
+            importance_parts.append("🚨 **Priority Level:** HIGH - This task is critical for meeting success")
+        elif priority == 'medium':
+            importance_parts.append("⚠️ **Priority Level:** MEDIUM - This task will significantly improve meeting outcomes")
+        else:
+            importance_parts.append("📝 **Priority Level:** Standard preparation task")
+        
+        strategic_importance = analysis.get('strategic_importance', 0.5)
+        if strategic_importance > 0.8:
+            importance_parts.append("⭐ **Strategic Value:** This meeting has very high strategic importance")
+        elif strategic_importance > 0.6:
+            importance_parts.append("⭐ **Strategic Value:** This meeting has significant strategic value")
+        
+        importance_parts.append(f"💼 **Business Impact:** {analysis.get('business_context', 'Important for business relationships and outcomes')}")
+        
+        return "\n".join(importance_parts)
+
+# Global intelligence engine instance
+intelligence_engine = IntelligenceEngine() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/unified_entity_engine.py
+PURPOSE: Email processor: Unified Entity Engine
+================================================================================
+# Unified Entity Engine - Central Intelligence Hub
+# This replaces the scattered entity creation across multiple files
+
+import logging
+from typing import Dict, List, Optional, Any, Tuple
+from datetime import datetime, timezone, timedelta
+import json
+import hashlib
+from sqlalchemy.orm import Session
+from dataclasses import dataclass
+import re
+
+from models.database import get_db_manager
+from config.settings import settings
+from models.database import (
+    Topic, Person, Task, Email, CalendarEvent, Project,
+    EntityRelationship, IntelligenceInsight, 
+    person_topic_association, task_topic_association, event_topic_association
+)
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class EntityContext:
+    """Container for entity creation context"""
+    source_type: str  # email, calendar, manual
+    source_id: Optional[int] = None
+    confidence: float = 0.8
+    user_id: int = None
+    processing_metadata: Dict = None
+
+class UnifiedEntityEngine:
+    """
+    Central hub for all entity creation, updating, and relationship management.
+    This is the brain that ensures consistency across all data sources.
+    """
+    
+    def __init__(self):
+        self.db_manager = get_db_manager()
+        
+    # =====================================================================
+    # CORE ENTITY CREATION METHODS
+    # =====================================================================
+    
+    def create_or_update_person(self, 
+                               email: str, 
+                               name: str = None, 
+                               context: EntityContext = None) -> Person:
+        """
+        Unified person creation from ANY source (email, calendar, manual).
+        This solves the asymmetry problem you identified.
+        """
+        try:
+            with self.db_manager.get_session() as session:
+                # Always check for existing person first
+                existing_person = session.query(Person).filter(
+                    Person.user_id == context.user_id,
+                    Person.email_address == email.lower()
+                ).first()
+                
+                if existing_person:
+                    # Update existing person with new information
+                    updated = self._update_person_intelligence(existing_person, name, context, session)
+                    if updated:
+                        session.commit()
+                        logger.info(f"Updated existing person: {existing_person.name} ({email})")
+                    return existing_person
+                
+                # Create new person
+                person = Person(
+                    user_id=context.user_id,
+                    email_address=email.lower(),
+                    name=name or self._extract_name_from_email(email),
+                    created_at=datetime.utcnow()
+                )
+                
+                # Add source-specific intelligence
+                self._enrich_person_from_context(person, context)
+                
+                session.add(person)
+                session.commit()
+                
+                logger.info(f"Created new person: {person.name} ({email}) from {context.source_type}")
+                return person
+                
+        except Exception as e:
+            logger.error(f"Failed to create/update person {email}: {str(e)}")
+            return None
+    
+    def create_or_update_topic(self, 
+                              topic_name: str, 
+                              description: str = None,
+                              keywords: List[str] = None,
+                              context: EntityContext = None) -> Topic:
+        """
+        Topics as the central brain - always check existing first, then augment.
+        This solves your topic duplication concern.
+        """
+        try:
+            with self.db_manager.get_session() as session:
+                # Intelligent topic matching - exact name or similar
+                existing_topic = self._find_matching_topic(topic_name, context.user_id, session)
+                
+                if existing_topic:
+                    # Augment existing topic with new intelligence
+                    updated = self._augment_topic_intelligence(existing_topic, description, keywords, context, session)
+                    if updated:
+                        existing_topic.updated_at = datetime.utcnow()
+                        existing_topic.version += 1
+                        session.commit()
+                        logger.info(f"Augmented existing topic: {existing_topic.name}")
+                    return existing_topic
+                
+                # Create new topic
+                topic = Topic(
+                    user_id=context.user_id,
+                    name=topic_name.strip().title(),
+                    description=description,
+                    keywords=','.join(keywords) if keywords else None,
+                    confidence_score=context.confidence,
+                    total_mentions=1,
+                    last_mentioned=datetime.utcnow(),
+                    created_at=datetime.utcnow()
+                )
+                
+                # Generate AI intelligence summary for new topic
+                topic.intelligence_summary = self._generate_topic_intelligence_summary(topic_name, description, keywords)
+                
+                session.add(topic)
+                session.commit()
+                
+                logger.info(f"Created new topic: {topic_name}")
+                return topic
+                
+        except Exception as e:
+            logger.error(f"Failed to create/update topic {topic_name}: {str(e)}")
+            return None
+    
+    def create_task_with_full_context(self,
+                                    description: str,
+                                    assignee_email: str = None,
+                                    topic_names: List[str] = None,
+                                    context: EntityContext = None,
+                                    due_date: datetime = None,
+                                    priority: str = 'medium') -> Task:
+        """
+        Create tasks with full context story and entity relationships.
+        This addresses your concern about tasks existing "in the air".
+        """
+        try:
+            with self.db_manager.get_session() as session:
+                # Create the task
+                task = Task(
+                    user_id=context.user_id,
+                    description=description,
+                    priority=priority,
+                    due_date=due_date,
+                    confidence=context.confidence,
+                    created_at=datetime.utcnow()
+                )
+                
+                # Generate context story - WHY this task exists
+                task.context_story = self._generate_task_context_story(
+                    description, assignee_email, topic_names, context
+                )
+                
+                # Link to assignee if provided
+                if assignee_email:
+                    assignee = self.create_or_update_person(assignee_email, context=context)
+                    if assignee:
+                        task.assignee_id = assignee.id
+                
+                # Link to topics
+                if topic_names:
+                    topic_ids = []
+                    for topic_name in topic_names:
+                        topic = self.create_or_update_topic(topic_name, context=context)
+                        if topic:
+                            topic_ids.append(topic.id)
+                    task.topics = topic_ids  # Store as JSON list of topic IDs
+                
+                # Link to source
+                if context.source_type == 'email' and context.source_id:
+                    task.source_email_id = context.source_id
+                elif context.source_type == 'calendar' and context.source_id:
+                    task.source_event_id = context.source_id
+                
+                session.add(task)
+                session.commit()
+                
+                logger.info(f"Created task with full context: {description[:50]}...")
+                return task
+                
+        except Exception as e:
+            logger.error(f"Failed to create task: {str(e)}")
+            return None
+    
+    # =====================================================================
+    # RELATIONSHIP INTELLIGENCE METHODS
+    # =====================================================================
+    
+    def create_entity_relationship(self, 
+                                 entity_a_type: str, entity_a_id: int,
+                                 entity_b_type: str, entity_b_id: int,
+                                 relationship_type: str,
+                                 context: EntityContext) -> EntityRelationship:
+        """Create intelligent relationships between any entities"""
+        try:
+            with self.db_manager.get_session() as session:
+                # Check if relationship already exists
+                existing = session.query(EntityRelationship).filter(
+                    EntityRelationship.user_id == context.user_id,
+                    EntityRelationship.entity_type_a == entity_a_type,
+                    EntityRelationship.entity_id_a == entity_a_id,
+                    EntityRelationship.entity_type_b == entity_b_type,
+                    EntityRelationship.entity_id_b == entity_b_id
+                ).first()
+                
+                if existing:
+                    # Strengthen existing relationship
+                    existing.total_interactions += 1
+                    existing.last_interaction = datetime.utcnow()
+                    existing.strength = min(1.0, existing.strength + 0.1)
+                    session.commit()
+                    return existing
+                
+                # Create new relationship
+                relationship = EntityRelationship(
+                    user_id=context.user_id,
+                    entity_type_a=entity_a_type,
+                    entity_id_a=entity_a_id,
+                    entity_type_b=entity_b_type,
+                    entity_id_b=entity_b_id,
+                    relationship_type=relationship_type,
+                    strength=0.5,
+                    last_interaction=datetime.utcnow(),
+                    total_interactions=1
+                )
+                
+                # Generate context summary
+                relationship.context_summary = self._generate_relationship_context(
+                    entity_a_type, entity_a_id, entity_b_type, entity_b_id, session
+                )
+                
+                session.add(relationship)
+                session.commit()
+                
+                logger.info(f"Created relationship: {entity_a_type}:{entity_a_id} -> {entity_b_type}:{entity_b_id}")
+                return relationship
+                
+        except Exception as e:
+            logger.error(f"Failed to create entity relationship: {str(e)}")
+            return None
+    
+    def generate_proactive_insights(self, user_id: int) -> List[IntelligenceInsight]:
+        """
+        Generate proactive insights based on entity patterns and relationships.
+        This is where the predictive intelligence happens.
+        """
+        insights = []
+        
+        try:
+            with self.db_manager.get_session() as session:
+                # Insight 1: Relationship gaps (haven't contacted important people)
+                relationship_insights = self._detect_relationship_gaps(user_id, session)
+                insights.extend(relationship_insights)
+                
+                # Insight 2: Topic momentum (topics getting hot)
+                topic_insights = self._detect_topic_momentum(user_id, session)
+                insights.extend(topic_insights)
+                
+                # Insight 3: Meeting preparation needs
+                meeting_prep_insights = self._detect_meeting_prep_needs(user_id, session)
+                insights.extend(meeting_prep_insights)
+                
+                # Insight 4: Project attention needed
+                project_insights = self._detect_project_attention_needs(user_id, session)
+                insights.extend(project_insights)
+                
+                # Save insights to database
+                for insight in insights:
+                    session.add(insight)
+                
+                session.commit()
+                logger.info(f"Generated {len(insights)} proactive insights for user {user_id}")
+                
+        except Exception as e:
+            logger.error(f"Failed to generate proactive insights: {str(e)}")
+            
+        return insights
+    
+    # =====================================================================
+    # HELPER METHODS
+    # =====================================================================
+    
+    def _find_matching_topic(self, topic_name: str, user_id: int, session: Session) -> Optional[Topic]:
+        """Intelligent topic matching using exact name, keywords, or similarity"""
+        # Exact match first
+        exact_match = session.query(Topic).filter(
+            Topic.user_id == user_id,
+            Topic.name.ilike(f"%{topic_name}%")
+        ).first()
+        
+        if exact_match:
+            return exact_match
+        
+        # Keyword matching
+        topics = session.query(Topic).filter(Topic.user_id == user_id).all()
+        for topic in topics:
+            if topic.keywords:
+                keywords = [k.strip().lower() for k in topic.keywords.split(',')]
+                if topic_name.lower() in keywords:
+                    return topic
+        
+        return None
+    
+    def _generate_task_context_story(self, description: str, assignee_email: str, 
+                                   topic_names: List[str], context: EntityContext) -> str:
+        """Generate WHY this task exists - the narrative context"""
+        story_parts = []
+        
+        # Source context
+        if context.source_type == 'email':
+            story_parts.append(f"Task extracted from email communication")
+        elif context.source_type == 'calendar':
+            story_parts.append(f"Task generated for meeting preparation")
+        
+        # Topic context
+        if topic_names:
+            story_parts.append(f"Related to: {', '.join(topic_names)}")
+        
+        # Assignee context
+        if assignee_email:
+            story_parts.append(f"Assigned to: {assignee_email}")
+        
+        # Confidence context
+        confidence_level = "high" if context.confidence > 0.8 else "medium" if context.confidence > 0.5 else "low"
+        story_parts.append(f"Confidence: {confidence_level}")
+        
+        return ". ".join(story_parts)
+    
+    def _generate_topic_intelligence_summary(self, name: str, description: str, keywords: List[str]) -> str:
+        """Generate AI summary of what we know about this topic"""
+        # This would call Claude for intelligence generation
+        # For now, return a structured summary
+        parts = [f"Topic: {name}"]
+        if description:
+            parts.append(f"Description: {description}")
+        if keywords:
+            parts.append(f"Keywords: {', '.join(keywords)}")
+        return ". ".join(parts)
+    
+    def _detect_relationship_gaps(self, user_id: int, session: Session) -> List[IntelligenceInsight]:
+        """Detect important people user hasn't contacted recently"""
+        insights = []
+        
+        # Find high-importance people with no recent contact
+        important_people = session.query(Person).filter(
+            Person.user_id == user_id,
+            Person.importance_level > 0.7,
+            Person.last_interaction < datetime.utcnow() - timedelta(days=14)
+        ).limit(5).all()
+        
+        for person in important_people:
+            insight = IntelligenceInsight(
+                user_id=user_id,
+                insight_type='relationship_alert',
+                title=f"Haven't connected with {person.name} recently",
+                description=f"Last contact was {person.last_interaction.strftime('%Y-%m-%d') if person.last_interaction else 'unknown'}. "
+                           f"Consider reaching out about relevant topics.",
+                priority='medium',
+                confidence=0.8,
+                related_entity_type='person',
+                related_entity_id=person.id
+            )
+            insights.append(insight)
+        
+        return insights
+    
+    def _detect_topic_momentum(self, user_id: int, session: Session) -> List[IntelligenceInsight]:
+        """Detect topics that are gaining momentum"""
+        insights = []
+        
+        # Topics mentioned frequently in recent emails (last 7 days)
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        
+        hot_topics = session.query(Topic).filter(
+            Topic.user_id == user_id,
+            Topic.last_mentioned > week_ago,
+            Topic.total_mentions > 3
+        ).order_by(Topic.total_mentions.desc()).limit(3).all()
+        
+        for topic in hot_topics:
+            insight = IntelligenceInsight(
+                user_id=user_id,
+                insight_type='topic_momentum',
+                title=f"'{topic.name}' is trending in your communications",
+                description=f"Mentioned {topic.total_mentions} times recently. "
+                           f"Consider preparing materials or scheduling focused time.",
+                priority='medium',
+                confidence=0.7,
+                related_entity_type='topic',
+                related_entity_id=topic.id
+            )
+            insights.append(insight)
+        
+        return insights
+    
+    def _detect_meeting_prep_needs(self, user_id: int, session: Session) -> List[IntelligenceInsight]:
+        """Detect upcoming meetings that need preparation"""
+        insights = []
+        
+        # Meetings in next 48 hours with high prep priority
+        tomorrow = datetime.utcnow() + timedelta(hours=48)
+        
+        upcoming_meetings = session.query(CalendarEvent).filter(
+            CalendarEvent.user_id == user_id,
+            CalendarEvent.start_time.between(datetime.utcnow(), tomorrow),
+            CalendarEvent.preparation_priority > 0.7
+        ).all()
+        
+        for meeting in upcoming_meetings:
+            insight = IntelligenceInsight(
+                user_id=user_id,
+                insight_type='meeting_prep',
+                title=f"Prepare for '{meeting.title}'",
+                description=f"High-priority meeting on {meeting.start_time.strftime('%Y-%m-%d %H:%M')}. "
+                           f"{meeting.business_context or 'No context available.'}",
+                priority='high',
+                confidence=0.9,
+                related_entity_type='event',
+                related_entity_id=meeting.id,
+                expires_at=meeting.start_time
+            )
+            insights.append(insight)
+        
+        return insights
+    
+    def _detect_project_attention_needs(self, user_id: int, session: Session) -> List[IntelligenceInsight]:
+        """Detect projects that need attention"""
+        insights = []
+        
+        # Projects with no recent activity
+        stale_projects = session.query(Project).filter(
+            Project.user_id == user_id,
+            Project.status == 'active',
+            Project.updated_at < datetime.utcnow() - timedelta(days=7)
+        ).limit(3).all()
+        
+        for project in stale_projects:
+            insight = IntelligenceInsight(
+                user_id=user_id,
+                insight_type='project_attention',
+                title=f"Project '{project.name}' needs attention",
+                description=f"No recent activity since {project.updated_at.strftime('%Y-%m-%d')}. "
+                           f"Consider checking in with stakeholders.",
+                priority='medium',
+                confidence=0.6,
+                related_entity_type='project',
+                related_entity_id=project.id
+            )
+            insights.append(insight)
+        
+        return insights
+    
+    def _update_person_intelligence(self, person: Person, name: str, context: EntityContext, session: Session) -> bool:
+        """Update existing person with new intelligence"""
+        updated = False
+        
+        # Update name if we have a better one
+        if name and name != person.name and len(name) > len(person.name or ""):
+            person.name = name
+            updated = True
+        
+        # Update interaction tracking
+        person.total_interactions += 1
+        person.last_interaction = datetime.utcnow()
+        person.updated_at = datetime.utcnow()
+        updated = True
+        
+        # Add any signature data from processing metadata
+        if context.processing_metadata and context.processing_metadata.get('signature'):
+            sig_data = context.processing_metadata['signature']
+            if sig_data.get('company') and not person.company:
+                person.company = sig_data['company']
+                updated = True
+            if sig_data.get('title') and not person.title:
+                person.title = sig_data['title']
+                updated = True
+            if sig_data.get('phone') and not person.phone:
+                person.phone = sig_data['phone']
+                updated = True
+        
+        return updated
+    
+    def _extract_name_from_email(self, email: str) -> str:
+        """Extract a reasonable name from email address"""
+        local_part = email.split('@')[0]
+        # Handle common formats like first.last, first_last, firstlast
+        if '.' in local_part:
+            parts = local_part.split('.')
+            return ' '.join(part.capitalize() for part in parts)
+        elif '_' in local_part:
+            parts = local_part.split('_')
+            return ' '.join(part.capitalize() for part in parts)
+        else:
+            return local_part.capitalize()
+    
+    def _enrich_person_from_context(self, person: Person, context: EntityContext):
+        """Enrich person with context-specific information"""
+        if context.source_type == 'email':
+            person.relationship_type = 'email_contact'
+        elif context.source_type == 'calendar':
+            person.relationship_type = 'meeting_attendee'
+        
+        # Set initial importance based on context
+        person.importance_level = context.confidence * 0.6  # Scale down initial importance
+        person.total_interactions = 1
+        person.last_interaction = datetime.utcnow()
+    
+    def _augment_topic_intelligence(self, topic: Topic, description: str, keywords: List[str], 
+                                   context: EntityContext, session: Session) -> bool:
+        """Augment existing topic with new intelligence"""
+        updated = False
+        
+        # Update mention tracking
+        topic.total_mentions += 1
+        topic.last_mentioned = datetime.utcnow()
+        updated = True
+        
+        # Add new description if we don't have one
+        if description and not topic.description:
+            topic.description = description
+            updated = True
+        
+        # Merge keywords
+        if keywords:
+            existing_keywords = set(topic.keywords.split(',')) if topic.keywords else set()
+            new_keywords = set(keywords)
+            merged_keywords = existing_keywords.union(new_keywords)
+            topic.keywords = ','.join(merged_keywords)
+            updated = True
+        
+        return updated
+    
+    def _generate_relationship_context(self, entity_a_type: str, entity_a_id: int, 
+                                     entity_b_type: str, entity_b_id: int, session: Session) -> str:
+        """Generate context summary for entity relationships"""
+        try:
+            # Get entity names for context
+            entity_a_name = self._get_entity_name(entity_a_type, entity_a_id, session)
+            entity_b_name = self._get_entity_name(entity_b_type, entity_b_id, session)
+            
+            return f"{entity_a_type.title()} '{entity_a_name}' connected to {entity_b_type} '{entity_b_name}'"
+        except:
+            return f"Relationship between {entity_a_type}:{entity_a_id} and {entity_b_type}:{entity_b_id}"
+    
+    def _get_entity_name(self, entity_type: str, entity_id: int, session: Session) -> str:
+        """Get display name for any entity"""
+        if entity_type == 'person':
+            person = session.query(Person).get(entity_id)
+            return person.name if person else f"Person {entity_id}"
+        elif entity_type == 'topic':
+            topic = session.query(Topic).get(entity_id)
+            return topic.name if topic else f"Topic {entity_id}"
+        elif entity_type == 'project':
+            project = session.query(Project).get(entity_id)
+            return project.name if project else f"Project {entity_id}"
+        else:
+            return f"{entity_type.title()} {entity_id}"
+    
+    def _extract_from_signature(self, signature_text: str) -> Dict[str, str]:
+        """Extract structured data from email signature"""
+        info = {}
+        
+        # Extract title (common patterns)
+        title_patterns = [
+            r'(?:CEO|CTO|CFO|President|Director|Manager|VP|Vice President)',
+            r'(?:Senior|Lead|Principal|Head of|Chief)\s+[A-Za-z\s]+',
+            r'(?:^|\n)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*(?:\n|$)'
+        ]
+        
+        for pattern in title_patterns:
+            match = re.search(pattern, signature_text, re.IGNORECASE)
+            if match:
+                info['title'] = match.group(0).strip()
+                break
+        
+        # Extract company (usually follows title)
+        company_patterns = [
+            r'(?:^|\n)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+Inc\.?|\s+LLC|\s+Corp\.?|\s+Co\.?))\s*(?:\n|$)',
+            r'(?:@\s*)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*(?:\n|$)'
+        ]
+        
+        for pattern in company_patterns:
+            match = re.search(pattern, signature_text)
+            if match:
+                potential_company = match.group(1).strip()
+                if potential_company and len(potential_company) > 2:
+                    info['company'] = potential_company
+                    break
+        
+        # Extract phone with improved pattern
+        phone_pattern = r'(\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4})'
+        phone_match = re.search(phone_pattern, signature_text)
+        if phone_match:
+            info['phone'] = phone_match.group(1).strip()
+        
+        # Extract LinkedIn with robust pattern
+        linkedin_pattern = r'(?:linkedin\.com/in/|linkedin\.com/pub/)([a-zA-Z0-9-]+)'
+        linkedin_match = re.search(linkedin_pattern, signature_text, re.IGNORECASE)
+        if linkedin_match:
+            info['linkedin'] = f"https://linkedin.com/in/{linkedin_match.group(1)}"
+        
+        # Extract email if different from sender
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        emails = re.findall(email_pattern, signature_text)
+        if emails:
+            info['additional_emails'] = emails
+        
+        return info
+
+# Global instance
+entity_engine = UnifiedEntityEngine() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/adapter_layer.py
+PURPOSE: Email processor: Adapter Layer
+================================================================================
+# Adapter Layer - Stub Implementation for Legacy Compatibility
+import logging
+from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
+
+class TaskExtractor:
+    """Stub implementation of legacy task extractor"""
+    
+    def extract_tasks_from_email(self, email_data: Dict, user_id: int) -> Dict[str, Any]:
+        """Extract tasks from email - legacy adapter"""
+        try:
+            return {
+                'success': True,
+                'tasks_found': 0,
+                'tasks': [],
+                'processing_notes': ['Legacy adapter stub - no tasks extracted']
+            }
+        except Exception as e:
+            logger.error(f"Error in legacy task extraction: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+class EmailIntelligence:
+    """Stub implementation of legacy email intelligence"""
+    
+    def process_email(self, email_data: Dict, user_id: int) -> Dict[str, Any]:
+        """Process email intelligence - legacy adapter"""
+        try:
+            return {
+                'success': True,
+                'intelligence': {},
+                'processing_notes': ['Legacy adapter stub - no intelligence extracted']
+            }
+        except Exception as e:
+            logger.error(f"Error in legacy email intelligence: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+class EmailNormalizer:
+    """Stub implementation of legacy email normalizer"""
+    
+    def normalize_gmail_email(self, email_data: Dict) -> Dict[str, Any]:
+        """Normalize Gmail email - legacy adapter"""
+        try:
+            # Basic normalization - just pass through the data
+            normalized = email_data.copy()
+            normalized['normalized'] = True
+            normalized['processing_notes'] = ['Legacy adapter stub - basic normalization']
+            return normalized
+        except Exception as e:
+            logger.error(f"Error in legacy email normalization: {str(e)}")
+            return {
+                'error': True,
+                'error_message': str(e)
+            }
+    
+    def normalize_user_emails(self, user_email: str, limit: int = 50) -> Dict[str, Any]:
+        """Normalize user emails in batch - legacy adapter"""
+        try:
+            return {
+                'success': True,
+                'emails_normalized': 0,
+                'processing_notes': ['Legacy adapter stub - no emails normalized']
+            }
+        except Exception as e:
+            logger.error(f"Error in legacy batch normalization: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+# Global instances for legacy compatibility
+task_extractor = TaskExtractor()
+email_intelligence = EmailIntelligence()
+email_normalizer = EmailNormalizer() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/email_normalizer.py
+PURPOSE: Email processor: Email Normalizer
+================================================================================
+# Normalizes raw Gmail data into clean format
+
+import re
+import logging
+from datetime import datetime
+from typing import Dict, List, Optional
+from html import unescape
+from bs4 import BeautifulSoup
+
+from models.database import get_db_manager, Email
+
+logger = logging.getLogger(__name__)
+
+class EmailNormalizer:
+    """Normalizes emails into clean, standardized format with entity extraction"""
+    
+    def __init__(self):
+        self.version = "1.0"
+        
+    def normalize_user_emails(self, user_email: str, limit: int = None) -> Dict:
+        """
+        Normalize all emails for a user that haven't been normalized yet
+        
+        Args:
+            user_email: Email of the user
+            limit: Maximum number of emails to process
+            
+        Returns:
+            Dictionary with normalization results
+        """
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            # Get emails that need normalization
+            with get_db_manager().get_session() as session:
+                emails = session.query(Email).filter(
+                    Email.user_id == user.id,
+                    Email.body_clean.is_(None)  # Not normalized yet
+                ).limit(limit or 100).all()
+            
+            if not emails:
+                logger.info(f"No emails to normalize for {user_email}")
+                return {
+                    'success': True,
+                    'user_email': user_email,
+                    'processed': 0,
+                    'message': 'No emails need normalization'
+                }
+            
+            processed_count = 0
+            error_count = 0
+            
+            for email in emails:
+                try:
+                    # Convert database email to dict for processing
+                    email_dict = {
+                        'id': email.gmail_id,
+                        'subject': email.subject,
+                        'body_text': email.body_text,
+                        'body_html': email.body_html,
+                        'sender': email.sender,
+                        'sender_name': email.sender_name,
+                        'snippet': email.snippet,
+                        'timestamp': email.email_date
+                    }
+                    
+                    # Normalize the email
+                    normalized = self.normalize_email(email_dict)
+                    
+                    # Update the database record
+                    with get_db_manager().get_session() as session:
+                        email_record = session.query(Email).filter(
+                            Email.user_id == user.id,
+                            Email.gmail_id == email.gmail_id
+                        ).first()
+                        
+                        if email_record:
+                            email_record.body_clean = normalized.get('body_clean')
+                            email_record.body_preview = normalized.get('body_preview')
+                            email_record.entities = normalized.get('entities', {})
+                            email_record.message_type = normalized.get('message_type')
+                            email_record.priority_score = normalized.get('priority_score')
+                            email_record.normalizer_version = self.version
+                            
+                            session.commit()
+                            processed_count += 1
+                    
+                except Exception as e:
+                    logger.error(f"Failed to normalize email {email.gmail_id}: {str(e)}")
+                    error_count += 1
+                    continue
+            
+            logger.info(f"Normalized {processed_count} emails for {user_email} ({error_count} errors)")
+            
+            return {
+                'success': True,
+                'user_email': user_email,
+                'processed': processed_count,
+                'errors': error_count,
+                'normalizer_version': self.version
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to normalize emails for {user_email}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def normalize_email(self, email_data: Dict) -> Dict:
+        """
+        Normalize a single email into clean format
+        
+        Args:
+            email_data: Raw email data dictionary
+            
+        Returns:
+            Normalized email data
+        """
+        try:
+            # Start with original data
+            normalized = email_data.copy()
+            
+            # Clean and extract body content
+            body_clean = self._extract_clean_body(email_data)
+            normalized['body_clean'] = body_clean
+            
+            # Create preview (first 300 chars)
+            normalized['body_preview'] = self._create_preview(body_clean)
+            
+            # Extract entities
+            normalized['entities'] = self._extract_entities(email_data, body_clean)
+            
+            # Determine message type
+            normalized['message_type'] = self._classify_message_type(email_data, body_clean)
+            
+            # Calculate priority score
+            normalized['priority_score'] = self._calculate_priority_score(email_data, body_clean)
+            
+            # Add processing metadata
+            normalized['processing_metadata'] = {
+                'normalizer_version': self.version,
+                'normalized_at': datetime.utcnow().isoformat(),
+                'body_length': len(body_clean) if body_clean else 0
+            }
+            
+            return normalized
+            
+        except Exception as e:
+            logger.error(f"Failed to normalize email {email_data.get('id', 'unknown')}: {str(e)}")
+            return {
+                **email_data,
+                'normalization_error': str(e),
+                'processing_metadata': {
+                    'normalizer_version': self.version,
+                    'normalized_at': datetime.utcnow().isoformat(),
+                    'error': True
+                }
+            }
+    
+    def _extract_clean_body(self, email_data: Dict) -> str:
+        """
+        Extract clean text from email body
+        
+        Args:
+            email_data: Email data dictionary
+            
+        Returns:
+            Clean body text
+        """
+        try:
+            body_text = email_data.get('body_text', '')
+            body_html = email_data.get('body_html', '')
+            
+            # Prefer HTML if available, fallback to text
+            if body_html:
+                # Parse HTML and extract text
+                soup = BeautifulSoup(body_html, 'html.parser')
+                
+                # Remove script and style elements
+                for script in soup(['script', 'style']):
+                    script.decompose()
+                
+                # Get text and clean it
+                text = soup.get_text()
+                
+                # Break into lines and remove leading/trailing spaces
+                lines = (line.strip() for line in text.splitlines())
+                
+                # Break multi-headlines into a line each
+                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+                
+                # Drop blank lines
+                clean_text = '\n'.join(chunk for chunk in chunks if chunk)
+                
+            elif body_text:
+                clean_text = body_text
+                
+            else:
+                # Fallback to snippet
+                clean_text = email_data.get('snippet', '')
+            
+            if not clean_text:
+                return ''
+                
+            # Remove quoted text (replies/forwards)
+            clean_text = self._remove_quoted_text(clean_text)
+            
+            # Remove excessive whitespace
+            clean_text = re.sub(r'\n\s*\n', '\n\n', clean_text)
+            clean_text = re.sub(r' +', ' ', clean_text)
+            
+            # Decode HTML entities
+            clean_text = unescape(clean_text)
+            
+            return clean_text.strip()
+            
+        except Exception as e:
+            logger.error(f"Failed to extract clean body: {str(e)}")
+            return email_data.get('snippet', '')
+    
+    def _remove_quoted_text(self, text: str) -> str:
+        """
+        Remove quoted text from emails (replies/forwards)
+        
+        Args:
+            text: Email body text
+            
+        Returns:
+            Text with quoted sections removed
+        """
+        try:
+            # Common quote patterns
+            quote_patterns = [
+                r'On .* wrote:.*',
+                r'From:.*\nSent:.*\nTo:.*\nSubject:.*',
+                r'-----Original Message-----.*',
+                r'> .*',  # Lines starting with >
+                r'________________________________.*',  # Outlook separator
+                r'From: .*<.*>.*',
+                r'Sent from my .*',
+                r'\n\n.*On.*\d{4}.*at.*\d{1,2}:\d{2}.*wrote:'
+            ]
+            
+            cleaned_text = text
+            
+            for pattern in quote_patterns:
+                cleaned_text = re.sub(pattern, '', cleaned_text, flags=re.DOTALL | re.IGNORECASE)
+            
+            # Remove excessive newlines created by quote removal
+            cleaned_text = re.sub(r'\n{3,}', '\n\n', cleaned_text)
+            
+            return cleaned_text.strip()
+            
+        except Exception as e:
+            logger.error(f"Failed to remove quoted text: {str(e)}")
+            return text
+    
+    def _create_preview(self, body_text: str) -> str:
+        """
+        Create a preview of the email body
+        
+        Args:
+            body_text: Clean email body text
+            
+        Returns:
+            Preview text (first 300 characters)
+        """
+        if not body_text:
+            return ''
+        
+        # Take first 300 characters
+        preview = body_text[:300]
+        
+        # If we cut in the middle of a word, cut to last complete word
+        if len(body_text) > 300:
+            last_space = preview.rfind(' ')
+            if last_space > 250:  # Only if we have a reasonable amount of text
+                preview = preview[:last_space] + '...'
+            else:
+                preview += '...'
+        
+        return preview
+    
+    def _extract_entities(self, email_data: Dict, body_text: str) -> Dict:
+        """
+        Extract entities from email content
+        
+        Args:
+            email_data: Email data dictionary
+            body_text: Clean email body text
+            
+        Returns:
+            Dictionary of extracted entities
+        """
+        try:
+            entities = {
+                'people': [],
+                'companies': [],
+                'dates': [],
+                'times': [],
+                'urls': [],
+                'emails': [],
+                'phone_numbers': [],
+                'amounts': []
+            }
+            
+            # Extract email addresses
+            email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+            entities['emails'] = list(set(re.findall(email_pattern, body_text)))
+            
+            # Extract URLs
+            url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+            entities['urls'] = list(set(re.findall(url_pattern, body_text)))
+            
+            # Extract phone numbers (US format)
+            phone_pattern = r'\b(?:\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})\b'
+            phone_matches = re.findall(phone_pattern, body_text)
+            entities['phone_numbers'] = ['-'.join(match) for match in phone_matches]
+            
+            # Extract dates (simple patterns)
+            date_patterns = [
+                r'\b\d{1,2}/\d{1,2}/\d{4}\b',
+                r'\b\d{1,2}-\d{1,2}-\d{4}\b',
+                r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b'
+            ]
+            for pattern in date_patterns:
+                entities['dates'].extend(re.findall(pattern, body_text, re.IGNORECASE))
+            
+            # Extract times
+            time_pattern = r'\b\d{1,2}:\d{2}(?:\s?[AP]M)?\b'
+            entities['times'] = list(set(re.findall(time_pattern, body_text, re.IGNORECASE)))
+            
+            # Extract monetary amounts
+            amount_pattern = r'\$\d{1,3}(?:,\d{3})*(?:\.\d{2})?'
+            entities['amounts'] = list(set(re.findall(amount_pattern, body_text)))
+            
+            # Remove empty lists and duplicates
+            for key in entities:
+                entities[key] = list(set(entities[key])) if entities[key] else []
+            
+            return entities
+            
+        except Exception as e:
+            logger.error(f"Failed to extract entities: {str(e)}")
+            return {}
+    
+    def _classify_message_type(self, email_data: Dict, body_text: str) -> str:
+        """
+        Classify the type of email message
+        
+        Args:
+            email_data: Email data dictionary
+            body_text: Clean email body text
+            
+        Returns:
+            Message type classification
+        """
+        try:
+            subject = email_data.get('subject', '').lower()
+            body_lower = body_text.lower() if body_text else ''
+            sender = email_data.get('sender', '').lower()
+            
+            # Meeting/Calendar invites
+            meeting_keywords = ['meeting', 'call', 'zoom', 'teams', 'webex', 'conference', 'invite', 'calendar']
+            if any(keyword in subject for keyword in meeting_keywords):
+                return 'meeting'
+            
+            # Automated/System emails
+            system_domains = ['noreply', 'no-reply', 'donotreply', 'mailer-daemon', 'bounce']
+            if any(domain in sender for domain in system_domains):
+                return 'automated'
+            
+            # Newsletters/Marketing
+            newsletter_keywords = ['unsubscribe', 'newsletter', 'marketing', 'promotional']
+            if any(keyword in body_lower for keyword in newsletter_keywords):
+                return 'newsletter'
+            
+            # Action required
+            action_keywords = ['urgent', 'asap', 'deadline', 'required', 'please review', 'action needed']
+            if any(keyword in subject for keyword in action_keywords):
+                return 'action_required'
+            
+            # FYI/Information
+            fyi_keywords = ['fyi', 'for your information', 'heads up', 'update', 'status']
+            if any(keyword in subject for keyword in fyi_keywords):
+                return 'informational'
+            
+            # Default to regular
+            return 'regular'
+            
+        except Exception as e:
+            logger.error(f"Failed to classify message type: {str(e)}")
+            return 'regular'
+    
+    def _calculate_priority_score(self, email_data: Dict, body_text: str) -> float:
+        """
+        Calculate priority score for email (0.0 to 1.0)
+        
+        Args:
+            email_data: Email data dictionary
+            body_text: Clean email body text
+            
+        Returns:
+            Priority score between 0.0 and 1.0
+        """
+        try:
+            score = 0.5  # Base score
+            
+            subject = email_data.get('subject', '').lower()
+            body_lower = body_text.lower() if body_text else ''
+            
+            # High priority keywords
+            urgent_keywords = ['urgent', 'asap', 'emergency', 'critical', 'deadline']
+            for keyword in urgent_keywords:
+                if keyword in subject or keyword in body_lower:
+                    score += 0.2
+            
+            # Medium priority keywords
+            important_keywords = ['important', 'priority', 'please review', 'action needed']
+            for keyword in important_keywords:
+                if keyword in subject or keyword in body_lower:
+                    score += 0.1
+            
+            # Questions increase priority slightly
+            if '?' in subject or '?' in body_text:
+                score += 0.05
+            
+            # Direct communication (personal emails)
+            if '@' in email_data.get('sender', '') and 'noreply' not in email_data.get('sender', ''):
+                score += 0.1
+            
+            # Reduce score for automated emails
+            automated_keywords = ['unsubscribe', 'automated', 'noreply', 'notification']
+            for keyword in automated_keywords:
+                if keyword in email_data.get('sender', '').lower():
+                    score -= 0.2
+            
+            # Ensure score is between 0.0 and 1.0
+            return max(0.0, min(1.0, score))
+            
+        except Exception as e:
+            logger.error(f"Failed to calculate priority score: {str(e)}")
+            return 0.5
+
+# Create global instance
+email_normalizer = EmailNormalizer()
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/__init__.py
+PURPOSE: Email processor:   Init  
+================================================================================
+"""
+Enhanced Processor Integration Manager
+Coordinates all processing components as specified in the refactor
+"""
+from .unified_entity_engine import entity_engine
+from .enhanced_ai_pipeline import enhanced_ai_processor  
+from .realtime_processing import realtime_processor
+from .analytics.predictive_analytics import predictive_analytics
+
+import logging
+from typing import Dict, List, Any
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+class ProcessorManager:
+    """Coordinates all processing components"""
+    
+    def __init__(self):
+        self.entity_engine = entity_engine
+        self.ai_processor = enhanced_ai_processor
+        self.realtime_processor = realtime_processor
+        self.predictive_analytics = predictive_analytics
+        
+    def start_all_processors(self):
+        """Start all processing components"""
+        try:
+            # Start real-time processor
+            if not self.realtime_processor.is_running:
+                self.realtime_processor.start()
+                logger.info("Started real-time processor")
+            
+            # Start predictive analytics
+            if not self.predictive_analytics.running:
+                self.predictive_analytics.start()
+                logger.info("Started predictive analytics engine")
+            
+            logger.info("All enhanced processors started successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to start processors: {str(e)}")
+    
+    def stop_all_processors(self):
+        """Stop all processing components"""
+        try:
+            self.realtime_processor.stop()
+            self.predictive_analytics.stop()
+            logger.info("All processors stopped")
+            
+        except Exception as e:
+            logger.error(f"Failed to stop processors: {str(e)}")
+    
+    def get_processing_statistics(self) -> Dict[str, Any]:
+        """Get comprehensive processing statistics"""
+        try:
+            stats = {
+                'success': True,
+                'result': {
+                    'real_time_processor': self.realtime_processor.get_stats(),
+                    'predictive_analytics': {
+                        'running': self.predictive_analytics.running,
+                        'pattern_cache_size': len(self.predictive_analytics.pattern_cache),
+                        'prediction_cache_size': len(self.predictive_analytics.prediction_cache)
+                    },
+                    'entity_engine': {
+                        'available': True,
+                        'methods': ['create_or_update_person', 'create_or_update_topic', 'create_task_with_full_context']
+                    },
+                    'ai_processor': {
+                        'available': True,
+                        'model': self.ai_processor.model
+                    }
+                }
+            }
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Failed to get processing statistics: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'result': {}
+            }
+    
+    def generate_user_insights(self, user_id: int, insight_type: str = 'comprehensive') -> Dict[str, Any]:
+        """Generate comprehensive user insights using all processors"""
+        try:
+            insights_result = {
+                'success': True,
+                'result': {
+                    'proactive_insights': [],
+                    'predictive_analytics': {},
+                    'entity_intelligence': {},
+                    'processing_timestamp': datetime.utcnow().isoformat()
+                }
+            }
+            
+            # Get proactive insights from entity engine
+            proactive_insights = self.entity_engine.generate_proactive_insights(user_id)
+            insights_result['result']['proactive_insights'] = [
+                {
+                    'id': insight.id if hasattr(insight, 'id') else None,
+                    'type': insight.insight_type if hasattr(insight, 'insight_type') else 'general',
+                    'title': insight.title if hasattr(insight, 'title') else 'Insight',
+                    'description': insight.description if hasattr(insight, 'description') else 'No description',
+                    'priority': insight.priority if hasattr(insight, 'priority') else 'medium',
+                    'confidence': insight.confidence if hasattr(insight, 'confidence') else 0.5
+                }
+                for insight in proactive_insights
+            ]
+            
+            # Get predictive analytics if insight_type includes predictions
+            if insight_type in ['comprehensive', 'predictive']:
+                predictions = {
+                    'relationship_opportunities': self.predictive_analytics.predict_relationship_opportunities(user_id),
+                    'topic_trends': self.predictive_analytics.predict_topic_trends(user_id),
+                    'business_opportunities': self.predictive_analytics.predict_business_opportunities(user_id)
+                }
+                
+                # Convert predictions to serializable format
+                serialized_predictions = {}
+                for category, pred_list in predictions.items():
+                    serialized_predictions[category] = [
+                        {
+                            'type': pred.prediction_type,
+                            'confidence': pred.confidence,
+                            'value': str(pred.predicted_value),
+                            'reasoning': pred.reasoning,
+                            'time_horizon': pred.time_horizon,
+                            'data_points': pred.data_points_used,
+                            'created_at': pred.created_at.isoformat()
+                        }
+                        for pred in pred_list
+                    ]
+                
+                insights_result['result']['predictive_analytics'] = serialized_predictions
+                
+                # Add upcoming needs summary
+                all_predictions = []
+                for pred_list in predictions.values():
+                    all_predictions.extend(pred_list)
+                
+                high_confidence_predictions = [p for p in all_predictions if p.confidence > 0.7]
+                insights_result['result']['predictive_analytics']['upcoming_needs'] = [
+                    {
+                        'title': pred.predicted_value,
+                        'confidence': pred.confidence,
+                        'reasoning': pred.reasoning
+                    }
+                    for pred in high_confidence_predictions[:3]  # Top 3
+                ]
+            
+            # Add entity intelligence if comprehensive
+            if insight_type == 'comprehensive':
+                insights_result['result']['entity_intelligence'] = self._generate_entity_intelligence_summary(user_id)
+            
+            return insights_result
+            
+        except Exception as e:
+            logger.error(f"Failed to generate user insights: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'result': {}
+            }
+    
+    def _generate_entity_intelligence_summary(self, user_id: int) -> Dict:
+        """Generate entity intelligence summary"""
+        try:
+            from models.database import get_db_manager
+            from models.enhanced_models import Topic, Person, Task
+            
+            with get_db_manager().get_session() as session:
+                # Entity counts
+                topics_count = session.query(Topic).filter(Topic.user_id == user_id).count()
+                people_count = session.query(Person).filter(Person.user_id == user_id).count()
+                tasks_count = session.query(Task).filter(Task.user_id == user_id).count()
+                
+                return {
+                    'entity_summary': {
+                        'topics': topics_count,
+                        'people': people_count,
+                        'tasks': tasks_count,
+                        'total_entities': topics_count + people_count + tasks_count
+                    },
+                    'intelligence_quality': {
+                        'entity_density': (topics_count + people_count) / max(1, tasks_count),
+                        'data_richness': 0.8  # Placeholder metric
+                    }
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to generate entity intelligence summary: {str(e)}")
+            return {}
+    
+    def process_unified_sync(self, user_id: int, sync_params: Dict) -> Dict[str, Any]:
+        """Process unified intelligence sync"""
+        try:
+            result = {
+                'success': True,
+                'processing_stages': {},
+                'entities_created': {'people': 0, 'topics': 0, 'tasks': 0},
+                'entities_updated': {'people': 0, 'topics': 0, 'tasks': 0},
+                'insights_generated': []
+            }
+            
+            # Generate insights for this sync
+            insights_result = self.generate_user_insights(user_id, 'comprehensive')
+            
+            if insights_result['success']:
+                result['insights_generated'] = insights_result['result']['proactive_insights']
+                result['predictive_analytics'] = insights_result['result'].get('predictive_analytics', {})
+            
+            # Trigger real-time analysis
+            self.realtime_processor.trigger_proactive_insights(user_id, priority=3)
+            
+            result['processing_stages']['unified_sync'] = 'completed'
+            result['processing_timestamp'] = datetime.utcnow().isoformat()
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to process unified sync: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'processing_stages': {},
+                'entities_created': {},
+                'entities_updated': {},
+                'insights_generated': []
+            }
+
+# Global instance
+processor_manager = ProcessorManager() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/realtime_processor.py
+PURPOSE: Email processor: Realtime Processor
+================================================================================
+# Real-Time Processing Pipeline - Proactive Intelligence
+# This transforms the system from batch processing to continuous intelligence
+
+import asyncio
+import logging
+from typing import Dict, List, Optional, Any
+from datetime import datetime, timedelta
+import json
+from dataclasses import dataclass, asdict
+from enum import Enum
+import threading
+import queue
+import time
+
+from processors.enhanced_ai_pipeline import enhanced_ai_processor
+from processors.unified_entity_engine import entity_engine, EntityContext
+from models.enhanced_models import IntelligenceInsight, Person, Topic, Task, CalendarEvent
+
+logger = logging.getLogger(__name__)
+
+class EventType(Enum):
+    NEW_EMAIL = "new_email"
+    NEW_CALENDAR_EVENT = "new_calendar_event"
+    ENTITY_UPDATE = "entity_update"
+    USER_ACTION = "user_action"
+    SCHEDULED_ANALYSIS = "scheduled_analysis"
+
+@dataclass
+class ProcessingEvent:
+    event_type: EventType
+    user_id: int
+    data: Dict
+    timestamp: datetime
+    priority: int = 5  # 1-10, 1 = highest priority
+    correlation_id: Optional[str] = None
+
+class RealTimeProcessor:
+    """
+    Real-time processing engine that provides continuous intelligence.
+    This is what transforms your system from reactive to proactive.
+    """
+    
+    def __init__(self):
+        self.processing_queue = queue.PriorityQueue()
+        self.running = False
+        self.worker_threads = []
+        self.user_contexts = {}  # Cache user contexts for efficiency
+        self.insight_callbacks = {}  # User-specific insight delivery callbacks
+        
+    def start(self, num_workers: int = 3):
+        """Start the real-time processing engine"""
+        self.running = True
+        
+        # Start worker threads
+        for i in range(num_workers):
+            worker = threading.Thread(target=self._process_events_worker, name=f"RTProcessor-{i}")
+            worker.daemon = True
+            worker.start()
+            self.worker_threads.append(worker)
+        
+        # Start periodic analysis thread
+        scheduler = threading.Thread(target=self._scheduled_analysis_worker, name="RTScheduler")
+        scheduler.daemon = True
+        scheduler.start()
+        self.worker_threads.append(scheduler)
+        
+        logger.info(f"Started real-time processor with {num_workers} workers")
+    
+    def stop(self):
+        """Stop the real-time processing engine"""
+        self.running = False
+        for worker in self.worker_threads:
+            worker.join(timeout=5)
+        logger.info("Stopped real-time processor")
+    
+    # =====================================================================
+    # EVENT INGESTION METHODS
+    # =====================================================================
+    
+    def process_new_email(self, email_data: Dict, user_id: int, priority: int = 5):
+        """Process new email in real-time"""
+        event = ProcessingEvent(
+            event_type=EventType.NEW_EMAIL,
+            user_id=user_id,
+            data=email_data,
+            timestamp=datetime.utcnow(),
+            priority=priority
+        )
+        self._queue_event(event)
+    
+    def process_new_calendar_event(self, event_data: Dict, user_id: int, priority: int = 5):
+        """Process new calendar event in real-time"""
+        event = ProcessingEvent(
+            event_type=EventType.NEW_CALENDAR_EVENT,
+            user_id=user_id,
+            data=event_data,
+            timestamp=datetime.utcnow(),
+            priority=priority
+        )
+        self._queue_event(event)
+    
+    def process_entity_update(self, entity_type: str, entity_id: int, update_data: Dict, user_id: int):
+        """Process entity update and trigger related intelligence updates"""
+        event = ProcessingEvent(
+            event_type=EventType.ENTITY_UPDATE,
+            user_id=user_id,
+            data={
+                'entity_type': entity_type,
+                'entity_id': entity_id,
+                'update_data': update_data
+            },
+            timestamp=datetime.utcnow(),
+            priority=3  # Higher priority for entity updates
+        )
+        self._queue_event(event)
+    
+    def process_user_action(self, action_type: str, action_data: Dict, user_id: int):
+        """Process user action and learn from feedback"""
+        event = ProcessingEvent(
+            event_type=EventType.USER_ACTION,
+            user_id=user_id,
+            data={
+                'action_type': action_type,
+                'action_data': action_data
+            },
+            timestamp=datetime.utcnow(),
+            priority=4
+        )
+        self._queue_event(event)
+    
+    # =====================================================================
+    # CORE PROCESSING WORKERS
+    # =====================================================================
+    
+    def _process_events_worker(self):
+        """Main event processing worker"""
+        while self.running:
+            try:
+                # Get event from queue (blocks until available or timeout)
+                try:
+                    priority, event = self.processing_queue.get(timeout=1.0)
+                except queue.Empty:
+                    continue
+                
+                logger.debug(f"Processing {event.event_type.value} for user {event.user_id}")
+                
+                # Process based on event type
+                if event.event_type == EventType.NEW_EMAIL:
+                    self._process_new_email_event(event)
+                elif event.event_type == EventType.NEW_CALENDAR_EVENT:
+                    self._process_new_calendar_event(event)
+                elif event.event_type == EventType.ENTITY_UPDATE:
+                    self._process_entity_update_event(event)
+                elif event.event_type == EventType.USER_ACTION:
+                    self._process_user_action_event(event)
+                elif event.event_type == EventType.SCHEDULED_ANALYSIS:
+                    self._process_scheduled_analysis_event(event)
+                
+                # Mark task as done
+                self.processing_queue.task_done()
+                
+            except Exception as e:
+                logger.error(f"Error in event processing worker: {str(e)}")
+                time.sleep(0.1)  # Brief pause on error
+    
+    def _scheduled_analysis_worker(self):
+        """Worker for periodic intelligence analysis"""
+        while self.running:
+            try:
+                # Run scheduled analysis every 15 minutes
+                time.sleep(900)  # 15 minutes
+                
+                # Get active users (those with recent activity)
+                active_users = self._get_active_users()
+                
+                for user_id in active_users:
+                    event = ProcessingEvent(
+                        event_type=EventType.SCHEDULED_ANALYSIS,
+                        user_id=user_id,
+                        data={'analysis_type': 'proactive_insights'},
+                        timestamp=datetime.utcnow(),
+                        priority=7  # Lower priority for scheduled analysis
+                    )
+                    self._queue_event(event)
+                
+            except Exception as e:
+                logger.error(f"Error in scheduled analysis worker: {str(e)}")
+    
+    # =====================================================================
+    # EVENT PROCESSING METHODS
+    # =====================================================================
+    
+    def _process_new_email_event(self, event: ProcessingEvent):
+        """Process new email with real-time intelligence generation"""
+        try:
+            email_data = event.data
+            user_id = event.user_id
+            
+            # Get cached user context for efficiency
+            context = self._get_cached_user_context(user_id)
+            
+            # Process email with enhanced AI pipeline
+            result = enhanced_ai_processor.process_email_with_context(email_data, user_id, context)
+            
+            if result.success:
+                # Update cached context with new information
+                self._update_cached_context(user_id, result)
+                
+                # Generate immediate insights
+                immediate_insights = self._generate_immediate_insights(email_data, result, user_id)
+                
+                # Deliver insights to user
+                self._deliver_insights_to_user(user_id, immediate_insights)
+                
+                # Check for entity cross-references and augmentations
+                self._check_cross_entity_augmentations(result, user_id)
+                
+                logger.info(f"Processed new email in real-time for user {user_id}: "
+                           f"{result.entities_created} entities created, {len(immediate_insights)} insights")
+            
+        except Exception as e:
+            logger.error(f"Failed to process new email event: {str(e)}")
+    
+    def _process_new_calendar_event(self, event: ProcessingEvent):
+        """Process new calendar event with intelligence enhancement"""
+        try:
+            event_data = event.data
+            user_id = event.user_id
+            
+            # Enhance calendar event with email intelligence
+            result = enhanced_ai_processor.enhance_calendar_event_with_intelligence(event_data, user_id)
+            
+            if result.success:
+                # Generate meeting preparation insights
+                prep_insights = self._generate_meeting_prep_insights(event_data, result, user_id)
+                
+                # Deliver insights to user
+                self._deliver_insights_to_user(user_id, prep_insights)
+                
+                # Update cached context
+                self._update_cached_context(user_id, result)
+                
+                logger.info(f"Enhanced calendar event in real-time for user {user_id}: "
+                           f"{result.entities_created['tasks']} prep tasks created")
+            
+        except Exception as e:
+            logger.error(f"Failed to process new calendar event: {str(e)}")
+    
+    def _process_entity_update_event(self, event: ProcessingEvent):
+        """Process entity updates and propagate intelligence"""
+        try:
+            entity_type = event.data['entity_type']
+            entity_id = event.data['entity_id']
+            update_data = event.data['update_data']
+            user_id = event.user_id
+            
+            # Create entity context
+            context = EntityContext(
+                source_type='update',
+                user_id=user_id,
+                confidence=0.9
+            )
+            
+            # Augment entity with new data
+            entity_engine.augment_entity_from_source(entity_type, entity_id, update_data, context)
+            
+            # Find related entities that might need updates
+            related_entities = self._find_related_entities(entity_type, entity_id, user_id)
+            
+            # Propagate intelligence to related entities
+            for related_entity in related_entities:
+                self._propagate_intelligence_update(
+                    related_entity['type'], 
+                    related_entity['id'], 
+                    entity_type, 
+                    entity_id, 
+                    update_data, 
+                    user_id
+                )
+            
+            # Generate insights from entity updates
+            update_insights = self._generate_entity_update_insights(entity_type, entity_id, update_data, user_id)
+            self._deliver_insights_to_user(user_id, update_insights)
+            
+            logger.info(f"Processed entity update for {entity_type}:{entity_id}, "
+                       f"propagated to {len(related_entities)} related entities")
+            
+        except Exception as e:
+            logger.error(f"Failed to process entity update event: {str(e)}")
+    
+    def _process_user_action_event(self, event: ProcessingEvent):
+        """Process user actions and learn from feedback"""
+        try:
+            action_type = event.data['action_type']
+            action_data = event.data['action_data']
+            user_id = event.user_id
+            
+            # Learning from user feedback
+            if action_type == 'insight_feedback':
+                self._learn_from_insight_feedback(action_data, user_id)
+            elif action_type == 'task_completion':
+                self._learn_from_task_completion(action_data, user_id)
+            elif action_type == 'topic_management':
+                self._learn_from_topic_management(action_data, user_id)
+            elif action_type == 'relationship_update':
+                self._learn_from_relationship_update(action_data, user_id)
+            
+            logger.debug(f"Processed user action: {action_type} for user {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to process user action event: {str(e)}")
+    
+    def _process_scheduled_analysis_event(self, event: ProcessingEvent):
+        """Process scheduled proactive analysis"""
+        try:
+            user_id = event.user_id
+            analysis_type = event.data.get('analysis_type', 'proactive_insights')
+            
+            if analysis_type == 'proactive_insights':
+                # Generate proactive insights
+                insights = entity_engine.generate_proactive_insights(user_id)
+                
+                if insights:
+                    self._deliver_insights_to_user(user_id, insights)
+                    logger.info(f"Generated {len(insights)} proactive insights for user {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to process scheduled analysis: {str(e)}")
+    
+    # =====================================================================
+    # INTELLIGENCE GENERATION METHODS
+    # =====================================================================
+    
+    def _generate_immediate_insights(self, email_data: Dict, processing_result: Any, user_id: int) -> List[IntelligenceInsight]:
+        """Generate immediate insights from new email processing"""
+        insights = []
+        
+        try:
+            # Insight 1: Important person contact
+            sender = email_data.get('sender', '')
+            if sender and self._is_important_person(sender, user_id):
+                insight = IntelligenceInsight(
+                    user_id=user_id,
+                    insight_type='important_contact',
+                    title=f"New email from important contact",
+                    description=f"Received email from {email_data.get('sender_name', sender)}. "
+                               f"Subject: {email_data.get('subject', 'No subject')}",
+                    priority='high',
+                    confidence=0.9,
+                    related_entity_type='person',
+                    status='new'
+                )
+                insights.append(insight)
+            
+            # Insight 2: Urgent task detection
+            if processing_result.entities_created.get('tasks', 0) > 0:
+                # Check if any high-priority tasks were created
+                insight = IntelligenceInsight(
+                    user_id=user_id,
+                    insight_type='urgent_task',
+                    title=f"New tasks extracted from email",
+                    description=f"Created {processing_result.entities_created['tasks']} tasks from recent email. "
+                               f"Review and prioritize action items.",
+                    priority='medium',
+                    confidence=0.8,
+                    related_entity_type='task',
+                    status='new'
+                )
+                insights.append(insight)
+            
+            # Insight 3: Topic momentum detection
+            if processing_result.entities_created.get('topics', 0) > 0 or processing_result.entities_updated.get('topics', 0) > 0:
+                insight = IntelligenceInsight(
+                    user_id=user_id,
+                    insight_type='topic_momentum',
+                    title=f"Business topic activity detected",
+                    description=f"Recent email activity relates to your business topics. "
+                               f"Consider scheduling focused time for strategic planning.",
+                    priority='medium',
+                    confidence=0.7,
+                    related_entity_type='topic',
+                    status='new'
+                )
+                insights.append(insight)
+            
+        except Exception as e:
+            logger.error(f"Failed to generate immediate insights: {str(e)}")
+        
+        return insights
+    
+    def _generate_meeting_prep_insights(self, event_data: Dict, processing_result: Any, user_id: int) -> List[IntelligenceInsight]:
+        """Generate meeting preparation insights"""
+        insights = []
+        
+        try:
+            meeting_title = event_data.get('title', 'Unknown Meeting')
+            meeting_time = event_data.get('start_time')
+            
+            # Calculate time until meeting
+            if meeting_time:
+                time_until = meeting_time - datetime.utcnow()
+                
+                if time_until.total_seconds() > 0 and time_until.days <= 2:  # Within 48 hours
+                    # High-priority preparation insight
+                    insight = IntelligenceInsight(
+                        user_id=user_id,
+                        insight_type='meeting_prep',
+                        title=f"Prepare for '{meeting_title}'",
+                        description=f"Meeting in {time_until.days} days, {time_until.seconds // 3600} hours. "
+                                   f"AI has generated preparation tasks based on attendee intelligence.",
+                        priority='high' if time_until.days == 0 else 'medium',
+                        confidence=0.9,
+                        related_entity_type='event',
+                        status='new',
+                        expires_at=meeting_time
+                    )
+                    insights.append(insight)
+            
+            # Insight about preparation tasks created
+            if processing_result.entities_created.get('tasks', 0) > 0:
+                insight = IntelligenceInsight(
+                    user_id=user_id,
+                    insight_type='prep_tasks_generated',
+                    title=f"Meeting preparation tasks created",
+                    description=f"Generated {processing_result.entities_created['tasks']} preparation tasks "
+                               f"for '{meeting_title}' based on your email history with attendees.",
+                    priority='medium',
+                    confidence=0.8,
+                    related_entity_type='task',
+                    status='new'
+                )
+                insights.append(insight)
+            
+        except Exception as e:
+            logger.error(f"Failed to generate meeting prep insights: {str(e)}")
+        
+        return insights
+    
+    def _generate_entity_update_insights(self, entity_type: str, entity_id: int, update_data: Dict, user_id: int) -> List[IntelligenceInsight]:
+        """Generate insights from entity updates"""
+        insights = []
+        
+        try:
+            if entity_type == 'topic' and update_data.get('mentions', 0) > 0:
+                # Topic becoming hot
+                insight = IntelligenceInsight(
+                    user_id=user_id,
+                    insight_type='topic_momentum',
+                    title=f"Topic gaining momentum",
+                    description=f"Business topic receiving increased attention. "
+                               f"Consider preparing materials or scheduling focused discussion.",
+                    priority='medium',
+                    confidence=0.7,
+                    related_entity_type='topic',
+                    related_entity_id=entity_id,
+                    status='new'
+                )
+                insights.append(insight)
+            
+            elif entity_type == 'person' and update_data.get('interaction'):
+                # Relationship activity
+                insight = IntelligenceInsight(
+                    user_id=user_id,
+                    insight_type='relationship_activity',
+                    title=f"Recent contact activity",
+                    description=f"Ongoing communication with important contact. "
+                               f"Relationship engagement is active.",
+                    priority='low',
+                    confidence=0.6,
+                    related_entity_type='person',
+                    related_entity_id=entity_id,
+                    status='new'
+                )
+                insights.append(insight)
+            
+        except Exception as e:
+            logger.error(f"Failed to generate entity update insights: {str(e)}")
+        
+        return insights
+    
+    # =====================================================================
+    # CONTEXT MANAGEMENT AND CACHING

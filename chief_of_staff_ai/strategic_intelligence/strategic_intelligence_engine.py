@@ -332,7 +332,7 @@ class StrategyEngine:
             synthesis_prompt = self._build_synthesis_prompt(content_summary)
             
             response = self.claude_client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model=settings.CLAUDE_MODEL,
                 max_tokens=4000,
                 system="""You are a strategic business intelligence synthesizer. Your job is to analyze all communications and identify unified business contexts.
 
@@ -386,7 +386,7 @@ Each context should represent a unified business situation with clear strategic 
             pattern_prompt = self._build_pattern_analysis_prompt(business_contexts)
             
             response = self.claude_client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model=settings.CLAUDE_MODEL,
                 max_tokens=3000,
                 system="""You are a strategic pattern analyst. Analyze business contexts to identify strategic insights.
 
@@ -437,7 +437,7 @@ Focus on insights that have strategic business implications.""",
             recommendations_prompt = self._build_recommendations_prompt(business_contexts, strategic_insights)
             
             response = self.claude_client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model=settings.CLAUDE_MODEL,
                 max_tokens=4000,
                 system="""You are a strategic business advisor and Chief of Staff. Generate actionable recommendations based on business contexts and insights.
 

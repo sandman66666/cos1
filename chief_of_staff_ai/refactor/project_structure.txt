@@ -1,0 +1,38 @@
+chief_of_staff_ai/
+├── __init__.py
+├── config/
+│   └── settings.py                 # KEEP & UPDATE
+├── auth/
+│   └── gmail_auth.py              # KEEP (works fine)
+├── models/
+│   └── database.py                # REMOVE (replaced by storage/)
+├── processors/
+│   └── email_quality_filter.py    # KEEP (works fine)
+├── engagement_analysis/
+│   └── smart_contact_strategy.py  # KEEP (works fine)
+├── storage/                       # NEW DIRECTORY
+│   ├── __init__.py
+│   ├── storage_manager.py         # NEW (multi-db orchestrator)
+│   ├── vector_store.py            # NEW (ChromaDB operations)
+│   ├── graph_store.py             # NEW (Neo4j operations)
+│   ├── cache_store.py             # NEW (Redis operations)
+│   └── migrations/                # NEW
+│       └── sqlite_to_postgres.py  # NEW (migration script)
+├── intelligence/                  # NEW DIRECTORY
+│   ├── __init__.py
+│   ├── web_scrapers.py           # NEW (LinkedIn/Twitter enrichment)
+│   ├── claude_analysts.py        # NEW (5 specialized analysts)
+│   ├── deep_augmentation.py      # NEW (evidence extraction)
+│   ├── predictive_engine.py      # NEW (predictions & recommendations)
+│   └── orchestrator.py           # NEW (coordinates all intelligence)
+├── api/
+│   └── routes/
+│       ├── settings_routes.py     # KEEP
+│       ├── intelligence_routes.py # NEW
+│       └── ...other routes        # KEEP
+└── ingest/
+    └── gmail_fetcher.py          # KEEP (if exists)
+
+main.py                           # UPDATE (add new endpoints)
+docker-compose.yml               # NEW (for local development)
+.env.example                     # UPDATE (new environment variables)

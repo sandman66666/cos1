@@ -344,6 +344,19 @@ class EmailQualityFilter:
         if user and stats.email_address.split('@')[0] in ['sandman', 'oudi', 'oudiantebi']:
             return ContactTier.TIER_1, "User's alias email address", True
         
+        # NEW: Check if this contact is from sent emails (TrustedContact) - these are automatically Tier 1
+        try:
+            with get_db_manager().get_session() as session:
+                from models.database import TrustedContact
+                trusted_contact = session.query(TrustedContact).filter(
+                    TrustedContact.email_address == stats.email_address
+                ).first()
+                
+                if trusted_contact:
+                    return ContactTier.TIER_1, f"Contact from sent emails (engagement: {trusted_contact.engagement_score:.1f})", True
+        except Exception as e:
+            logger.warning(f"Could not check TrustedContact for {stats.email_address}: {e}")
+        
         # Tier 1: People you respond to regularly (HIGH QUALITY)
         if stats.response_rate >= self.TIER_1_MIN_RESPONSE_RATE:
             return ContactTier.TIER_1, f"High response rate ({stats.response_rate:.1%})", True

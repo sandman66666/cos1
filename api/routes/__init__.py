@@ -2,29 +2,22 @@
 API Routes Package
 ==================
 
-This package contains all the route blueprints for the AI Chief of Staff API.
-Each blueprint handles a specific domain of functionality.
+This package contains all the Flask blueprint route definitions for the AI Chief of Staff API.
+
+Blueprints included:
+- auth_routes: Authentication and session management
+- email_routes: Email processing and analysis
+- task_routes: Task management and creation
+- people_routes: Contact and relationship management
+- intelligence_routes: Business intelligence and insights
+- calendar_routes: Calendar integration and event processing
+- enhanced_agent_routes: Claude 4 Opus agent capabilities
+- breakthrough_routes: Advanced analytics and breakthrough insights
+- settings_routes: User settings and system configuration
 """
 
-from .auth_routes import auth_bp
-from .email_routes import email_bp
-from .intelligence_routes import intelligence_bp
-from .task_routes import task_bp
-from .people_routes import people_bp
-from .calendar_routes import calendar_bp
-from .topic_routes import topic_bp
-from .settings_routes import settings_bp
-from .knowledge_routes import knowledge_bp
+# This file makes the api/routes directory a proper Python package
+# so that Flask can import the blueprint modules correctly.
 
-# List of all blueprints to register
-BLUEPRINTS = [
-    auth_bp,
-    email_bp, 
-    intelligence_bp,
-    task_bp,
-    people_bp,
-    calendar_bp,
-    topic_bp,
-    settings_bp,
-    knowledge_bp
-] 
+# We don't import the blueprints here to avoid circular import issues
+# The blueprints are imported directly in main.py 

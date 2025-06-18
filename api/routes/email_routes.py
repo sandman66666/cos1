@@ -710,7 +710,7 @@ def build_initial_knowledge_tree(emails_data, user_email):
         )
 
         response = claude_client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model=settings.CLAUDE_MODEL,
             max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -762,7 +762,7 @@ def refine_knowledge_tree(new_emails_data, existing_tree, user_email):
         )
 
         response = claude_client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model=settings.CLAUDE_MODEL,
             max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -858,7 +858,7 @@ def assign_email_to_knowledge_tree(email, tree_structure, user_email):
         )
 
         response = claude_client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model=settings.CLAUDE_MODEL,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -919,4 +919,1123 @@ def api_normalize_emails():
             
     except Exception as e:
         logger.error(f"Email normalization API error: {str(e)}")
-        return jsonify({'error': str(e)}), 500 
+        return jsonify({'error': str(e)}), 500
+
+
+@email_bp.route('/knowledge-driven-pipeline', methods=['POST'])
+@require_auth
+def knowledge_driven_email_pipeline():
+    """
+    UNIFIED KNOWLEDGE-DRIVEN EMAIL PROCESSING PIPELINE
+    
+    Phase 1: Smart Contact Filtering (quality gate)
+    Phase 2: Bulk Knowledge Tree Creation (Claude 4 Opus on ALL emails)
+    Phase 3: Email Assignment to Topics
+    Phase 4: Cross-Topic Intelligence Generation
+    Phase 5: Agent Augmentation of Knowledge Topics
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+        from chief_of_staff_ai.agents.intelligence_agent import IntelligenceAgent
+        from chief_of_staff_ai.agents.mcp_agent import MCPConnectorAgent
+        import anthropic
+        from config.settings import settings
+        
+        data = request.get_json() or {}
+        force_rebuild = data.get('force_rebuild', False)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"🚀 Starting Knowledge-Driven Pipeline for {user_email}")
+        
+        # =================================================================
+        # PHASE 1: SMART CONTACT FILTERING (Quality Gate)
+        # =================================================================
+        logger.info("📧 Phase 1: Smart Contact Filtering")
+        
+        # Build trusted contact database if not exists
+        trusted_result = smart_contact_strategy.build_trusted_contact_database(
+            user_email=user_email,
+            days_back=365
+        )
+        
+        if not trusted_result.get('success'):
+            return jsonify({
+                'success': False, 
+                'error': f"Failed to build trusted contacts: {trusted_result.get('error')}"
+            }), 500
+        
+        # Get ALL emails
+        all_emails = get_db_manager().get_user_emails(db_user.id, limit=1000)
+        
+        # Filter emails using Smart Contact Strategy
+        quality_filtered_emails = []
+        for email in all_emails:
+            if email.sender and email.subject:
+                email_data = {
+                    'sender': email.sender,
+                    'sender_name': email.sender_name,
+                    'subject': email.subject,
+                    'body_preview': email.body_preview or email.snippet,
+                    'date': email.email_date.isoformat() if email.email_date else None
+                }
+                
+                classification = smart_contact_strategy.classify_incoming_email(
+                    user_email=user_email,
+                    email_data=email_data
+                )
+                
+                # Only include high-quality emails for knowledge building
+                if classification.action in ['ANALYZE_WITH_AI', 'PROCESS_WITH_AI']:
+                    quality_filtered_emails.append(email)
+        
+        logger.info(f"📊 Filtered {len(quality_filtered_emails)} quality emails from {len(all_emails)} total")
+        
+        # =================================================================
+        # PHASE 2: BULK KNOWLEDGE TREE CREATION (Claude 4 Opus)
+        # =================================================================
+        logger.info("🧠 Phase 2: Bulk Knowledge Tree Creation with Claude 4 Opus")
+        
+        # Check if we should rebuild
+        existing_tree = get_master_knowledge_tree(db_user.id)
+        if existing_tree and not force_rebuild:
+            logger.info("📚 Using existing knowledge tree")
+            master_tree = existing_tree
+        else:
+            # Prepare ALL filtered emails for bulk analysis
+            emails_for_knowledge = []
+            for email in quality_filtered_emails:
+                emails_for_knowledge.append({
+                    'id': email.gmail_id,
+                    'subject': email.subject or '',
+                    'sender': email.sender or '',
+                    'sender_name': email.sender_name or '',
+                    'date': email.email_date.isoformat() if email.email_date else '',
+                    'content': (email.body_clean or email.snippet or '')[:2000],  # Longer content for knowledge building
+                    'recipients': email.recipient_emails or []
+                })
+            
+            logger.info(f"🎯 Building knowledge tree from {len(emails_for_knowledge)} quality emails")
+            
+            # Enhanced Claude 4 Opus prompt for knowledge-driven architecture
+            knowledge_prompt = f"""You are Claude 4 Opus analyzing ALL business communications for {user_email} to build a comprehensive KNOWLEDGE-DRIVEN architecture.
+
+MISSION: Create a master knowledge tree that represents this person's complete business world.
+
+FILTERED QUALITY EMAILS ({len(emails_for_knowledge)} emails from trusted network):
+{json.dumps(emails_for_knowledge, indent=2)}
+
+BUILD COMPREHENSIVE KNOWLEDGE ARCHITECTURE:
+
+1. **CORE BUSINESS TOPICS** (8-15 major knowledge areas):
+   - Strategic business themes that span multiple communications
+   - Project areas and business initiatives  
+   - Operational domains and business functions
+   - Industry/market areas of focus
+   - Partnership and relationship categories
+
+2. **TOPIC DESCRIPTIONS** (Rich context for each topic):
+   - Clear description of what this knowledge area covers
+   - How it relates to the user's business/role
+   - Key people typically involved
+   - Strategic importance and current status
+
+3. **KNOWLEDGE RELATIONSHIPS**:
+   - How topics connect and influence each other
+   - Cross-topic dependencies and overlaps
+   - Strategic hierarchies and priorities
+
+4. **PEOPLE WITHIN KNOWLEDGE CONTEXT**:
+   - Key people organized by their primary knowledge areas
+   - Their expertise and role in different topics
+   - Relationship strength and communication patterns
+
+RETURN COMPREHENSIVE JSON:
+{{
+    "knowledge_topics": [
+        {{
+            "name": "Strategic Topic Name",
+            "description": "Comprehensive description of this knowledge area and how it relates to the user's business world",
+            "strategic_importance": 0.9,
+            "current_status": "active/developing/monitoring",
+            "key_themes": ["theme1", "theme2", "theme3"],
+            "typical_activities": ["activity1", "activity2"],
+            "decision_patterns": ["type of decisions made in this area"],
+            "success_metrics": ["how success is measured in this area"],
+            "external_dependencies": ["what external factors affect this"],
+            "knowledge_depth": "deep/moderate/surface",
+            "update_frequency": "daily/weekly/monthly"
+        }}
+    ],
+    "topic_relationships": [
+        {{
+            "topic_a": "Topic Name 1",
+            "topic_b": "Topic Name 2", 
+            "relationship_type": "depends_on/influences/collaborates_with/competes_with",
+            "strength": 0.8,
+            "description": "How these knowledge areas interact"
+        }}
+    ],
+    "knowledge_people": [
+        {{
+            "email": "person@company.com",
+            "name": "Person Name",
+            "primary_knowledge_areas": ["Topic 1", "Topic 2"],
+            "expertise_level": {{"Topic 1": 0.9, "Topic 2": 0.7}},
+            "communication_role": "decision_maker/expert/collaborator/stakeholder",
+            "strategic_value": 0.8,
+            "knowledge_contribution": "What unique knowledge/perspective they bring"
+        }}
+    ],
+    "business_intelligence": {{
+        "industry_context": "Primary industry/market context",
+        "business_stage": "startup/growth/enterprise/transition",
+        "strategic_priorities": ["priority1", "priority2", "priority3"],
+        "knowledge_gaps": ["areas where more intelligence is needed"],
+        "opportunity_areas": ["where knowledge suggests opportunities"],
+        "risk_areas": ["where knowledge suggests risks/challenges"]
+    }}
+}}
+
+FOCUS: This is the foundation for ALL future intelligence. Make it comprehensive, strategic, and knowledge-centric."""
+
+            # Call Claude 4 Opus for comprehensive knowledge analysis
+            claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            response = claude_client.messages.create(
+                model=settings.CLAUDE_MODEL,  # Claude 4 Opus
+                max_tokens=6000,  # Increased for comprehensive analysis
+                messages=[{"role": "user", "content": knowledge_prompt}]
+            )
+            
+            # Parse and save knowledge tree
+            tree_content = response.content[0].text
+            import re
+            json_start = tree_content.find('{')
+            json_end = tree_content.rfind('}') + 1
+            
+            if json_start != -1 and json_end > json_start:
+                master_tree = json.loads(tree_content[json_start:json_end])
+                save_master_knowledge_tree(db_user.id, master_tree)
+                logger.info(f"✅ Built knowledge tree with {len(master_tree.get('knowledge_topics', []))} topics")
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to parse knowledge tree from Claude 4 Opus'
+                }), 500
+        
+        # =================================================================
+        # PHASE 3: EMAIL ASSIGNMENT TO KNOWLEDGE TOPICS
+        # =================================================================
+        logger.info("📋 Phase 3: Assigning emails to knowledge topics")
+        
+        email_assignments = []
+        topics_enhanced = 0
+        
+        for email in quality_filtered_emails[:100]:  # Process top 100 quality emails
+            try:
+                assignment_result = assign_email_to_knowledge_tree(email, master_tree, user_email)
+                
+                if assignment_result.get('success'):
+                    # Update email with knowledge assignment
+                    email.ai_summary = assignment_result.get('summary')
+                    email.business_category = assignment_result.get('primary_topic')
+                    email.strategic_importance = assignment_result.get('importance_score', 0.5)
+                    email.sentiment = assignment_result.get('sentiment_score', 0.0)
+                    email.processed_at = datetime.utcnow()
+                    email.processing_version = "knowledge_driven_v1.0"
+                    
+                    email_assignments.append({
+                        'email_id': email.gmail_id,
+                        'subject': email.subject,
+                        'assigned_topic': assignment_result.get('primary_topic'),
+                        'importance': assignment_result.get('importance_score')
+                    })
+                    topics_enhanced += 1
+                    
+            except Exception as e:
+                logger.error(f"Error assigning email {email.id}: {str(e)}")
+                continue
+        
+        # Commit email updates
+        with get_db_manager().get_session() as session:
+            session.commit()
+        
+        logger.info(f"📊 Assigned {topics_enhanced} emails to knowledge topics")
+        
+        # =================================================================
+        # PHASE 4: CROSS-TOPIC INTELLIGENCE GENERATION
+        # =================================================================
+        logger.info("💡 Phase 4: Cross-Topic Intelligence Generation")
+        
+        # Generate cross-topic insights and tasks
+        intelligence_prompt = f"""Based on the complete knowledge tree and email assignments, generate strategic intelligence:
+
+KNOWLEDGE TOPICS: {json.dumps(master_tree.get('knowledge_topics', []), indent=2)}
+
+EMAIL ASSIGNMENTS: {json.dumps(email_assignments[:20], indent=2)}
+
+GENERATE CROSS-TOPIC INTELLIGENCE:
+
+1. **STRATEGIC TASKS** (Real actions needed across topics):
+   - Look for patterns across multiple emails in each topic
+   - Identify genuine deadlines and commitments
+   - Find cross-topic dependencies requiring action
+   - Extract strategic decisions that need follow-up
+
+2. **KNOWLEDGE INSIGHTS**:
+   - Patterns that emerge across different knowledge areas
+   - Opportunities for connecting different topics
+   - Strategic timing based on multiple topic developments
+   - Risk areas requiring attention
+
+3. **TOPIC STATUS UPDATES**:
+   - Current state of each knowledge area based on recent emails
+   - Momentum and energy levels in different topics
+   - Emerging themes and new developments
+
+RETURN JSON:
+{{
+    "strategic_tasks": [
+        {{
+            "description": "Clear, actionable task based on cross-topic analysis",
+            "knowledge_topics": ["Topic 1", "Topic 2"],
+            "rationale": "Why this task is needed based on topic knowledge",
+            "priority": "high/medium/low",
+            "due_date_hint": "Timeline based on topic context",
+            "stakeholders": ["person@email.com"],
+            "success_criteria": "What completion looks like",
+            "cross_topic_impact": "How this affects multiple knowledge areas"
+        }}
+    ],
+    "knowledge_insights": [
+        {{
+            "title": "Strategic insight title",
+            "description": "Detailed insight based on cross-topic analysis",
+            "affected_topics": ["Topic 1", "Topic 2"],
+            "insight_type": "opportunity/risk/trend/connection",
+            "confidence": 0.8,
+            "recommended_action": "What should be done about this insight"
+        }}
+    ],
+    "topic_status_updates": [
+        {{
+            "topic_name": "Topic Name",
+            "current_momentum": "high/medium/low",
+            "recent_developments": "What's happening in this area",
+            "key_decisions_needed": ["Decision 1", "Decision 2"],
+            "next_milestones": ["Milestone 1", "Milestone 2"],
+            "attention_required": "What needs focus in this area"
+        }}
+    ]
+}}"""
+
+        intelligence_response = claude_client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=4000,
+            messages=[{"role": "user", "content": intelligence_prompt}]
+        )
+        
+        # Parse intelligence results
+        intelligence_content = intelligence_response.content[0].text
+        json_start = intelligence_content.find('{')
+        json_end = intelligence_content.rfind('}') + 1
+        
+        cross_topic_intelligence = {}
+        if json_start != -1 and json_end > json_start:
+            cross_topic_intelligence = json.loads(intelligence_content[json_start:json_end])
+        
+        # =================================================================
+        # PHASE 5: AGENT AUGMENTATION OF KNOWLEDGE TOPICS  
+        # =================================================================
+        logger.info("🤖 Phase 5: Agent Augmentation")
+        
+        # Initialize agents for knowledge enhancement
+        # Note: Simplified for now - full async agent integration would require async route
+        augmented_topics = []
+        
+        try:
+            # For now, we'll prepare the structure for agent enhancement
+            # The agents can be called separately or in background tasks
+            for topic in master_tree.get('knowledge_topics', [])[:3]:  # Top 3 topics
+                augmented_topics.append({
+                    'topic': topic['name'],
+                    'enhancement_status': 'ready_for_agent_processing',
+                    'enhancement_type': 'external_research_pending'
+                })
+                
+            logger.info(f"🤖 Prepared {len(augmented_topics)} topics for agent augmentation")
+            
+        except Exception as e:
+            logger.error(f"Agent preparation failed: {str(e)}")
+            # Continue without agent augmentation
+        
+        # =================================================================
+        # FINAL RESULTS
+        # =================================================================
+        
+        pipeline_results = {
+            'success': True,
+            'pipeline_version': 'knowledge_driven_v1.0',
+            'phases_completed': 5,
+            'processing_summary': {
+                'total_emails_available': len(all_emails),
+                'quality_filtered_emails': len(quality_filtered_emails),
+                'emails_assigned_to_topics': topics_enhanced,
+                'knowledge_topics_created': len(master_tree.get('knowledge_topics', [])),
+                'strategic_tasks_identified': len(cross_topic_intelligence.get('strategic_tasks', [])),
+                'knowledge_insights_generated': len(cross_topic_intelligence.get('knowledge_insights', [])),
+                'topics_augmented_by_agents': len(augmented_topics)
+            },
+            'knowledge_tree': master_tree,
+            'email_assignments': email_assignments[:10],  # Sample assignments
+            'cross_topic_intelligence': cross_topic_intelligence,
+            'agent_augmentations': augmented_topics,
+            'pipeline_efficiency': {
+                'quality_filter_ratio': len(quality_filtered_emails) / max(len(all_emails), 1),
+                'knowledge_coverage': topics_enhanced / max(len(quality_filtered_emails), 1),
+                'intelligence_density': len(cross_topic_intelligence.get('strategic_tasks', [])) / max(len(master_tree.get('knowledge_topics', [])), 1)
+            }
+        }
+        
+        logger.info(f"🎉 Knowledge-Driven Pipeline Complete: {pipeline_results['processing_summary']}")
+        
+        return jsonify(pipeline_results)
+        
+    except Exception as e:
+        logger.error(f"Knowledge-driven pipeline error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# Individual Phase Testing Endpoints
+
+@email_bp.route('/knowledge-pipeline/phase1-contacts', methods=['POST'])
+@require_auth
+def phase1_smart_contact_filtering():
+    """
+    PHASE 1: Smart Contact Filtering & Contact Building
+    Builds trusted contact database from sent emails and shows results in People tab
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+        
+        data = request.get_json() or {}
+        days_back = data.get('days_back', 365)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"🚀 Phase 1: Smart Contact Filtering for {user_email}")
+        
+        # Build trusted contact database from sent emails
+        trusted_result = smart_contact_strategy.build_trusted_contact_database(
+            user_email=user_email,
+            days_back=days_back
+        )
+        
+        if not trusted_result.get('success'):
+            return jsonify({
+                'success': False, 
+                'error': f"Failed to build trusted contacts: {trusted_result.get('error')}"
+            }), 500
+        
+        # Get all contacts created/updated
+        all_people = get_db_manager().get_user_people(db_user.id)
+        
+        # Prepare detailed contact list for frontend
+        contacts_created = []
+        for person in all_people:
+            contacts_created.append({
+                'id': person.id,
+                'name': person.name,
+                'email': person.email_address,
+                'company': person.company,
+                'title': person.title,
+                'engagement_score': person.engagement_score,
+                'total_emails': person.total_emails,
+                'created_from': 'sent_emails_analysis'
+            })
+        
+        return jsonify({
+            'success': True,
+            'phase': 1,
+            'phase_name': 'Smart Contact Filtering',
+            'results': {
+                'sent_emails_analyzed': trusted_result.get('sent_emails_analyzed', 0),
+                'contacts_identified': trusted_result.get('contacts_analyzed', 0),
+                'trusted_contacts_created': trusted_result.get('trusted_contacts_created', 0),
+                'total_people_in_database': len(all_people)
+            },
+            'contacts_created': contacts_created,
+            'next_step': 'Phase 2: Create initial knowledge tree from these contacts',
+            'message': f"✅ Created {len(contacts_created)} trusted contacts from sent email analysis"
+        })
+        
+    except Exception as e:
+        logger.error(f"Phase 1 error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@email_bp.route('/knowledge-pipeline/phase2-knowledge-tree', methods=['POST'])
+@require_auth
+def phase2_initial_knowledge_tree():
+    """
+    PHASE 2: Initial Knowledge Tree Creation
+    Creates knowledge tree from filtered emails and displays structure
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
+        import anthropic
+        from config.settings import settings
+        
+        data = request.get_json() or {}
+        max_emails = data.get('max_emails', 50)
+        force_rebuild = data.get('force_rebuild', False)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"🧠 Phase 2: Knowledge Tree Creation for {user_email}")
+        
+        # Check if knowledge tree already exists
+        existing_tree = get_master_knowledge_tree(db_user.id)
+        if existing_tree and not force_rebuild:
+            return jsonify({
+                'success': True,
+                'phase': 2,
+                'phase_name': 'Knowledge Tree Creation',
+                'results': {
+                    'tree_exists': True,
+                    'knowledge_topics': len(existing_tree.get('knowledge_topics', [])),
+                    'knowledge_people': len(existing_tree.get('knowledge_people', [])),
+                    'topic_relationships': len(existing_tree.get('topic_relationships', []))
+                },
+                'knowledge_tree': existing_tree,
+                'message': f"✅ Knowledge tree already exists with {len(existing_tree.get('knowledge_topics', []))} topics",
+                'next_step': 'Phase 3: Sync calendar to augment contacts'
+            })
+        
+        # Get filtered emails for knowledge creation
+        all_emails = get_db_manager().get_user_emails(db_user.id, limit=max_emails)
+        
+        if not all_emails:
+            return jsonify({
+                'success': False,
+                'error': 'No emails found. Please fetch emails first.'
+            }), 400
+        
+        # Filter emails using smart contact strategy
+        quality_filtered_emails = []
+        for email in all_emails:
+            if email.sender and email.subject:
+                email_data = {
+                    'sender': email.sender,
+                    'sender_name': email.sender_name,
+                    'subject': email.subject,
+                    'body_preview': email.body_preview or email.snippet,
+                    'date': email.email_date.isoformat() if email.email_date else None
+                }
+                
+                classification = smart_contact_strategy.classify_incoming_email(
+                    user_email=user_email,
+                    email_data=email_data
+                )
+                
+                if classification.action in ['ANALYZE_WITH_AI', 'PROCESS_WITH_AI']:
+                    quality_filtered_emails.append(email)
+        
+        # Prepare emails for knowledge tree creation
+        emails_for_knowledge = []
+        for email in quality_filtered_emails:
+            emails_for_knowledge.append({
+                'id': email.gmail_id,
+                'subject': email.subject or '',
+                'sender': email.sender or '',
+                'sender_name': email.sender_name or '',
+                'date': email.email_date.isoformat() if email.email_date else '',
+                'content': (email.body_clean or email.snippet or '')[:1500],
+                'recipients': email.recipient_emails or []
+            })
+        
+        logger.info(f"🎯 Creating knowledge tree from {len(emails_for_knowledge)} quality emails")
+        
+        # Create knowledge tree using Claude 4 Opus
+        knowledge_prompt = f"""You are Claude 4 Opus creating a comprehensive knowledge tree from business communications for {user_email}.
+
+QUALITY EMAILS ({len(emails_for_knowledge)} filtered emails):
+{json.dumps(emails_for_knowledge, indent=2)}
+
+CREATE INITIAL KNOWLEDGE ARCHITECTURE:
+
+1. **BUSINESS TOPICS** (5-12 major areas):
+   - Core business themes from communications
+   - Project areas and initiatives
+   - Operational domains
+   - Partnership/relationship categories
+
+2. **PEOPLE & RELATIONSHIPS**:
+   - Key contacts with their expertise areas
+   - Relationship strength and communication patterns
+   - Role in different business topics
+
+3. **BUSINESS CONTEXT**:
+   - Industry and market context
+   - Business stage and priorities
+   - Strategic focus areas
+
+RETURN JSON:
+{{
+    "knowledge_topics": [
+        {{
+            "name": "Topic Name",
+            "description": "What this topic covers",
+            "strategic_importance": 0.8,
+            "current_status": "active/developing/monitoring",
+            "key_themes": ["theme1", "theme2"],
+            "email_count": 5,
+            "key_people": ["person1@email.com", "person2@email.com"]
+        }}
+    ],
+    "knowledge_people": [
+        {{
+            "email": "person@company.com",
+            "name": "Person Name",
+            "primary_knowledge_areas": ["Topic 1", "Topic 2"],
+            "relationship_strength": 0.8,
+            "communication_role": "decision_maker/expert/collaborator",
+            "company": "Company Name",
+            "expertise_summary": "What they bring to conversations"
+        }}
+    ],
+    "business_intelligence": {{
+        "industry_context": "Industry/market",
+        "business_stage": "startup/growth/enterprise",
+        "strategic_priorities": ["priority1", "priority2"],
+        "communication_patterns": ["pattern1", "pattern2"]
+    }},
+    "tree_metadata": {{
+        "created_from_emails": {len(emails_for_knowledge)},
+        "quality_filtered_ratio": "{len(quality_filtered_emails)}/{len(all_emails)}",
+        "creation_date": "{datetime.now().isoformat()}"
+    }}
+}}"""
+
+        claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        response = claude_client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=5000,
+            messages=[{"role": "user", "content": knowledge_prompt}]
+        )
+        
+        # Parse knowledge tree
+        tree_content = response.content[0].text
+        json_start = tree_content.find('{')
+        json_end = tree_content.rfind('}') + 1
+        
+        if json_start != -1 and json_end > json_start:
+            knowledge_tree = json.loads(tree_content[json_start:json_end])
+            save_master_knowledge_tree(db_user.id, knowledge_tree)
+            
+            return jsonify({
+                'success': True,
+                'phase': 2,
+                'phase_name': 'Knowledge Tree Creation',
+                'results': {
+                    'tree_created': True,
+                    'emails_analyzed': len(emails_for_knowledge),
+                    'quality_filter_ratio': f"{len(quality_filtered_emails)}/{len(all_emails)}",
+                    'knowledge_topics': len(knowledge_tree.get('knowledge_topics', [])),
+                    'knowledge_people': len(knowledge_tree.get('knowledge_people', [])),
+                    'business_intelligence_extracted': True
+                },
+                'knowledge_tree': knowledge_tree,
+                'message': f"✅ Created knowledge tree with {len(knowledge_tree.get('knowledge_topics', []))} topics from {len(emails_for_knowledge)} emails",
+                'next_step': 'Phase 3: Sync calendar to augment contact data'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to parse knowledge tree from Claude 4 Opus'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Phase 2 error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@email_bp.route('/knowledge-pipeline/phase3-calendar-sync', methods=['POST'])
+@require_auth
+def phase3_calendar_augmentation():
+    """
+    PHASE 3: Calendar Sync & Contact Augmentation
+    Syncs calendar data and augments contacts with meeting information
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.ingest.calendar_fetcher import calendar_fetcher
+        
+        data = request.get_json() or {}
+        days_back = data.get('days_back', 30)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"📅 Phase 3: Calendar Sync & Contact Augmentation for {user_email}")
+        
+        # Fetch calendar events
+        calendar_result = calendar_fetcher.fetch_recent_events(
+            user_email=user_email,
+            days_back=days_back
+        )
+        
+        if not calendar_result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': f"Calendar sync failed: {calendar_result.get('error')}"
+            }), 500
+        
+        events_fetched = calendar_result.get('events_fetched', 0)
+        
+        # Extract contacts from calendar events
+        calendar_contacts = []
+        meeting_insights = []
+        
+        if events_fetched > 0:
+            # Get calendar events from database
+            calendar_events = get_db_manager().get_user_calendar_events(db_user.id, limit=50)
+            
+            for event in calendar_events:
+                # Extract attendees as potential contacts
+                if hasattr(event, 'attendees') and event.attendees:
+                    for attendee_email in event.attendees:
+                        if attendee_email != user_email and '@' in attendee_email:
+                            calendar_contacts.append({
+                                'email': attendee_email,
+                                'source': 'calendar',
+                                'meeting_count': 1,
+                                'last_meeting': event.start_time.isoformat() if event.start_time else None,
+                                'meeting_title': event.title
+                            })
+                
+                # Create meeting insights
+                meeting_insights.append({
+                    'title': event.title,
+                    'date': event.start_time.isoformat() if event.start_time else None,
+                    'attendee_count': len(event.attendees) if event.attendees else 0,
+                    'duration_hours': event.duration_hours if hasattr(event, 'duration_hours') else None
+                })
+        
+        # Update existing contacts with calendar data
+        contacts_augmented = 0
+        existing_people = get_db_manager().get_user_people(db_user.id)
+        
+        for person in existing_people:
+            # Check if this person appears in calendar
+            calendar_data = next((c for c in calendar_contacts if c['email'] == person.email_address), None)
+            if calendar_data:
+                # Augment person record with calendar information
+                if not person.business_context:
+                    person.business_context = {}
+                
+                person.business_context['calendar_meetings'] = calendar_data['meeting_count']
+                person.business_context['last_meeting'] = calendar_data['last_meeting']
+                person.business_context['meeting_frequency'] = 'regular' if calendar_data['meeting_count'] > 2 else 'occasional'
+                contacts_augmented += 1
+        
+        # Save updates
+        with get_db_manager().get_session() as session:
+            session.commit()
+        
+        return jsonify({
+            'success': True,
+            'phase': 3,
+            'phase_name': 'Calendar Sync & Contact Augmentation',
+            'results': {
+                'calendar_events_fetched': events_fetched,
+                'calendar_contacts_found': len(calendar_contacts),
+                'existing_contacts_augmented': contacts_augmented,
+                'meeting_insights_generated': len(meeting_insights)
+            },
+            'calendar_contacts': calendar_contacts[:10],  # Show first 10
+            'meeting_insights': meeting_insights[:5],     # Show first 5
+            'message': f"✅ Synced {events_fetched} calendar events and augmented {contacts_augmented} contacts",
+            'next_step': 'Phase 4: Fetch more emails and enhance knowledge tree'
+        })
+        
+    except Exception as e:
+        logger.error(f"Phase 3 error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@email_bp.route('/knowledge-pipeline/phase4-email-enhancement', methods=['POST'])
+@require_auth
+def phase4_email_knowledge_enhancement():
+    """
+    PHASE 4: Fetch More Emails & Enhance Knowledge Tree
+    Fetches additional emails and enhances the knowledge tree with more context
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        from chief_of_staff_ai.ingest.gmail_fetcher import gmail_fetcher
+        import anthropic
+        from config.settings import settings
+        
+        data = request.get_json() or {}
+        additional_emails = data.get('additional_emails', 50)
+        days_back = data.get('days_back', 60)
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"📧 Phase 4: Email Enhancement for {user_email}")
+        
+        # Check if knowledge tree exists
+        existing_tree = get_master_knowledge_tree(db_user.id)
+        if not existing_tree:
+            return jsonify({
+                'success': False,
+                'error': 'No knowledge tree found. Please run Phase 2 first.'
+            }), 400
+        
+        # Fetch additional emails
+        fetch_result = gmail_fetcher.fetch_recent_emails(
+            user_email=user_email,
+            limit=additional_emails,
+            days_back=days_back,
+            force_refresh=True
+        )
+        
+        new_emails_count = fetch_result.get('emails_fetched', 0)
+        
+        # Get recent emails for enhancement
+        all_emails = get_db_manager().get_user_emails(db_user.id, limit=additional_emails * 2)
+        
+        # Find emails not yet assigned to knowledge topics
+        unprocessed_emails = [
+            email for email in all_emails 
+            if not email.business_category or email.processing_version != "knowledge_driven_v1.0"
+        ]
+        
+        # Assign new emails to knowledge tree
+        emails_assigned = 0
+        topic_enhancements = {}
+        
+        for email in unprocessed_emails[:additional_emails]:
+            try:
+                assignment_result = assign_email_to_knowledge_tree(email, existing_tree, user_email)
+                
+                if assignment_result.get('success'):
+                    # Update email with knowledge assignment
+                    email.ai_summary = assignment_result.get('summary')
+                    email.business_category = assignment_result.get('primary_topic')
+                    email.strategic_importance = assignment_result.get('importance_score', 0.5)
+                    email.processing_version = "knowledge_driven_v1.0"
+                    
+                    # Track topic enhancements
+                    topic = assignment_result.get('primary_topic')
+                    if topic:
+                        if topic not in topic_enhancements:
+                            topic_enhancements[topic] = []
+                        topic_enhancements[topic].append({
+                            'subject': email.subject,
+                            'sender': email.sender,
+                            'importance': assignment_result.get('importance_score', 0.5)
+                        })
+                    
+                    emails_assigned += 1
+                    
+            except Exception as e:
+                logger.error(f"Error assigning email {email.id}: {str(e)}")
+                continue
+        
+        # Commit email updates
+        with get_db_manager().get_session() as session:
+            session.commit()
+        
+        # Generate enhancement summary
+        enhancement_summary = {
+            'topics_enhanced': len(topic_enhancements),
+            'emails_per_topic': {topic: len(emails) for topic, emails in topic_enhancements.items()},
+            'avg_importance': sum(
+                email['importance'] for emails in topic_enhancements.values() for email in emails
+            ) / max(emails_assigned, 1)
+        }
+        
+        return jsonify({
+            'success': True,
+            'phase': 4,
+            'phase_name': 'Email Knowledge Enhancement',
+            'results': {
+                'new_emails_fetched': new_emails_count,
+                'emails_assigned_to_topics': emails_assigned,
+                'topics_enhanced': len(topic_enhancements),
+                'unprocessed_emails_remaining': len(unprocessed_emails) - emails_assigned,
+                'knowledge_tree_version': 'enhanced_v1.1'
+            },
+            'topic_enhancements': dict(list(topic_enhancements.items())[:5]),  # Show first 5 topics
+            'enhancement_summary': enhancement_summary,
+            'message': f"✅ Enhanced knowledge tree with {emails_assigned} new emails across {len(topic_enhancements)} topics",
+            'next_step': 'Phase 5: Generate cross-topic intelligence and strategic tasks'
+        })
+        
+    except Exception as e:
+        logger.error(f"Phase 4 error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@email_bp.route('/knowledge-pipeline/phase5-intelligence', methods=['POST'])
+@require_auth
+def phase5_cross_topic_intelligence():
+    """
+    PHASE 5: Generate Cross-Topic Intelligence & Strategic Tasks
+    Analyzes knowledge tree to generate strategic insights and actionable tasks
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        import anthropic
+        from config.settings import settings
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        logger.info(f"💡 Phase 5: Cross-Topic Intelligence Generation for {user_email}")
+        
+        # Get current knowledge tree
+        knowledge_tree = get_master_knowledge_tree(db_user.id)
+        if not knowledge_tree:
+            return jsonify({
+                'success': False,
+                'error': 'No knowledge tree found. Please run previous phases first.'
+            }), 400
+        
+        # Get emails assigned to topics for context
+        processed_emails = get_db_manager().get_user_emails(db_user.id, limit=200)
+        email_assignments = []
+        
+        for email in processed_emails:
+            if email.business_category and email.processing_version == "knowledge_driven_v1.0":
+                email_assignments.append({
+                    'subject': email.subject,
+                    'topic': email.business_category,
+                    'importance': email.strategic_importance or 0.5,
+                    'sender': email.sender,
+                    'date': email.email_date.isoformat() if email.email_date else None
+                })
+        
+        # Generate cross-topic intelligence
+        intelligence_prompt = f"""Analyze this comprehensive knowledge tree and email assignments to generate strategic intelligence:
+
+KNOWLEDGE TREE:
+{json.dumps(knowledge_tree, indent=2)}
+
+EMAIL ASSIGNMENTS SAMPLE ({len(email_assignments[:30])} recent assignments):
+{json.dumps(email_assignments[:30], indent=2)}
+
+GENERATE STRATEGIC INTELLIGENCE:
+
+1. **STRATEGIC TASKS** - Real, actionable items that span multiple topics
+2. **KNOWLEDGE INSIGHTS** - Patterns and opportunities across topics  
+3. **TOPIC STATUS** - Current momentum and next steps for each topic
+
+RETURN JSON:
+{{
+    "strategic_tasks": [
+        {{
+            "description": "Specific actionable task",
+            "knowledge_topics": ["Topic1", "Topic2"],
+            "priority": "high/medium/low",
+            "rationale": "Why this task is important",
+            "estimated_effort": "time estimate",
+            "stakeholders": ["person@email.com"],
+            "success_criteria": "How to measure completion"
+        }}
+    ],
+    "knowledge_insights": [
+        {{
+            "title": "Insight title",
+            "description": "Detailed insight description",
+            "affected_topics": ["Topic1", "Topic2"],
+            "insight_type": "opportunity/risk/trend/connection",
+            "confidence": 0.8,
+            "recommended_action": "What to do about this"
+        }}
+    ],
+    "topic_status_updates": [
+        {{
+            "topic_name": "Topic Name",
+            "current_momentum": "high/medium/low",
+            "recent_activity": "What's been happening",
+            "next_milestones": ["milestone1", "milestone2"],
+            "attention_needed": "What requires focus"
+        }}
+    ],
+    "intelligence_summary": {{
+        "total_strategic_value": 0.8,
+        "execution_complexity": "low/medium/high",
+        "time_sensitivity": "urgent/moderate/low",
+        "resource_requirements": "Resource needs overview"
+    }}
+}}"""
+
+        claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        response = claude_client.messages.create(
+            model=settings.CLAUDE_MODEL,
+            max_tokens=4000,
+            messages=[{"role": "user", "content": intelligence_prompt}]
+        )
+        
+        # Parse intelligence results
+        intelligence_content = response.content[0].text
+        json_start = intelligence_content.find('{')
+        json_end = intelligence_content.rfind('}') + 1
+        
+        if json_start != -1 and json_end > json_start:
+            cross_topic_intelligence = json.loads(intelligence_content[json_start:json_end])
+            
+            return jsonify({
+                'success': True,
+                'phase': 5,
+                'phase_name': 'Cross-Topic Intelligence Generation',
+                'results': {
+                    'strategic_tasks_generated': len(cross_topic_intelligence.get('strategic_tasks', [])),
+                    'knowledge_insights_generated': len(cross_topic_intelligence.get('knowledge_insights', [])),
+                    'topics_analyzed': len(cross_topic_intelligence.get('topic_status_updates', [])),
+                    'intelligence_quality': cross_topic_intelligence.get('intelligence_summary', {}).get('total_strategic_value', 0.0)
+                },
+                'cross_topic_intelligence': cross_topic_intelligence,
+                'knowledge_tree_stats': {
+                    'total_topics': len(knowledge_tree.get('knowledge_topics', [])),
+                    'total_people': len(knowledge_tree.get('knowledge_people', [])),
+                    'emails_analyzed': len(email_assignments)
+                },
+                'message': f"✅ Generated {len(cross_topic_intelligence.get('strategic_tasks', []))} strategic tasks and {len(cross_topic_intelligence.get('knowledge_insights', []))} insights",
+                'next_step': 'All phases complete! Review strategic tasks and insights.'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to parse intelligence results from Claude'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Phase 5 error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@email_bp.route('/knowledge-tree/current', methods=['GET'])
+@require_auth
+def get_current_knowledge_tree():
+    """
+    Get the current knowledge tree for viewing in the Knowledge tab
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        from models.database import get_db_manager
+        
+        user_email = user['email']
+        db_user = get_db_manager().get_user_by_email(user_email)
+        
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get current knowledge tree
+        knowledge_tree = get_master_knowledge_tree(db_user.id)
+        
+        if not knowledge_tree:
+            return jsonify({
+                'success': True,
+                'has_tree': False,
+                'message': 'No knowledge tree found. Run Phase 2 to create one.',
+                'tree': None
+            })
+        
+        # Get some stats about assigned emails
+        processed_emails = get_db_manager().get_user_emails(db_user.id, limit=500)
+        assigned_emails = [
+            email for email in processed_emails 
+            if email.business_category and email.processing_version == "knowledge_driven_v1.0"
+        ]
+        
+        # Create topic statistics
+        topic_stats = {}
+        for email in assigned_emails:
+            topic = email.business_category
+            if topic:
+                if topic not in topic_stats:
+                    topic_stats[topic] = {'email_count': 0, 'importance_sum': 0.0}
+                topic_stats[topic]['email_count'] += 1
+                topic_stats[topic]['importance_sum'] += (email.strategic_importance or 0.5)
+        
+        # Calculate average importance per topic
+        for topic in topic_stats:
+            if topic_stats[topic]['email_count'] > 0:
+                topic_stats[topic]['avg_importance'] = topic_stats[topic]['importance_sum'] / topic_stats[topic]['email_count']
+            else:
+                topic_stats[topic]['avg_importance'] = 0.0
+        
+        return jsonify({
+            'success': True,
+            'has_tree': True,
+            'tree': knowledge_tree,
+            'tree_stats': {
+                'knowledge_topics': len(knowledge_tree.get('knowledge_topics', [])),
+                'knowledge_people': len(knowledge_tree.get('knowledge_people', [])),
+                'topic_relationships': len(knowledge_tree.get('topic_relationships', [])),
+                'emails_assigned': len(assigned_emails),
+                'total_emails_processed': len(processed_emails)
+            },
+            'topic_stats': topic_stats,
+            'message': f"Knowledge tree with {len(knowledge_tree.get('knowledge_topics', []))} topics and {len(assigned_emails)} assigned emails"
+        })
+        
+    except Exception as e:
+        logger.error(f"Get knowledge tree error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500 

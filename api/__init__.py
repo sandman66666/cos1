@@ -1,10 +1,12 @@
 """
-AI Chief of Staff API Package
-============================
+API Package
+===========
 
-Modular Flask API for the AI Chief of Staff application.
-Refactored from monolithic main.py for better maintainability.
+This package contains all the Flask API routes and blueprints for the AI Chief of Staff system.
 """
+
+# This file makes the api directory a proper Python package
+# so that Flask can import the blueprint modules correctly
 
 __version__ = "2.0.0"
 __author__ = "AI Chief of Staff Team"

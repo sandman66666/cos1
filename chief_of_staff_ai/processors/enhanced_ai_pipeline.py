@@ -34,8 +34,10 @@ class EnhancedAIProcessor:
     """
     
     def __init__(self):
+        from config.settings import settings
+        
         self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-3-5-sonnet-20241022"
+        self.model = settings.CLAUDE_MODEL  # Now uses Claude 4 Opus from settings
         self.entity_engine = entity_engine
         
     # =====================================================================

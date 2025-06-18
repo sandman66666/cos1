@@ -1,0 +1,542 @@
+# File: chief_of_staff_ai/intelligence/calendar_intelligence.py
+"""
+Calendar Intelligence Integration
+=================================
+Integrates calendar events with knowledge tree for meeting preparation and context
+"""
+
+import logging
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+import asyncio
+from collections import defaultdict
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class MeetingContext:
+    """Rich context for an upcoming meeting"""
+    event_id: str
+    meeting_title: str
+    start_time: datetime
+    attendees: List[Dict]
+    historical_context: Dict
+    preparation_tasks: List[Dict]
+    talking_points: List[str]
+    relationship_insights: Dict
+    strategic_importance: float
+    predicted_outcomes: List[Dict]
+
+class CalendarIntelligenceEngine:
+    """Integrates calendar with knowledge tree for predictive meeting intelligence"""
+    
+    def __init__(self, storage_manager, claude_client):
+        self.storage = storage_manager
+        self.claude = claude_client
+        
+    async def analyze_upcoming_meetings(self, user_id: int, days_ahead: int = 7) -> List[MeetingContext]:
+        """Analyze upcoming meetings with full context from knowledge tree"""
+        try:
+            # Get upcoming calendar events
+            calendar_events = await self._fetch_upcoming_events(user_id, days_ahead)
+            
+            # Get knowledge tree
+            knowledge_tree = self.storage.get_latest_knowledge_tree(user_id)
+            
+            # Analyze each meeting in parallel
+            meeting_contexts = []
+            analysis_tasks = []
+            
+            for event in calendar_events:
+                task = self._analyze_single_meeting(event, knowledge_tree, user_id)
+                analysis_tasks.append(task)
+            
+            results = await asyncio.gather(*analysis_tasks, return_exceptions=True)
+            
+            for result in results:
+                if isinstance(result, MeetingContext):
+                    meeting_contexts.append(result)
+                else:
+                    logger.error(f"Meeting analysis error: {result}")
+            
+            # Sort by strategic importance and time
+            meeting_contexts.sort(
+                key=lambda m: (m.strategic_importance, -m.start_time.timestamp()),
+                reverse=True
+            )
+            
+            return meeting_contexts
+            
+        except Exception as e:
+            logger.error(f"Error analyzing upcoming meetings: {str(e)}")
+            return []
+    
+    async def _analyze_single_meeting(self, event: Dict, knowledge_tree: Dict, user_id: int) -> MeetingContext:
+        """Deep analysis of a single meeting"""
+        # Extract attendee emails
+        attendee_emails = self._extract_attendee_emails(event)
+        
+        # Get historical context for each attendee
+        historical_context = await self._gather_historical_context(
+            attendee_emails, knowledge_tree, user_id
+        )
+        
+        # Get relationship insights
+        relationship_insights = await self._analyze_attendee_relationships(
+            attendee_emails, knowledge_tree, user_id
+        )
+        
+        # Generate meeting-specific insights using Claude
+        meeting_insights = await self._generate_meeting_insights(
+            event, historical_context, relationship_insights
+        )
+        
+        # Create preparation tasks
+        prep_tasks = self._generate_preparation_tasks(
+            event, meeting_insights, historical_context
+        )
+        
+        # Predict likely outcomes
+        predicted_outcomes = await self._predict_meeting_outcomes(
+            event, historical_context, relationship_insights
+        )
+        
+        return MeetingContext(
+            event_id=event['id'],
+            meeting_title=event.get('summary', 'Untitled Meeting'),
+            start_time=datetime.fromisoformat(event['start']['dateTime']),
+            attendees=self._enrich_attendee_info(attendee_emails, knowledge_tree),
+            historical_context=historical_context,
+            preparation_tasks=prep_tasks,
+            talking_points=meeting_insights.get('talking_points', []),
+            relationship_insights=relationship_insights,
+            strategic_importance=meeting_insights.get('importance_score', 0.5),
+            predicted_outcomes=predicted_outcomes
+        )
+    
+    async def _gather_historical_context(self, attendee_emails: List[str], 
+                                       knowledge_tree: Dict, user_id: int) -> Dict:
+        """Gather all historical context about meeting attendees"""
+        context = {
+            'previous_meetings': [],
+            'email_threads': [],
+            'shared_projects': [],
+            'discussion_topics': [],
+            'decision_history': [],
+            'action_items_history': []
+        }
+        
+        for email in attendee_emails:
+            # Get previous meetings with this person
+            prev_meetings = self.storage.get_meetings_with_attendee(user_id, email)
+            context['previous_meetings'].extend(prev_meetings)
+            
+            # Get email threads
+            email_threads = self.storage.get_email_threads_with_person(user_id, email)
+            context['email_threads'].extend(email_threads)
+            
+            # Extract shared projects from knowledge tree
+            if 'insights' in knowledge_tree:
+                for insight_type, insights in knowledge_tree['insights'].items():
+                    if isinstance(insights, dict):
+                        for category, items in insights.items():
+                            if isinstance(items, list):
+                                for item in items:
+                                    if self._involves_attendee(item, email):
+                                        if 'project' in str(item).lower():
+                                            context['shared_projects'].append(item)
+                                        elif 'decision' in str(item).lower():
+                                            context['decision_history'].append(item)
+            
+            # Get topics discussed with this person
+            person_topics = self._extract_person_topics(email, knowledge_tree)
+            context['discussion_topics'].extend(person_topics)
+        
+        # Deduplicate and sort by relevance
+        for key in context:
+            if isinstance(context[key], list):
+                context[key] = self._deduplicate_and_rank(context[key])
+        
+        return context
+    
+    async def _analyze_attendee_relationships(self, attendee_emails: List[str], 
+                                            knowledge_tree: Dict, user_id: int) -> Dict:
+        """Analyze relationships between meeting attendees"""
+        relationships = {
+            'attendee_profiles': {},
+            'influence_network': {},
+            'collaboration_history': {},
+            'communication_patterns': {},
+            'potential_dynamics': []
+        }
+        
+        # Get relationship data from graph database
+        for email in attendee_emails:
+            # Get person profile
+            person = self.storage.get_person_by_email(user_id, email)
+            if person:
+                relationships['attendee_profiles'][email] = {
+                    'name': person.get('name'),
+                    'title': person.get('title'),
+                    'company': person.get('company'),
+                    'relationship_strength': person.get('engagement_score', 0),
+                    'last_interaction': person.get('last_interaction')
+                }
+            
+            # Get influence metrics from graph
+            influence = self.storage.get_network_metrics(user_id, email)
+            relationships['influence_network'][email] = influence
+            
+            # Get collaboration patterns
+            collaborations = self._extract_collaboration_patterns(email, knowledge_tree)
+            relationships['collaboration_history'][email] = collaborations
+        
+        # Analyze group dynamics
+        if len(attendee_emails) > 2:
+            relationships['potential_dynamics'] = await self._predict_group_dynamics(
+                attendee_emails, relationships
+            )
+        
+        return relationships
+    
+    async def _generate_meeting_insights(self, event: Dict, historical_context: Dict, 
+                                       relationship_insights: Dict) -> Dict:
+        """Use Claude to generate meeting-specific insights"""
+        prompt = f"""Analyze this upcoming meeting and provide strategic insights:
+
+Meeting: {event.get('summary')}
+Time: {event.get('start')}
+Attendees: {json.dumps(relationship_insights.get('attendee_profiles', {}))}
+
+Historical Context:
+- Previous meetings: {len(historical_context.get('previous_meetings', []))}
+- Shared projects: {historical_context.get('shared_projects', [])}
+- Recent decisions: {historical_context.get('decision_history', [])[-3:]}
+
+Relationship Insights:
+{json.dumps(relationship_insights, indent=2)}
+
+Provide:
+1. Strategic importance score (0-1)
+2. Key talking points (list of 3-5)
+3. Potential agenda items
+4. Risks or sensitivities to be aware of
+5. Opportunities to explore
+6. Recommended preparation actions
+
+Format as JSON."""
+
+        response = await asyncio.to_thread(
+            self.claude.messages.create,
+            model="claude-3-opus-20240229",
+            max_tokens=2000,
+            temperature=0.3,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        
+        try:
+            insights = json.loads(response.content[0].text)
+            return insights
+        except:
+            return {
+                'importance_score': 0.5,
+                'talking_points': [],
+                'opportunities': []
+            }
+    
+    def _generate_preparation_tasks(self, event: Dict, insights: Dict, 
+                                   historical_context: Dict) -> List[Dict]:
+        """Generate specific preparation tasks for the meeting"""
+        tasks = []
+        
+        # Review previous discussions
+        if historical_context.get('email_threads'):
+            tasks.append({
+                'task': 'Review recent email threads with attendees',
+                'priority': 'high',
+                'time_estimate': '10 minutes',
+                'resources': [thread['id'] for thread in historical_context['email_threads'][:3]]
+            })
+        
+        # Prepare talking points
+        if insights.get('talking_points'):
+            tasks.append({
+                'task': 'Prepare notes on key talking points',
+                'priority': 'high',
+                'time_estimate': '15 minutes',
+                'details': insights['talking_points']
+            })
+        
+        # Review shared projects
+        if historical_context.get('shared_projects'):
+            tasks.append({
+                'task': 'Update on shared project status',
+                'priority': 'medium',
+                'time_estimate': '20 minutes',
+                'projects': [p.get('name', 'Unknown') for p in historical_context['shared_projects']]
+            })
+        
+        # Address sensitivities
+        if insights.get('sensitivities'):
+            tasks.append({
+                'task': 'Review and prepare for sensitive topics',
+                'priority': 'high',
+                'time_estimate': '10 minutes',
+                'details': insights['sensitivities']
+            })
+        
+        return tasks
+    
+    async def _predict_meeting_outcomes(self, event: Dict, historical_context: Dict,
+                                      relationship_insights: Dict) -> List[Dict]:
+        """Predict likely meeting outcomes based on patterns"""
+        predictions = []
+        
+        # Analyze historical meeting patterns
+        if historical_context.get('previous_meetings'):
+            patterns = self._analyze_meeting_patterns(historical_context['previous_meetings'])
+            
+            if patterns.get('typical_outcomes'):
+                predictions.extend([
+                    {
+                        'outcome': outcome,
+                        'probability': prob,
+                        'based_on': 'historical patterns'
+                    }
+                    for outcome, prob in patterns['typical_outcomes'].items()
+                ])
+        
+        # Consider relationship dynamics
+        dynamics = relationship_insights.get('potential_dynamics', [])
+        if dynamics:
+            predictions.append({
+                'outcome': 'Group dynamics assessment',
+                'probability': 0.7,
+                'details': dynamics,
+                'based_on': 'relationship analysis'
+            })
+        
+        return predictions
+    
+    async def generate_meeting_brief(self, meeting_context: MeetingContext) -> str:
+        """Generate a comprehensive meeting brief"""
+        brief_template = f"""
+# Meeting Brief: {meeting_context.meeting_title}
+**Date/Time**: {meeting_context.start_time.strftime('%Y-%m-%d %H:%M')}
+**Strategic Importance**: {meeting_context.strategic_importance:.1%}
+
+## Attendees
+{self._format_attendee_summary(meeting_context.attendees)}
+
+## Historical Context
+{self._format_historical_summary(meeting_context.historical_context)}
+
+## Key Talking Points
+{self._format_talking_points(meeting_context.talking_points)}
+
+## Preparation Tasks
+{self._format_prep_tasks(meeting_context.preparation_tasks)}
+
+## Relationship Dynamics
+{self._format_relationship_insights(meeting_context.relationship_insights)}
+
+## Predicted Outcomes
+{self._format_predictions(meeting_context.predicted_outcomes)}
+"""
+        return brief_template
+    
+    def _extract_attendee_emails(self, event: Dict) -> List[str]:
+        """Extract attendee emails from calendar event"""
+        emails = []
+        attendees = event.get('attendees', [])
+        
+        for attendee in attendees:
+            if attendee.get('email'):
+                emails.append(attendee['email'].lower())
+        
+        # Add organizer
+        if event.get('organizer', {}).get('email'):
+            emails.append(event['organizer']['email'].lower())
+        
+        return list(set(emails))
+    
+    def _involves_attendee(self, item: Dict, email: str) -> bool:
+        """Check if an item involves a specific attendee"""
+        item_str = json.dumps(item).lower()
+        return email.lower() in item_str or email.split('@')[0].lower() in item_str
+    
+    def _extract_person_topics(self, email: str, knowledge_tree: Dict) -> List[str]:
+        """Extract topics associated with a person"""
+        topics = set()
+        
+        # Search through all topics in knowledge tree
+        if 'topics' in knowledge_tree:
+            for topic in knowledge_tree['topics']:
+                if self._involves_attendee({'topic': topic}, email):
+                    topics.add(topic)
+        
+        return list(topics)
+    
+    def _deduplicate_and_rank(self, items: List[Any]) -> List[Any]:
+        """Deduplicate and rank items by relevance"""
+        # Simple deduplication - enhance with similarity matching
+        seen = set()
+        unique_items = []
+        
+        for item in items:
+            item_key = str(item)[:100]  # Use first 100 chars as key
+            if item_key not in seen:
+                seen.add(item_key)
+                unique_items.append(item)
+        
+        return unique_items[:10]  # Return top 10
+    
+    def _extract_collaboration_patterns(self, email: str, knowledge_tree: Dict) -> Dict:
+        """Extract collaboration patterns for a person"""
+        patterns = {
+            'projects_together': 0,
+            'decisions_together': 0,
+            'topics_overlap': [],
+            'communication_frequency': 'unknown'
+        }
+        
+        # Count collaborative instances in knowledge tree
+        if 'insights' in knowledge_tree:
+            for insight_type, insights in knowledge_tree['insights'].items():
+                if 'project' in insight_type.lower():
+                    patterns['projects_together'] += self._count_collaborations(insights, email)
+                elif 'decision' in insight_type.lower():
+                    patterns['decisions_together'] += self._count_collaborations(insights, email)
+        
+        return patterns
+    
+    def _count_collaborations(self, insights: Dict, email: str) -> int:
+        """Count collaborative instances involving a person"""
+        count = 0
+        insights_str = json.dumps(insights).lower()
+        email_username = email.split('@')[0].lower()
+        
+        if email.lower() in insights_str or email_username in insights_str:
+            count += insights_str.count(email_username)
+        
+        return min(count, 10)  # Cap at 10
+    
+    async def _predict_group_dynamics(self, attendees: List[str], relationships: Dict) -> List[str]:
+        """Predict group dynamics for meetings with multiple attendees"""
+        dynamics = []
+        
+        # Check for hierarchy
+        influence_scores = relationships.get('influence_network', {})
+        if influence_scores:
+            max_influence = max(influence_scores.values(), key=lambda x: x.get('influence_rank', 0))
+            if max_influence.get('influence_rank', 0) > 0.7:
+                dynamics.append("High-influence attendee present - may dominate discussion")
+        
+        # Check for potential conflicts
+        # This would need more sophisticated analysis in production
+        
+        return dynamics
+    
+    async def _fetch_upcoming_events(self, user_id: int, days_ahead: int) -> List[Dict]:
+        """Fetch upcoming calendar events"""
+        # This would integrate with Google Calendar API
+        # For now, return from database
+        start_date = datetime.utcnow()
+        end_date = start_date + timedelta(days=days_ahead)
+        
+        events = self.storage.get_calendar_events(
+            user_id, 
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        return [event for event in events if event.get('status') != 'cancelled']
+    
+    def _format_attendee_summary(self, attendees: List[Dict]) -> str:
+        """Format attendee information for the brief"""
+        lines = []
+        for attendee in attendees:
+            line = f"- **{attendee.get('name', 'Unknown')}**"
+            if attendee.get('title'):
+                line += f" - {attendee['title']}"
+            if attendee.get('company'):
+                line += f" at {attendee['company']}"
+            lines.append(line)
+        return '\n'.join(lines)
+    
+    def _format_historical_summary(self, context: Dict) -> str:
+        """Format historical context for the brief"""
+        summary = []
+        
+        if context.get('previous_meetings'):
+            summary.append(f"- {len(context['previous_meetings'])} previous meetings")
+        
+        if context.get('shared_projects'):
+            projects = [p.get('name', 'Unknown') for p in context['shared_projects'][:3]]
+            summary.append(f"- Shared projects: {', '.join(projects)}")
+        
+        if context.get('discussion_topics'):
+            topics = context['discussion_topics'][:5]
+            summary.append(f"- Common topics: {', '.join(topics)}")
+        
+        return '\n'.join(summary) if summary else "No significant historical context found"
+    
+    def _format_talking_points(self, points: List[str]) -> str:
+        """Format talking points for the brief"""
+        if not points:
+            return "No specific talking points identified"
+        
+        return '\n'.join([f"{i+1}. {point}" for i, point in enumerate(points)])
+    
+    def _format_prep_tasks(self, tasks: List[Dict]) -> str:
+        """Format preparation tasks for the brief"""
+        if not tasks:
+            return "No specific preparation required"
+        
+        lines = []
+        for task in tasks:
+            line = f"- [ ] {task['task']} ({task['time_estimate']})"
+            if task.get('priority') == 'high':
+                line = f"- [ ] **{task['task']}** ({task['time_estimate']}) 🔴"
+            lines.append(line)
+        
+        return '\n'.join(lines)
+    
+    def _format_relationship_insights(self, insights: Dict) -> str:
+        """Format relationship insights for the brief"""
+        lines = []
+        
+        # Add influence network summary
+        if insights.get('influence_network'):
+            high_influence = [
+                email for email, metrics in insights['influence_network'].items()
+                if metrics.get('influence_rank', 0) > 0.6
+            ]
+            if high_influence:
+                lines.append(f"- High-influence attendees: {', '.join(high_influence)}")
+        
+        # Add collaboration history
+        if insights.get('collaboration_history'):
+            for email, history in insights['collaboration_history'].items():
+                if history.get('projects_together', 0) > 0:
+                    lines.append(f"- Collaborated with {email} on {history['projects_together']} projects")
+        
+        return '\n'.join(lines) if lines else "Standard professional relationships"
+    
+    def _format_predictions(self, predictions: List[Dict]) -> str:
+        """Format predicted outcomes for the brief"""
+        if not predictions:
+            return "No specific predictions available"
+        
+        lines = []
+        for pred in predictions:
+            prob_str = f"{pred['probability']:.0%}" if pred.get('probability') else 'Likely'
+            lines.append(f"- {pred['outcome']} ({prob_str})")
+            if pred.get('details'):
+                lines.append(f"  - {pred['details']}")
+        
+        return '\n'.join(lines)
+
+# Global instance
+calendar_intelligence = CalendarIntelligenceEngine(storage_manager, claude_client)

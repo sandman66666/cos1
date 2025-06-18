@@ -17,8 +17,10 @@ class TaskExtractor:
     """Extracts actionable tasks from emails using Claude 4 Sonnet"""
     
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-3-5-sonnet-20241022"
+        from config.settings import settings
+        
+        self.claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = settings.CLAUDE_MODEL  # Now uses Claude 4 Opus from settings
         self.version = "1.0"
         
     def extract_tasks_for_user(self, user_email: str, limit: int = None, force_refresh: bool = False) -> Dict:
@@ -391,7 +393,7 @@ Return ONLY the JSON array. If no actionable tasks are found, return an empty ar
 
 Remember to return only a JSON array of tasks, or an empty array [] if no actionable tasks are found."""
 
-            message = self.client.messages.create(
+            message = self.claude_client.messages.create(
                 model=self.model,
                 max_tokens=2000,
                 temperature=0.1,
@@ -895,7 +897,7 @@ Return ONLY the JSON array. If no actionable tasks are found, return an empty ar
 
 Focus on tasks that leverage the business context for maximum relevance and strategic value. Consider the relationships, projects, meetings, and strategic insights provided."""
 
-            message = self.client.messages.create(
+            message = self.claude_client.messages.create(
                 model=self.model,
                 max_tokens=3000,  # More tokens for detailed context
                 temperature=0.1,

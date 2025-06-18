@@ -423,6 +423,170 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  // ENHANCED KNOWLEDGE-DRIVEN PIPELINE PHASES
+  const runPhase1 = async () => {
+    setProcessing(true);
+    updateStatus('🚀 Phase 1: Smart Contact Filtering...');
+    addNotification('🚀 Phase 1: Analyzing sent emails to build trusted contact database...');
+    try {
+      const response = await fetch('/api/email/knowledge-pipeline/phase1-contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days_back: 365 })
+      });
+      const data = await response.json();
+      if (data.success) {
+        addNotification(`✅ Phase 1 Complete: ${data.message}`, {
+          title: 'Phase 1: Smart Contact Filtering Results',
+          data: {
+            phase_results: data.results,
+            contacts_created: data.contacts_created,
+            next_step: data.next_step,
+            people_tab_message: `Go to People tab to see ${data.results.total_people_in_database} contacts created!`
+          }
+        });
+      } else {
+        addNotification('❌ Phase 1 Failed: ' + data.error);
+      }
+    } catch (error) {
+      addNotification('❌ Phase 1 Network Error');
+    } finally {
+      setProcessing(false);
+      updateStatus(null);
+    }
+  };
+
+  const runPhase2 = async () => {
+    setProcessing(true);
+    updateStatus('🧠 Phase 2: Knowledge Tree Creation...');
+    addNotification('🧠 Phase 2: Creating comprehensive knowledge tree from filtered emails...');
+    try {
+      const response = await fetch('/api/email/knowledge-pipeline/phase2-knowledge-tree', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ max_emails: 50, force_rebuild: false })
+      });
+      const data = await response.json();
+      if (data.success) {
+        addNotification(`✅ Phase 2 Complete: ${data.message}`, {
+          title: 'Phase 2: Knowledge Tree Creation Results',
+          data: {
+            phase_results: data.results,
+            knowledge_tree: data.knowledge_tree,
+            next_step: data.next_step,
+            knowledge_tab_message: `Go to Knowledge tab to explore ${data.results.knowledge_topics} topics created!`
+          }
+        });
+      } else {
+        addNotification('❌ Phase 2 Failed: ' + data.error);
+      }
+    } catch (error) {
+      addNotification('❌ Phase 2 Network Error');
+    } finally {
+      setProcessing(false);
+      updateStatus(null);
+    }
+  };
+
+  const runPhase3 = async () => {
+    setProcessing(true);
+    updateStatus('📅 Phase 3: Calendar Sync & Contact Augmentation...');
+    addNotification('📅 Phase 3: Syncing calendar events and augmenting contact data...');
+    try {
+      const response = await fetch('/api/email/knowledge-pipeline/phase3-calendar-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days_back: 30 })
+      });
+      const data = await response.json();
+      if (data.success) {
+        addNotification(`✅ Phase 3 Complete: ${data.message}`, {
+          title: 'Phase 3: Calendar Sync & Contact Augmentation Results',
+          data: {
+            phase_results: data.results,
+            calendar_contacts: data.calendar_contacts,
+            meeting_insights: data.meeting_insights,
+            next_step: data.next_step,
+            enhancement_message: `Contacts now enhanced with meeting data - check People tab for updates!`
+          }
+        });
+      } else {
+        addNotification('❌ Phase 3 Failed: ' + data.error);
+      }
+    } catch (error) {
+      addNotification('❌ Phase 3 Network Error');
+    } finally {
+      setProcessing(false);
+      updateStatus(null);
+    }
+  };
+
+  const runPhase4 = async () => {
+    setProcessing(true);
+    updateStatus('📧 Phase 4: Email Knowledge Enhancement...');
+    addNotification('📧 Phase 4: Fetching more emails and enhancing knowledge tree...');
+    try {
+      const response = await fetch('/api/email/knowledge-pipeline/phase4-email-enhancement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ additional_emails: 50, days_back: 60 })
+      });
+      const data = await response.json();
+      if (data.success) {
+        addNotification(`✅ Phase 4 Complete: ${data.message}`, {
+          title: 'Phase 4: Email Knowledge Enhancement Results',
+          data: {
+            phase_results: data.results,
+            topic_enhancements: data.topic_enhancements,
+            enhancement_summary: data.enhancement_summary,
+            next_step: data.next_step,
+            knowledge_growth_message: `Knowledge tree enhanced with ${data.results.emails_assigned_to_topics} new emails across ${data.results.topics_enhanced} topics!`
+          }
+        });
+      } else {
+        addNotification('❌ Phase 4 Failed: ' + data.error);
+      }
+    } catch (error) {
+      addNotification('❌ Phase 4 Network Error');
+    } finally {
+      setProcessing(false);
+      updateStatus(null);
+    }
+  };
+
+  const runPhase5 = async () => {
+    setProcessing(true);
+    updateStatus('💡 Phase 5: Cross-Topic Intelligence Generation...');
+    addNotification('💡 Phase 5: Generating strategic tasks and insights from knowledge tree...');
+    try {
+      const response = await fetch('/api/email/knowledge-pipeline/phase5-intelligence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await response.json();
+      if (data.success) {
+        addNotification(`✅ Phase 5 Complete: ${data.message}`, {
+          title: 'Phase 5: Cross-Topic Intelligence Generation Results',
+          data: {
+            phase_results: data.results,
+            cross_topic_intelligence: data.cross_topic_intelligence,
+            knowledge_tree_stats: data.knowledge_tree_stats,
+            next_step: data.next_step,
+            completion_message: `Generated ${data.results.strategic_tasks_generated} strategic tasks and ${data.results.knowledge_insights_generated} insights!`
+          }
+        });
+      } else {
+        addNotification('❌ Phase 5 Failed: ' + data.error);
+      }
+    } catch (error) {
+      addNotification('❌ Phase 5 Network Error');
+    } finally {
+      setProcessing(false);
+      updateStatus(null);
+    }
+  };
+
   const showNotificationData = (data: any) => {
     if (data) {
       setInspectorData(data);
@@ -544,6 +708,121 @@ const SettingsPage: React.FC = () => {
               <Calendar className="w-4 h-4" />
               Augment Meetings
             </button>
+          </div>
+        </div>
+
+        {/* NEW: Enhanced Knowledge-Driven Pipeline Testing */}
+        <div className="bg-gradient-to-br from-blue-900 to-purple-900 p-6 rounded-lg border border-blue-500/30 space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">🧠 Enhanced Knowledge-Driven Pipeline Testing</h3>
+              <p className="text-blue-200 text-sm">Test each phase individually to see step-by-step results and incremental improvements</p>
+            </div>
+          </div>
+
+          {/* Phase 1: Smart Contact Filtering */}
+          <div className="bg-black/20 rounded-lg p-4 border border-blue-400/20">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                <h4 className="text-white font-semibold">🚀 Smart Contact Filtering</h4>
+              </div>
+              <button
+                onClick={runPhase1}
+                disabled={processing}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                Run Phase 1
+              </button>
+            </div>
+            <p className="text-blue-200 text-sm">Analyzes sent emails to build trusted contact database. <span className="font-medium">Expected Result:</span> Contacts appear in People tab with engagement scores.</p>
+          </div>
+
+          {/* Phase 2: Knowledge Tree Creation */}
+          <div className="bg-black/20 rounded-lg p-4 border border-purple-400/20">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                <h4 className="text-white font-semibold">🧠 Knowledge Tree Creation</h4>
+              </div>
+              <button
+                onClick={runPhase2}
+                disabled={processing}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+              >
+                Run Phase 2
+              </button>
+            </div>
+            <p className="text-purple-200 text-sm">Creates comprehensive knowledge topics from filtered emails. <span className="font-medium">Expected Result:</span> Knowledge tree with business topics and relationships.</p>
+          </div>
+
+          {/* Phase 3: Calendar Sync & Contact Augmentation */}
+          <div className="bg-black/20 rounded-lg p-4 border border-green-400/20">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                <h4 className="text-white font-semibold">📅 Calendar Sync & Contact Augmentation</h4>
+              </div>
+              <button
+                onClick={runPhase3}
+                disabled={processing}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+              >
+                Run Phase 3
+              </button>
+            </div>
+            <p className="text-green-200 text-sm">Syncs calendar events and enhances contacts with meeting data. <span className="font-medium">Expected Result:</span> Contacts updated with meeting frequency and context.</p>
+          </div>
+
+          {/* Phase 4: Email Knowledge Enhancement */}
+          <div className="bg-black/20 rounded-lg p-4 border border-yellow-400/20">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
+                <h4 className="text-white font-semibold">📧 Email Knowledge Enhancement</h4>
+              </div>
+              <button
+                onClick={runPhase4}
+                disabled={processing}
+                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 transition-colors"
+              >
+                Run Phase 4
+              </button>
+            </div>
+            <p className="text-yellow-200 text-sm">Fetches more emails and enhances knowledge tree with additional context. <span className="font-medium">Expected Result:</span> Knowledge topics grow richer with more email content.</p>
+          </div>
+
+          {/* Phase 5: Cross-Topic Intelligence */}
+          <div className="bg-black/20 rounded-lg p-4 border border-red-400/20">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold">5</div>
+                <h4 className="text-white font-semibold">💡 Cross-Topic Intelligence Generation</h4>
+              </div>
+              <button
+                onClick={runPhase5}
+                disabled={processing}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                Run Phase 5
+              </button>
+            </div>
+            <p className="text-red-200 text-sm">Generates strategic tasks and insights from the complete knowledge tree. <span className="font-medium">Expected Result:</span> Strategic tasks and cross-topic insights for action.</p>
+          </div>
+
+          {/* Pipeline Status */}
+          <div className="bg-black/30 rounded-lg p-4 border border-gray-400/30">
+            <h4 className="text-white font-semibold mb-2">📊 Pipeline Progress Tips</h4>
+            <ul className="text-gray-300 text-sm space-y-1">
+              <li>• Run phases in order for best results</li>
+              <li>• Each phase builds on the previous one</li>
+              <li>• Click notification results to inspect detailed data</li>
+              <li>• Check People, Knowledge, and Tasks tabs after each phase</li>
+              <li>• Run Phase 4 multiple times to enhance knowledge tree</li>
+            </ul>
           </div>
         </div>
 

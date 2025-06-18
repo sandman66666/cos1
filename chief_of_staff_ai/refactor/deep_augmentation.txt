@@ -1,0 +1,437 @@
+# File: chief_of_staff_ai/intelligence/deep_augmentation.py
+"""
+Deep Augmentation System
+========================
+Enriches knowledge tree with supporting evidence and temporal evolution
+"""
+
+import logging
+from typing import Dict, List, Optional, Tuple
+from datetime import datetime, timedelta
+from collections import defaultdict
+import numpy as np
+from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class AugmentedNode:
+    """Augmented knowledge tree node with deep context"""
+    node_id: str
+    node_type: str  # insight, relationship, topic, entity
+    original_content: Dict
+    supporting_evidence: List[Dict]
+    temporal_evolution: List[Dict]
+    causality_chain: List[Dict]
+    patterns: List[Dict]
+    hidden_connections: List[Dict]
+    confidence_score: float
+
+class DeepAugmentationEngine:
+    """Enriches knowledge tree with deep context and evidence"""
+    
+    def __init__(self):
+        self.augmented_nodes = {}
+        
+    async def augment_knowledge_tree(self, knowledge_tree: Dict, emails: List[Dict]) -> Dict:
+        """
+        Perform deep augmentation pass on knowledge tree
+        
+        For each node:
+        1. Extract supporting evidence from emails
+        2. Build temporal evolution timeline
+        3. Identify causality chains
+        4. Extract patterns and learnings
+        5. Find hidden connections
+        """
+        logger.info("Starting deep augmentation pass")
+        
+        # Create email index for fast lookup
+        email_index = self._build_email_index(emails)
+        
+        # Augment each insight
+        augmented_insights = {}
+        for analyst_type, insights in knowledge_tree['insights'].items():
+            augmented_insights[analyst_type] = await self._augment_insights(
+                insights, email_index, analyst_type
+            )
+        
+        # Augment relationships
+        augmented_relationships = await self._augment_relationships(
+            knowledge_tree['relationships'], email_index
+        )
+        
+        # Augment topics with knowledge accumulation
+        augmented_topics = await self._augment_topics(
+            knowledge_tree['topics'], email_index
+        )
+        
+        # Build cross-references and hidden connections
+        hidden_connections = self._discover_hidden_connections(
+            augmented_insights, augmented_relationships, augmented_topics
+        )
+        
+        # Construct augmented tree
+        augmented_tree = {
+            'original_tree': knowledge_tree,
+            'augmented_insights': augmented_insights,
+            'augmented_relationships': augmented_relationships,
+            'augmented_topics': augmented_topics,
+            'hidden_connections': hidden_connections,
+            'augmentation_metadata': {
+                'timestamp': datetime.utcnow().isoformat(),
+                'email_count': len(emails),
+                'augmentation_depth': 'deep',
+                'confidence': self._calculate_overall_confidence(augmented_insights)
+            }
+        }
+        
+        return augmented_tree
+    
+    def _build_email_index(self, emails: List[Dict]) -> Dict:
+        """Build indices for fast email lookup"""
+        index = {
+            'by_id': {email['id']: email for email in emails},
+            'by_date': defaultdict(list),
+            'by_sender': defaultdict(list),
+            'by_thread': defaultdict(list),
+            'by_topic': defaultdict(list)
+        }
+        
+        for email in emails:
+            # Index by date
+            if email.get('email_date'):
+                date_key = email['email_date'][:10]  # YYYY-MM-DD
+                index['by_date'][date_key].append(email)
+            
+            # Index by sender
+            if email.get('sender'):
+                index['by_sender'][email['sender'].lower()].append(email)
+            
+            # Index by thread
+            if email.get('thread_id'):
+                index['by_thread'][email['thread_id']].append(email)
+            
+            # Index by topics
+            if email.get('topics'):
+                for topic in email['topics']:
+                    index['by_topic'][topic].append(email)
+        
+        return index
+    
+    async def _augment_insights(self, insights: Dict, email_index: Dict, analyst_type: str) -> Dict:
+        """Augment insights with evidence and evolution"""
+        augmented = {}
+        
+        for insight_category, insight_list in insights.items():
+            if not isinstance(insight_list, list):
+                continue
+                
+            augmented_list = []
+            for insight in insight_list:
+                if isinstance(insight, dict):
+                    augmented_insight = await self._augment_single_insight(
+                        insight, email_index, analyst_type, insight_category
+                    )
+                    augmented_list.append(augmented_insight)
+            
+            augmented[insight_category] = augmented_list
+        
+        return augmented
+    
+    async def _augment_single_insight(self, insight: Dict, email_index: Dict, 
+                                     analyst_type: str, category: str) -> Dict:
+        """Augment a single insight with deep context"""
+        # Extract supporting evidence
+        evidence = self._extract_supporting_evidence(insight, email_index)
+        
+        # Build temporal evolution
+        evolution = self._build_temporal_evolution(insight, evidence, email_index)
+        
+        # Identify causality chains
+        causality = self._identify_causality_chains(insight, evidence, email_index)
+        
+        # Extract patterns
+        patterns = self._extract_patterns(insight, evidence, evolution)
+        
+        return {
+            'original_insight': insight,
+            'augmented_data': {
+                'evidence': evidence,
+                'temporal_evolution': evolution,
+                'causality_chains': causality,
+                'patterns': patterns,
+                'confidence': self._calculate_insight_confidence(evidence, patterns)
+            },
+            'metadata': {
+                'analyst_type': analyst_type,
+                'category': category,
+                'augmentation_timestamp': datetime.utcnow().isoformat()
+            }
+        }
+    
+    def _extract_supporting_evidence(self, insight: Dict, email_index: Dict) -> List[Dict]:
+        """Extract email evidence supporting an insight"""
+        evidence = []
+        
+        # Search emails for relevant content
+        search_terms = self._extract_search_terms(insight)
+        
+        for term in search_terms:
+            # Search in email content
+            for email_list in email_index['by_topic'].values():
+                for email in email_list:
+                    if self._email_contains_evidence(email, term, insight):
+                        evidence.append({
+                            'email_id': email['id'],
+                            'date': email.get('email_date'),
+                            'sender': email.get('sender'),
+                            'subject': email.get('subject'),
+                            'relevant_excerpt': self._extract_relevant_excerpt(email, term),
+                            'relevance_score': self._calculate_relevance_score(email, insight)
+                        })
+        
+        # Sort by relevance
+        evidence.sort(key=lambda x: x['relevance_score'], reverse=True)
+        return evidence[:10]  # Top 10 pieces of evidence
+    
+    def _build_temporal_evolution(self, insight: Dict, evidence: List[Dict], 
+                                 email_index: Dict) -> List[Dict]:
+        """Build timeline showing how an insight evolved over time"""
+        evolution = []
+        
+        # Group evidence by time periods
+        time_buckets = defaultdict(list)
+        for item in evidence:
+            if item.get('date'):
+                date = datetime.fromisoformat(item['date'])
+                week_key = date.strftime('%Y-W%U')
+                time_buckets[week_key].append(item)
+        
+        # Analyze evolution in each time period
+        for week, items in sorted(time_buckets.items()):
+            evolution.append({
+                'period': week,
+                'evidence_count': len(items),
+                'key_developments': self._summarize_developments(items),
+                'sentiment_shift': self._analyze_sentiment_shift(items),
+                'momentum': self._calculate_momentum(items, week)
+            })
+        
+        return evolution
+    
+    def _identify_causality_chains(self, insight: Dict, evidence: List[Dict], 
+                                   email_index: Dict) -> List[Dict]:
+        """Identify cause-and-effect relationships"""
+        chains = []
+        
+        # Look for temporal sequences that suggest causation
+        for i, item in enumerate(evidence[:-1]):
+            for j, next_item in enumerate(evidence[i+1:], i+1):
+                if self._suggests_causation(item, next_item):
+                    chains.append({
+                        'cause': item,
+                        'effect': next_item,
+                        'confidence': self._calculate_causation_confidence(item, next_item),
+                        'time_delta': self._calculate_time_delta(item, next_item)
+                    })
+        
+        return chains
+    
+    def _extract_patterns(self, insight: Dict, evidence: List[Dict], 
+                         evolution: List[Dict]) -> List[Dict]:
+        """Extract recurring patterns and learnings"""
+        patterns = []
+        
+        # Communication patterns
+        comm_patterns = self._analyze_communication_patterns(evidence)
+        if comm_patterns:
+            patterns.extend(comm_patterns)
+        
+        # Decision patterns
+        decision_patterns = self._analyze_decision_patterns(insight, evidence)
+        if decision_patterns:
+            patterns.extend(decision_patterns)
+        
+        # Timing patterns
+        timing_patterns = self._analyze_timing_patterns(evolution)
+        if timing_patterns:
+            patterns.extend(timing_patterns)
+        
+        return patterns
+    
+    async def _augment_relationships(self, relationships: List[Dict], 
+                                    email_index: Dict) -> List[Dict]:
+        """Augment relationships with communication patterns and evolution"""
+        augmented = []
+        
+        for relationship in relationships:
+            # Get all communications between parties
+            communications = self._get_relationship_communications(relationship, email_index)
+            
+            # Analyze communication patterns
+            patterns = self._analyze_relationship_patterns(communications)
+            
+            # Track relationship evolution
+            evolution = self._track_relationship_evolution(communications)
+            
+            augmented.append({
+                'original': relationship,
+                'augmented_data': {
+                    'communication_count': len(communications),
+                    'patterns': patterns,
+                    'evolution': evolution,
+                    'health_score': self._calculate_relationship_health(patterns, evolution),
+                    'collaboration_opportunities': self._identify_collaboration_opportunities(
+                        relationship, communications
+                    )
+                }
+            })
+        
+        return augmented
+    
+    async def _augment_topics(self, topics: List[str], email_index: Dict) -> List[Dict]:
+        """Augment topics with knowledge accumulation and expertise mapping"""
+        augmented = []
+        
+        for topic in topics:
+            # Get all emails related to topic
+            topic_emails = email_index['by_topic'].get(topic, [])
+            
+            # Build knowledge accumulation timeline
+            knowledge_timeline = self._build_knowledge_timeline(topic, topic_emails)
+            
+            # Identify topic experts
+            experts = self._identify_topic_experts(topic, topic_emails)
+            
+            # Extract key decisions and outcomes
+            decisions = self._extract_topic_decisions(topic, topic_emails)
+            
+            augmented.append({
+                'topic': topic,
+                'augmented_data': {
+                    'email_count': len(topic_emails),
+                    'knowledge_timeline': knowledge_timeline,
+                    'experts': experts,
+                    'key_decisions': decisions,
+                    'maturity_level': self._assess_topic_maturity(knowledge_timeline),
+                    'strategic_importance': self._calculate_topic_importance(topic_emails)
+                }
+            })
+        
+        return augmented
+    
+    def _discover_hidden_connections(self, insights: Dict, relationships: List[Dict], 
+                                    topics: List[Dict]) -> List[Dict]:
+        """Discover non-obvious connections across different branches of knowledge tree"""
+        connections = []
+        
+        # Cross-reference insights with relationships
+        for analyst_type, insight_list in insights.items():
+            for relationship in relationships:
+                connection_strength = self._calculate_connection_strength(
+                    insight_list, relationship
+                )
+                if connection_strength > 0.7:
+                    connections.append({
+                        'type': 'insight_relationship',
+                        'source': {'type': 'insight', 'analyst': analyst_type},
+                        'target': {'type': 'relationship', 'data': relationship['original']},
+                        'strength': connection_strength,
+                        'implications': self._analyze_connection_implications(
+                            insight_list, relationship
+                        )
+                    })
+        
+        # Find topic intersections
+        for i, topic1 in enumerate(topics):
+            for topic2 in topics[i+1:]:
+                intersection = self._find_topic_intersection(topic1, topic2)
+                if intersection['strength'] > 0.5:
+                    connections.append({
+                        'type': 'topic_intersection',
+                        'topics': [topic1['topic'], topic2['topic']],
+                        'intersection': intersection,
+                        'opportunities': self._identify_intersection_opportunities(
+                            topic1, topic2, intersection
+                        )
+                    })
+        
+        return connections
+    
+    # Helper methods (implement based on specific needs)
+    def _extract_search_terms(self, insight: Dict) -> List[str]:
+        """Extract search terms from insight"""
+        terms = []
+        # Implementation
+        return terms
+    
+    def _email_contains_evidence(self, email: Dict, term: str, insight: Dict) -> bool:
+        """Check if email contains evidence for insight"""
+        # Implementation
+        return False
+    
+    def _extract_relevant_excerpt(self, email: Dict, term: str) -> str:
+        """Extract relevant excerpt from email"""
+        # Implementation
+        return ""
+    
+    def _calculate_relevance_score(self, email: Dict, insight: Dict) -> float:
+        """Calculate relevance score"""
+        # Implementation
+        return 0.0
+    
+    def _summarize_developments(self, items: List[Dict]) -> List[str]:
+        """Summarize key developments"""
+        # Implementation
+        return []
+    
+    def _analyze_sentiment_shift(self, items: List[Dict]) -> Dict:
+        """Analyze sentiment changes"""
+        # Implementation
+        return {}
+    
+    def _calculate_momentum(self, items: List[Dict], period: str) -> float:
+        """Calculate momentum score"""
+        # Implementation
+        return 0.0
+    
+    def _suggests_causation(self, item1: Dict, item2: Dict) -> bool:
+        """Check if items suggest causation"""
+        # Implementation
+        return False
+    
+    def _calculate_causation_confidence(self, cause: Dict, effect: Dict) -> float:
+        """Calculate causation confidence"""
+        # Implementation
+        return 0.0
+    
+    def _calculate_time_delta(self, item1: Dict, item2: Dict) -> str:
+        """Calculate time between items"""
+        # Implementation
+        return ""
+    
+    def _analyze_communication_patterns(self, evidence: List[Dict]) -> List[Dict]:
+        """Analyze communication patterns"""
+        # Implementation
+        return []
+    
+    def _analyze_decision_patterns(self, insight: Dict, evidence: List[Dict]) -> List[Dict]:
+        """Analyze decision patterns"""
+        # Implementation
+        return []
+    
+    def _analyze_timing_patterns(self, evolution: List[Dict]) -> List[Dict]:
+        """Analyze timing patterns"""
+        # Implementation
+        return []
+    
+    def _calculate_insight_confidence(self, evidence: List[Dict], patterns: List[Dict]) -> float:
+        """Calculate overall confidence"""
+        # Implementation
+        return 0.8
+    
+    def _calculate_overall_confidence(self, augmented_insights: Dict) -> float:
+        """Calculate tree-wide confidence"""
+        # Implementation
+        return 0.75

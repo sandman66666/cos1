@@ -306,8 +306,8 @@ Focus on actionable insights that would help in future interactions. Be specific
                     try:
                         # Call Claude for intelligence analysis
                         response = claude_client.messages.create(
-                            model="claude-3-5-sonnet-20241022",
-                            max_tokens=1000,
+                            model=settings.CLAUDE_MODEL,
+                            max_tokens=3000,
                             messages=[{"role": "user", "content": intelligence_prompt}]
                         )
                         

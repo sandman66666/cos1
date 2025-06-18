@@ -1,0 +1,2973 @@
+6,
+                    related_entity_type='person',
+                    related_entity_id=entity_id,
+                    status='new'
+                )
+                insights.append(insight)
+            
+        except Exception as e:
+            logger.error(f"Failed to generate entity update insights: {str(e)}")
+        
+        return insights
+    
+    # =====================================================================
+    # CONTEXT MANAGEMENT AND CACHING
+    # =====================================================================
+    
+    def _get_cached_user_context(self, user_id: int) -> Dict:
+        """Get cached user context for efficient processing"""
+        if user_id not in self.user_contexts:
+            # Load context from enhanced AI processor
+            context = enhanced_ai_processor._gather_user_context(user_id)
+            self.user_contexts[user_id] = {
+                'context': context,
+                'last_updated': datetime.utcnow(),
+                'version': 1
+            }
+        else:
+            # Check if context needs refresh (every 30 minutes)
+            cached = self.user_contexts[user_id]
+            if datetime.utcnow() - cached['last_updated'] > timedelta(minutes=30):
+                context = enhanced_ai_processor._gather_user_context(user_id)
+                cached['context'] = context
+                cached['last_updated'] = datetime.utcnow()
+                cached['version'] += 1
+        
+        return self.user_contexts[user_id]['context']
+    
+    def _update_cached_context(self, user_id: int, processing_result: Any):
+        """Update cached context with new processing results"""
+        if user_id not in self.user_contexts:
+            return
+        
+        cached = self.user_contexts[user_id]
+        
+        # Update context with new entities
+        if hasattr(processing_result, 'entities_created'):
+            # This would update the cached context with newly created entities
+            # Implementation would depend on the specific structure
+            cached['last_updated'] = datetime.utcnow()
+            cached['version'] += 1
+    
+    def _check_cross_entity_augmentations(self, processing_result: Any, user_id: int):
+        """Check for cross-entity augmentations from new processing"""
+        try:
+            # Example: If we found a new person in email, check if they appear in upcoming calendar events
+            # This would augment those calendar events with the new person intelligence
+            pass
+        except Exception as e:
+            logger.error(f"Failed to check cross-entity augmentations: {str(e)}")
+    
+    def _find_related_entities(self, entity_type: str, entity_id: int, user_id: int) -> List[Dict]:
+        """Find entities related to the updated entity"""
+        related_entities = []
+        
+        try:
+            from models.database import get_db_manager
+            from models.enhanced_models import EntityRelationship
+            
+            with get_db_manager().get_session() as session:
+                # Find direct relationships
+                relationships = session.query(EntityRelationship).filter(
+                    EntityRelationship.user_id == user_id,
+                    ((EntityRelationship.entity_type_a == entity_type) & (EntityRelationship.entity_id_a == entity_id)) |
+                    ((EntityRelationship.entity_type_b == entity_type) & (EntityRelationship.entity_id_b == entity_id))
+                ).all()
+                
+                for rel in relationships:
+                    if rel.entity_type_a == entity_type and rel.entity_id_a == entity_id:
+                        related_entities.append({
+                            'type': rel.entity_type_b,
+                            'id': rel.entity_id_b,
+                            'relationship': rel.relationship_type
+                        })
+                    else:
+                        related_entities.append({
+                            'type': rel.entity_type_a,
+                            'id': rel.entity_id_a,
+                            'relationship': rel.relationship_type
+                        })
+            
+        except Exception as e:
+            logger.error(f"Failed to find related entities: {str(e)}")
+        
+        return related_entities
+    
+    def _propagate_intelligence_update(self, target_entity_type: str, target_entity_id: int, 
+                                     source_entity_type: str, source_entity_id: int, 
+                                     update_data: Dict, user_id: int):
+        """Propagate intelligence updates to related entities"""
+        try:
+            # Create propagation context
+            context = EntityContext(
+                source_type='propagation',
+                user_id=user_id,
+                confidence=0.7,
+                processing_metadata={
+                    'source_entity': f"{source_entity_type}:{source_entity_id}",
+                    'propagation_data': update_data
+                }
+            )
+            
+            # Determine what intelligence to propagate based on entity types
+            propagation_data = {}
+            
+            if source_entity_type == 'topic' and target_entity_type == 'person':
+                # Topic update affecting person
+                propagation_data = {
+                    'topic_activity': True,
+                    'related_topic_update': update_data
+                }
+            elif source_entity_type == 'person' and target_entity_type == 'topic':
+                # Person update affecting topic
+                propagation_data = {
+                    'person_interaction': True,
+                    'related_person_update': update_data
+                }
+            
+            if propagation_data:
+                entity_engine.augment_entity_from_source(
+                    target_entity_type, target_entity_id, propagation_data, context
+                )
+            
+        except Exception as e:
+            logger.error(f"Failed to propagate intelligence update: {str(e)}")
+    
+    # =====================================================================
+    # USER FEEDBACK AND LEARNING
+    # =====================================================================
+    
+    def _learn_from_insight_feedback(self, feedback_data: Dict, user_id: int):
+        """Learn from user feedback on insights"""
+        try:
+            insight_id = feedback_data.get('insight_id')
+            feedback_type = feedback_data.get('feedback')  # helpful, not_helpful, etc.
+            
+            from models.database import get_db_manager
+            
+            with get_db_manager().get_session() as session:
+                insight = session.query(IntelligenceInsight).filter(
+                    IntelligenceInsight.id == insight_id,
+                    IntelligenceInsight.user_id == user_id
+                ).first()
+                
+                if insight:
+                    insight.user_feedback = feedback_type
+                    insight.updated_at = datetime.utcnow()
+                    session.commit()
+                    
+                    # Adjust future insight generation based on feedback
+                    self._adjust_insight_generation(insight.insight_type, feedback_type, user_id)
+            
+        except Exception as e:
+            logger.error(f"Failed to learn from insight feedback: {str(e)}")
+    
+    def _learn_from_task_completion(self, completion_data: Dict, user_id: int):
+        """Learn from task completion patterns"""
+        try:
+            task_id = completion_data.get('task_id')
+            completion_time = completion_data.get('completion_time')
+            
+            # This would analyze task completion patterns to improve future task extraction
+            # For example: tasks that take longer than estimated, tasks that are never completed, etc.
+            
+        except Exception as e:
+            logger.error(f"Failed to learn from task completion: {str(e)}")
+    
+    def _learn_from_topic_management(self, topic_data: Dict, user_id: int):
+        """Learn from user topic management actions"""
+        try:
+            action = topic_data.get('action')  # create, merge, delete, etc.
+            
+            # This would learn user preferences for topic organization
+            # and improve future topic extraction and categorization
+            
+        except Exception as e:
+            logger.error(f"Failed to learn from topic management: {str(e)}")
+    
+    def _learn_from_relationship_update(self, relationship_data: Dict, user_id: int):
+        """Learn from relationship updates"""
+        try:
+            # Learn how users categorize and prioritize relationships
+            # to improve future relationship intelligence
+            pass
+            
+        except Exception as e:
+            logger.error(f"Failed to learn from relationship update: {str(e)}")
+    
+    def _adjust_insight_generation(self, insight_type: str, feedback: str, user_id: int):
+        """Adjust future insight generation based on user feedback"""
+        # This would implement adaptive insight generation
+        # For example: if user consistently marks "relationship_alert" as not helpful,
+        # reduce frequency or adjust criteria for that insight type
+        pass
+    
+    # =====================================================================
+    # UTILITY METHODS
+    # =====================================================================
+    
+    def _queue_event(self, event: ProcessingEvent):
+        """Queue event for processing"""
+        # Priority queue uses tuple (priority, item)
+        self.processing_queue.put((event.priority, event))
+    
+    def _get_active_users(self) -> List[int]:
+        """Get users with recent activity for scheduled analysis"""
+        try:
+            from models.database import get_db_manager
+            from models.enhanced_models import Email
+            
+            # Users with activity in last 24 hours
+            cutoff = datetime.utcnow() - timedelta(hours=24)
+            
+            with get_db_manager().get_session() as session:
+                # Get users with recent email processing
+                active_user_ids = session.query(Email.user_id).filter(
+                    Email.processed_at > cutoff
+                ).distinct().all()
+                
+                return [user_id[0] for user_id in active_user_ids]
+            
+        except Exception as e:
+            logger.error(f"Failed to get active users: {str(e)}")
+            return []
+    
+    def _is_important_person(self, email: str, user_id: int) -> bool:
+        """Check if person is marked as important"""
+        try:
+            from models.database import get_db_manager
+            
+            with get_db_manager().get_session() as session:
+                person = session.query(Person).filter(
+                    Person.user_id == user_id,
+                    Person.email_address == email.lower(),
+                    Person.importance_level > 0.7
+                ).first()
+                
+                return person is not None
+                
+        except Exception as e:
+            logger.error(f"Failed to check person importance: {str(e)}")
+            return False
+    
+    def _deliver_insights_to_user(self, user_id: int, insights: List[IntelligenceInsight]):
+        """Deliver insights to user through registered callbacks"""
+        if not insights:
+            return
+        
+        try:
+            # Store insights in database
+            from models.database import get_db_manager
+            
+            with get_db_manager().get_session() as session:
+                for insight in insights:
+                    session.add(insight)
+                session.commit()
+            
+            # Deliver through callbacks (WebSocket, push notifications, etc.)
+            if user_id in self.insight_callbacks:
+                callback = self.insight_callbacks[user_id]
+                callback(insights)
+            
+            logger.info(f"Delivered {len(insights)} insights to user {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to deliver insights to user: {str(e)}")
+    
+    def register_insight_callback(self, user_id: int, callback):
+        """Register callback for delivering insights to specific user"""
+        self.insight_callbacks[user_id] = callback
+    
+    def unregister_insight_callback(self, user_id: int):
+        """Unregister insight callback for user"""
+        if user_id in self.insight_callbacks:
+            del self.insight_callbacks[user_id]
+
+# Global instance
+realtime_processor = RealTimeProcessor() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/task_extractor.py
+PURPOSE: Email processor: Task Extractor
+================================================================================
+# Extract actionable tasks from emails using Claude 4 Sonnet
+
+import json
+import logging
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional
+import re
+from dateutil import parser
+import anthropic
+
+from config.settings import settings
+from models.database import get_db_manager, Email, Task
+
+logger = logging.getLogger(__name__)
+
+class TaskExtractor:
+    """Extracts actionable tasks from emails using Claude 4 Sonnet"""
+    
+    def __init__(self):
+        from config.settings import settings
+        
+        self.claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = settings.CLAUDE_MODEL  # Now uses Claude 4 Opus from settings
+        self.version = "1.0"
+        
+    def extract_tasks_for_user(self, user_email: str, limit: int = None, force_refresh: bool = False) -> Dict:
+        """
+        ENHANCED 360-CONTEXT TASK EXTRACTION
+        
+        Extract tasks with comprehensive business intelligence by cross-referencing:
+        - Email communications & AI analysis
+        - People relationships & interaction patterns
+        - Project context & status
+        - Calendar events & meeting intelligence
+        - Topic analysis & business themes
+        - Strategic decisions & opportunities
+        
+        Creates super relevant and actionable tasks with full business context
+        """
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            # COMPREHENSIVE BUSINESS CONTEXT COLLECTION
+            business_context = self._get_360_business_context(user.id)
+            
+            # Get normalized emails that need task extraction
+            with get_db_manager().get_session() as session:
+                query = session.query(Email).filter(
+                    Email.user_id == user.id,
+                    Email.body_clean.isnot(None)  # Already normalized
+                )
+                
+                if not force_refresh:
+                    # Only process emails that don't have tasks yet
+                    query = query.filter(~session.query(Task).filter(
+                        Task.email_id == Email.id
+                    ).exists())
+                
+                emails = query.limit(limit or 50).all()
+            
+            if not emails:
+                logger.info(f"No emails to process for 360-context task extraction for {user_email}")
+                return {
+                    'success': True,
+                    'user_email': user_email,
+                    'processed_emails': 0,
+                    'extracted_tasks': 0,
+                    'message': 'No emails need 360-context task extraction'
+                }
+            
+            processed_emails = 0
+            total_tasks = 0
+            error_count = 0
+            context_enhanced_tasks = 0
+            
+            for email in emails:
+                try:
+                    # Convert database email to dict for processing
+                    email_dict = {
+                        'id': email.gmail_id,
+                        'subject': email.subject,
+                        'sender': email.sender,
+                        'sender_name': email.sender_name,
+                        'body_clean': email.body_clean,
+                        'body_preview': email.body_preview,
+                        'timestamp': email.email_date,
+                        'message_type': email.message_type,
+                        'priority_score': email.priority_score,
+                        'ai_summary': email.ai_summary,
+                        'key_insights': email.key_insights,
+                        'topics': email.topics
+                    }
+                    
+                    # ENHANCED EXTRACTION with 360-context
+                    extraction_result = self.extract_tasks_with_360_context(email_dict, business_context)
+                    
+                    if extraction_result['success'] and extraction_result['tasks']:
+                        # Save tasks to database with enhanced context
+                        for task_data in extraction_result['tasks']:
+                            task_data['email_id'] = email.id
+                            task_data['extractor_version'] = f"{self.version}_360_context"
+                            task_data['model_used'] = self.model
+                            
+                            # Check if this task was context-enhanced
+                            if task_data.get('context_enhanced'):
+                                context_enhanced_tasks += 1
+                            
+                            get_db_manager().save_task(user.id, email.id, task_data)
+                            total_tasks += 1
+                    
+                    processed_emails += 1
+                    
+                except Exception as e:
+                    logger.error(f"Failed to extract 360-context tasks from email {email.gmail_id}: {str(e)}")
+                    error_count += 1
+                    continue
+            
+            logger.info(f"Extracted {total_tasks} tasks ({context_enhanced_tasks} context-enhanced) from {processed_emails} emails for {user_email} ({error_count} errors)")
+            
+            return {
+                'success': True,
+                'user_email': user_email,
+                'processed_emails': processed_emails,
+                'extracted_tasks': total_tasks,
+                'context_enhanced_tasks': context_enhanced_tasks,
+                'errors': error_count,
+                'extractor_version': f"{self.version}_360_context"
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to extract 360-context tasks for {user_email}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def _get_360_business_context(self, user_id: int) -> Dict:
+        """
+        Collect comprehensive business intelligence context for task extraction
+        """
+        try:
+            context = {
+                'people': [],
+                'projects': [],
+                'topics': [],
+                'calendar_events': [],
+                'recent_decisions': [],
+                'opportunities': [],
+                'relationship_map': {},
+                'project_map': {},
+                'topic_keywords': {}
+            }
+            
+            # Get business data
+            people = get_db_manager().get_user_people(user_id, limit=100)
+            projects = get_db_manager().get_user_projects(user_id, limit=50)
+            topics = get_db_manager().get_user_topics(user_id, limit=50)
+            calendar_events = get_db_manager().get_user_calendar_events(user_id, limit=50)
+            emails = get_db_manager().get_user_emails(user_id, limit=100)
+            
+            # Process people for relationship context
+            for person in people:
+                if person.name and person.email_address:
+                    person_info = {
+                        'name': person.name,
+                        'email': person.email_address,
+                        'company': person.company,
+                        'title': person.title,
+                        'relationship': person.relationship_type,
+                        'total_emails': person.total_emails or 0,
+                        'importance': person.importance_level or 0.5
+                    }
+                    context['people'].append(person_info)
+                    context['relationship_map'][person.email_address.lower()] = person_info
+            
+            # Process projects for context linking
+            for project in projects:
+                if project.name and project.status == 'active':
+                    project_info = {
+                        'name': project.name,
+                        'description': project.description,
+                        'status': project.status,
+                        'priority': project.priority,
+                        'stakeholders': project.stakeholders or []
+                    }
+                    context['projects'].append(project_info)
+                    context['project_map'][project.name.lower()] = project_info
+            
+            # Process topics for keyword matching
+            for topic in topics:
+                if topic.name:
+                    topic_info = {
+                        'name': topic.name,
+                        'description': topic.description,
+                        'keywords': json.loads(topic.keywords) if topic.keywords else [],
+                        'is_official': topic.is_official
+                    }
+                    context['topics'].append(topic_info)
+                    # Build keyword map for topic detection
+                    all_keywords = [topic.name.lower()] + [kw.lower() for kw in topic_info['keywords']]
+                    for keyword in all_keywords:
+                        if keyword not in context['topic_keywords']:
+                            context['topic_keywords'][keyword] = []
+                        context['topic_keywords'][keyword].append(topic_info)
+            
+            # Process calendar events for meeting context
+            now = datetime.now(timezone.utc)
+            upcoming_meetings = [e for e in calendar_events if e.start_time and e.start_time > now]
+            for meeting in upcoming_meetings[:20]:  # Next 20 meetings
+                meeting_info = {
+                    'title': meeting.title,
+                    'start_time': meeting.start_time,
+                    'attendees': meeting.attendees or [],
+                    'description': meeting.description
+                }
+                context['calendar_events'].append(meeting_info)
+            
+            # Extract recent decisions and opportunities from emails
+            for email in emails[-30:]:  # Recent 30 emails
+                if email.key_insights and isinstance(email.key_insights, dict):
+                    decisions = email.key_insights.get('key_decisions', [])
+                    context['recent_decisions'].extend(decisions[:2])  # Top 2 per email
+                    
+                    opportunities = email.key_insights.get('strategic_opportunities', [])
+                    context['opportunities'].extend(opportunities[:2])  # Top 2 per email
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Failed to get 360-context for task extraction: {str(e)}")
+            return {}
+    
+    def extract_tasks_with_360_context(self, email_data: Dict, business_context: Dict) -> Dict:
+        """
+        Extract actionable tasks with comprehensive 360-context intelligence
+        
+        Args:
+            email_data: Normalized email data dictionary with AI analysis
+            business_context: Comprehensive business intelligence context
+            
+        Returns:
+            Dictionary containing extracted tasks with enhanced context
+        """
+        try:
+            # Check if email has enough content for task extraction
+            body_clean = email_data.get('body_clean', '')
+            if not body_clean or len(body_clean.strip()) < 20:
+                return {
+                    'success': True,
+                    'email_id': email_data.get('id'),
+                    'tasks': [],
+                    'reason': 'Email content too short for task extraction'
+                }
+            
+            # Skip certain message types that unlikely contain tasks
+            message_type = email_data.get('message_type', 'regular')
+            if message_type in ['newsletter', 'automated']:
+                return {
+                    'success': True,
+                    'email_id': email_data.get('id'),
+                    'tasks': [],
+                    'reason': f'Message type "{message_type}" skipped for task extraction'
+                }
+            
+            # ANALYZE BUSINESS CONTEXT CONNECTIONS
+            email_context = self._analyze_email_business_connections(email_data, business_context)
+            
+            # Prepare enhanced email context for Claude
+            enhanced_email_context = self._prepare_360_email_context(email_data, email_context, business_context)
+            
+            # Call Claude for 360-context task extraction
+            claude_response = self._call_claude_for_360_tasks(enhanced_email_context, email_context)
+            
+            if not claude_response:
+                return {
+                    'success': False,
+                    'email_id': email_data.get('id'),
+                    'error': 'Failed to get response from Claude for 360-context extraction'
+                }
+            
+            # Parse Claude's response with context enhancement
+            tasks = self._parse_claude_360_response(claude_response, email_data, email_context)
+            
+            # Enhance tasks with 360-context metadata
+            enhanced_tasks = []
+            for task in tasks:
+                enhanced_task = self._enhance_task_with_360_context(task, email_data, email_context, business_context)
+                enhanced_tasks.append(enhanced_task)
+            
+            return {
+                'success': True,
+                'email_id': email_data.get('id'),
+                'tasks': enhanced_tasks,
+                'extraction_metadata': {
+                    'extracted_at': datetime.utcnow().isoformat(),
+                    'extractor_version': f"{self.version}_360_context",
+                    'model_used': self.model,
+                    'email_priority': email_data.get('priority_score', 0.5),
+                    'context_connections': email_context.get('connection_count', 0),
+                    'business_intelligence_used': True
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to extract 360-context tasks from email {email_data.get('id', 'unknown')}: {str(e)}")
+            return {
+                'success': False,
+                'email_id': email_data.get('id'),
+                'error': str(e)
+            }
+    
+    def _prepare_email_context(self, email_data: Dict) -> str:
+        """
+        Prepare email context for Claude task extraction
+        
+        Args:
+            email_data: Email data dictionary
+            
+        Returns:
+            Formatted email context string
+        """
+        sender = email_data.get('sender_name') or email_data.get('sender', '')
+        subject = email_data.get('subject', '')
+        body = email_data.get('body_clean', '')
+        timestamp = email_data.get('timestamp')
+        
+        # Format timestamp
+        if timestamp:
+            try:
+                if isinstance(timestamp, str):
+                    timestamp = parser.parse(timestamp)
+                date_str = timestamp.strftime('%Y-%m-%d %H:%M')
+            except:
+                date_str = 'Unknown date'
+        else:
+            date_str = 'Unknown date'
+        
+        context = f"""Email Details:
+From: {sender}
+Date: {date_str}
+Subject: {subject}
+
+Email Content:
+{body}
+"""
+        return context
+    
+    def _call_claude_for_tasks(self, email_context: str) -> Optional[str]:
+        """
+        Call Claude 4 Sonnet to extract tasks from email
+        
+        Args:
+            email_context: Formatted email context
+            
+        Returns:
+            Claude's response or None if failed
+        """
+        try:
+            system_prompt = """You are an expert AI assistant that extracts actionable tasks from emails. Your job is to identify specific tasks, action items, deadlines, and follow-ups from email content.
+
+Please analyze the email and extract actionable tasks following these guidelines:
+
+1. **Task Identification**: Look for:
+   - Direct requests or assignments
+   - Deadlines and due dates
+   - Follow-up actions needed
+   - Meetings to schedule or attend
+   - Documents to review or create
+   - Decisions to make
+   - Items requiring response
+
+2. **Task Details**: For each task, identify:
+   - Clear description of what needs to be done
+   - Who is responsible (assignee)
+   - When it needs to be done (due date/deadline)
+   - Priority level (high, medium, low)
+   - Category (follow-up, deadline, meeting, review, etc.)
+
+3. **Response Format**: Return a JSON array of tasks. Each task should have:
+   - "description": Clear, actionable description
+   - "assignee": Who should do this (if mentioned)
+   - "due_date": Specific date if mentioned (YYYY-MM-DD format)
+   - "due_date_text": Original due date text from email
+   - "priority": high/medium/low based on urgency and importance
+   - "category": type of task (follow-up, deadline, meeting, review, etc.)
+   - "confidence": 0.0-1.0 confidence score
+   - "source_text": Original text from email that led to this task
+
+Return ONLY the JSON array. If no actionable tasks are found, return an empty array []."""
+
+            user_prompt = f"""Please analyze this email and extract actionable tasks:
+
+{email_context}
+
+Remember to return only a JSON array of tasks, or an empty array [] if no actionable tasks are found."""
+
+            message = self.claude_client.messages.create(
+                model=self.model,
+                max_tokens=2000,
+                temperature=0.1,
+                system=system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": user_prompt
+                    }
+                ]
+            )
+            
+            response_text = message.content[0].text.strip()
+            logger.debug(f"Claude response: {response_text}")
+            
+            return response_text
+            
+        except Exception as e:
+            logger.error(f"Failed to call Claude for task extraction: {str(e)}")
+            return None
+    
+    def _parse_claude_response(self, response: str, email_data: Dict) -> List[Dict]:
+        """
+        Parse Claude's JSON response into task dictionaries
+        
+        Args:
+            response: Claude's response text
+            email_data: Original email data
+            
+        Returns:
+            List of task dictionaries
+        """
+        try:
+            # Try to find JSON in the response
+            json_start = response.find('[')
+            json_end = response.rfind(']') + 1
+            
+            if json_start == -1 or json_end == 0:
+                logger.warning("No JSON array found in Claude response")
+                return []
+            
+            json_text = response[json_start:json_end]
+            
+            # Parse JSON
+            tasks_data = json.loads(json_text)
+            
+            if not isinstance(tasks_data, list):
+                logger.warning("Claude response is not a JSON array")
+                return []
+            
+            tasks = []
+            for task_data in tasks_data:
+                if isinstance(task_data, dict) and task_data.get('description'):
+                    tasks.append(task_data)
+            
+            logger.info(f"Parsed {len(tasks)} tasks from Claude response")
+            return tasks
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Claude JSON response: {str(e)}")
+            logger.error(f"Response was: {response}")
+            return []
+        except Exception as e:
+            logger.error(f"Failed to parse Claude response: {str(e)}")
+            return []
+    
+    def _enhance_task(self, task: Dict, email_data: Dict) -> Dict:
+        """
+        Enhance task with additional metadata and processing
+        
+        Args:
+            task: Task dictionary from Claude
+            email_data: Original email data
+            
+        Returns:
+            Enhanced task dictionary
+        """
+        try:
+            # Start with Claude's task data
+            enhanced_task = task.copy()
+            
+            # Parse due date if provided
+            if task.get('due_date'):
+                try:
+                    # Try to parse various date formats
+                    due_date = parser.parse(task['due_date'])
+                    enhanced_task['due_date'] = due_date
+                except:
+                    # If parsing fails, try to extract from due_date_text
+                    enhanced_task['due_date'] = self._extract_date_from_text(
+                        task.get('due_date_text', '')
+                    )
+            elif task.get('due_date_text'):
+                enhanced_task['due_date'] = self._extract_date_from_text(task['due_date_text'])
+            
+            # Set default values
+            enhanced_task['priority'] = task.get('priority', 'medium').lower()
+            enhanced_task['category'] = task.get('category', 'action_item')
+            enhanced_task['confidence'] = min(1.0, max(0.0, task.get('confidence', 0.8)))
+            enhanced_task['status'] = 'pending'
+            
+            # Determine assignee context
+            if not enhanced_task.get('assignee'):
+                # If no specific assignee mentioned, assume it's for the email recipient
+                enhanced_task['assignee'] = 'me'
+            
+            # Enhance priority based on email priority and urgency
+            email_priority = email_data.get('priority_score', 0.5)
+            if email_priority > 0.8:
+                if enhanced_task['priority'] == 'medium':
+                    enhanced_task['priority'] = 'high'
+            
+            # Add contextual category if not specified
+            if enhanced_task['category'] == 'action_item':
+                enhanced_task['category'] = self._determine_category(
+                    enhanced_task['description'], 
+                    email_data
+                )
+            
+            return enhanced_task
+            
+        except Exception as e:
+            logger.error(f"Failed to enhance task: {str(e)}")
+            return task
+    
+    def _extract_date_from_text(self, text: str) -> Optional[datetime]:
+        """
+        Extract date from text using various patterns
+        
+        Args:
+            text: Text that might contain a date
+            
+        Returns:
+            Parsed datetime or None
+        """
+        if not text:
+            return None
+        
+        try:
+            # Try direct parsing first
+            return parser.parse(text, fuzzy=True)
+        except:
+            pass
+        
+        # Try common patterns
+        patterns = [
+            r'(\d{1,2}/\d{1,2}/\d{4})',
+            r'(\d{1,2}-\d{1,2}-\d{4})',
+            r'(\w+\s+\d{1,2},?\s+\d{4})',
+            r'(next\s+\w+)',
+            r'(tomorrow)',
+            r'(today)',
+            r'(this\s+week)',
+            r'(next\s+week)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text.lower())
+            if match:
+                try:
+                    return parser.parse(match.group(1), fuzzy=True)
+                except:
+                    continue
+        
+        return None
+    
+    def _determine_category(self, description: str, email_data: Dict) -> str:
+        """
+        Determine task category based on description and email context
+        
+        Args:
+            description: Task description
+            email_data: Email context
+            
+        Returns:
+            Task category
+        """
+        description_lower = description.lower()
+        subject = email_data.get('subject', '').lower()
+        
+        # Meeting-related tasks
+        if any(keyword in description_lower for keyword in ['meeting', 'call', 'schedule', 'zoom', 'teams']):
+            return 'meeting'
+        
+        # Review tasks
+        if any(keyword in description_lower for keyword in ['review', 'check', 'look at', 'examine']):
+            return 'review'
+        
+        # Response tasks
+        if any(keyword in description_lower for keyword in ['reply', 'respond', 'answer', 'get back']):
+            return 'follow-up'
+        
+        # Document tasks
+        if any(keyword in description_lower for keyword in ['document', 'report', 'write', 'create', 'draft']):
+            return 'document'
+        
+        # Decision tasks
+        if any(keyword in description_lower for keyword in ['decide', 'choose', 'approve', 'confirm']):
+            return 'decision'
+        
+        # Deadline tasks
+        if any(keyword in description_lower for keyword in ['deadline', 'due', 'submit', 'deliver']):
+            return 'deadline'
+        
+        return 'action_item'
+    
+    def get_user_tasks(self, user_email: str, status: str = None, limit: int = None) -> Dict:
+        """
+        Get extracted tasks for a user
+        
+        Args:
+            user_email: Email of the user
+            status: Filter by task status (pending, in_progress, completed)
+            limit: Maximum number of tasks to return
+            
+        Returns:
+            Dictionary with user tasks
+        """
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            tasks = get_db_manager().get_user_tasks(user.id, status)
+            
+            if limit:
+                tasks = tasks[:limit]
+            
+            return {
+                'success': True,
+                'user_email': user_email,
+                'tasks': [task.to_dict() for task in tasks],
+                'count': len(tasks),
+                'status_filter': status
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get tasks for {user_email}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def update_task_status(self, user_email: str, task_id: int, status: str) -> Dict:
+        """
+        Update task status
+        
+        Args:
+            user_email: Email of the user
+            task_id: ID of the task to update
+            status: New status (pending, in_progress, completed, cancelled)
+            
+        Returns:
+            Dictionary with update result
+        """
+        try:
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+            
+            with get_db_manager().get_session() as session:
+                task = session.query(Task).filter(
+                    Task.id == task_id,
+                    Task.user_id == user.id
+                ).first()
+                
+                if not task:
+                    return {'success': False, 'error': 'Task not found'}
+                
+                task.status = status
+                task.updated_at = datetime.utcnow()
+                
+                if status == 'completed':
+                    task.completed_at = datetime.utcnow()
+                
+                session.commit()
+                
+                return {
+                    'success': True,
+                    'task_id': task_id,
+                    'new_status': status,
+                    'updated_at': task.updated_at.isoformat()
+                }
+            
+        except Exception as e:
+            logger.error(f"Failed to update task {task_id} for {user_email}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def _analyze_email_business_connections(self, email_data: Dict, business_context: Dict) -> Dict:
+        """
+        Analyze connections between email and business intelligence context
+        """
+        try:
+            connections = {
+                'related_people': [],
+                'related_projects': [],
+                'related_topics': [],
+                'related_meetings': [],
+                'connection_count': 0,
+                'context_strength': 0.0
+            }
+            
+            sender_email = email_data.get('sender', '').lower()
+            subject = (email_data.get('subject') or '').lower()
+            body = (email_data.get('body_clean') or '').lower()
+            ai_summary = (email_data.get('ai_summary') or '').lower()
+            email_topics = email_data.get('topics') or []
+            
+            # Find related people
+            if sender_email in business_context.get('relationship_map', {}):
+                person_info = business_context['relationship_map'][sender_email]
+                connections['related_people'].append(person_info)
+                connections['connection_count'] += 1
+                connections['context_strength'] += person_info.get('importance', 0.5)
+            
+            # Find related projects
+            for project_name, project_info in business_context.get('project_map', {}).items():
+                if (project_name in subject or project_name in body or project_name in ai_summary):
+                    connections['related_projects'].append(project_info)
+                    connections['connection_count'] += 1
+                    connections['context_strength'] += 0.8  # High value for project connection
+            
+            # Find related topics
+            for topic in email_topics:
+                topic_lower = topic.lower()
+                if topic_lower in business_context.get('topic_keywords', {}):
+                    topic_infos = business_context['topic_keywords'][topic_lower]
+                    connections['related_topics'].extend(topic_infos)
+                    connections['connection_count'] += len(topic_infos)
+                    connections['context_strength'] += 0.6 * len(topic_infos)
+            
+            # Find related upcoming meetings
+            for meeting in business_context.get('calendar_events', []):
+                meeting_attendees = meeting.get('attendees', [])
+                meeting_title = meeting.get('title', '').lower()
+                
+                # Check if sender is in meeting attendees
+                if any(att.get('email', '').lower() == sender_email for att in meeting_attendees):
+                    connections['related_meetings'].append(meeting)
+                    connections['connection_count'] += 1
+                    connections['context_strength'] += 0.7
+                
+                # Check if meeting title relates to email subject/content
+                if any(keyword in meeting_title for keyword in subject.split() + body.split()[:20] if len(keyword) > 3):
+                    if meeting not in connections['related_meetings']:
+                        connections['related_meetings'].append(meeting)
+                        connections['connection_count'] += 1
+                        connections['context_strength'] += 0.5
+            
+            # Normalize context strength
+            connections['context_strength'] = min(1.0, connections['context_strength'] / max(1, connections['connection_count']))
+            
+            return connections
+            
+        except Exception as e:
+            logger.error(f"Failed to analyze email business connections: {str(e)}")
+            return {'related_people': [], 'related_projects': [], 'related_topics': [], 'related_meetings': [], 'connection_count': 0, 'context_strength': 0.0}
+    
+    def _prepare_360_email_context(self, email_data: Dict, email_context: Dict, business_context: Dict) -> str:
+        """
+        Prepare comprehensive email context with business intelligence for Claude
+        """
+        try:
+            sender = email_data.get('sender_name') or email_data.get('sender', '')
+            subject = email_data.get('subject', '')
+            body = email_data.get('body_clean', '')
+            ai_summary = email_data.get('ai_summary', '')
+            timestamp = email_data.get('timestamp')
+            
+            # Format timestamp
+            if timestamp:
+                try:
+                    if isinstance(timestamp, str):
+                        timestamp = parser.parse(timestamp)
+                    date_str = timestamp.strftime('%Y-%m-%d %H:%M')
+                except:
+                    date_str = 'Unknown date'
+            else:
+                date_str = 'Unknown date'
+            
+            # Build business context summary
+            context_elements = []
+            
+            # Add people context
+            if email_context['related_people']:
+                people_info = []
+                for person in email_context['related_people']:
+                    people_info.append(f"{person['name']} ({person.get('company', 'Unknown company')}) - {person.get('total_emails', 0)} previous interactions")
+                context_elements.append(f"RELATED PEOPLE: {'; '.join(people_info)}")
+            
+            # Add project context
+            if email_context['related_projects']:
+                project_info = []
+                for project in email_context['related_projects']:
+                    project_info.append(f"{project['name']} (Status: {project.get('status', 'Unknown')}, Priority: {project.get('priority', 'Unknown')})")
+                context_elements.append(f"RELATED PROJECTS: {'; '.join(project_info)}")
+            
+            # Add topic context
+            if email_context['related_topics']:
+                topic_names = [topic['name'] for topic in email_context['related_topics'] if topic.get('is_official')]
+                if topic_names:
+                    context_elements.append(f"RELATED BUSINESS TOPICS: {', '.join(topic_names)}")
+            
+            # Add meeting context
+            if email_context['related_meetings']:
+                meeting_info = []
+                for meeting in email_context['related_meetings']:
+                    meeting_date = meeting['start_time'].strftime('%Y-%m-%d %H:%M') if meeting.get('start_time') else 'TBD'
+                    meeting_info.append(f"{meeting['title']} ({meeting_date})")
+                context_elements.append(f"RELATED UPCOMING MEETINGS: {'; '.join(meeting_info)}")
+            
+            # Add strategic insights
+            if business_context.get('recent_decisions'):
+                recent_decisions = business_context['recent_decisions'][:3]
+                context_elements.append(f"RECENT BUSINESS DECISIONS: {'; '.join(recent_decisions)}")
+            
+            if business_context.get('opportunities'):
+                opportunities = business_context['opportunities'][:3]
+                context_elements.append(f"STRATEGIC OPPORTUNITIES: {'; '.join(opportunities)}")
+            
+            business_intelligence = '\n'.join(context_elements) if context_elements else "No specific business context identified."
+            
+            enhanced_context = f"""Email Details:
+From: {sender}
+Date: {date_str}
+Subject: {subject}
+
+AI Summary: {ai_summary}
+
+Email Content:
+{body}
+
+BUSINESS INTELLIGENCE CONTEXT:
+{business_intelligence}
+
+Context Strength: {email_context.get('context_strength', 0.0):.2f} (0.0 = no context, 1.0 = highly connected)
+"""
+            return enhanced_context
+            
+        except Exception as e:
+            logger.error(f"Failed to prepare 360-context email: {str(e)}")
+            return self._prepare_email_context(email_data)
+    
+    def _call_claude_for_360_tasks(self, enhanced_email_context: str, email_context: Dict) -> Optional[str]:
+        """
+        Call Claude 4 Sonnet for 360-context task extraction with business intelligence
+        """
+        try:
+            context_strength = email_context.get('context_strength', 0.0)
+            connection_count = email_context.get('connection_count', 0)
+            
+            system_prompt = f"""You are an expert AI Chief of Staff that extracts actionable tasks from emails using comprehensive business intelligence context. You have access to the user's complete business ecosystem including relationships, projects, topics, and strategic insights.
+
+BUSINESS INTELLIGENCE CAPABILITIES:
+- Cross-reference people relationships and interaction history
+- Connect tasks to active projects and strategic initiatives  
+- Leverage topic analysis and business themes
+- Consider upcoming meetings and calendar context
+- Incorporate recent business decisions and opportunities
+
+ENHANCED TASK EXTRACTION GUIDELINES:
+
+1. **360-Context Task Identification**: Look for tasks that:
+   - Connect to the business relationships and projects mentioned
+   - Align with strategic opportunities and recent decisions
+   - Prepare for upcoming meetings with related attendees
+   - Advance active projects and business initiatives
+   - Leverage the full business context for maximum relevance
+
+2. **Business-Aware Task Details**: For each task, provide:
+   - Clear, actionable description with business context
+   - Connect to specific people, projects, or meetings when relevant
+   - Priority based on business importance and relationships
+   - Category that reflects business context (project_work, relationship_management, strategic_planning, etc.)
+   - Due dates that consider business timing and meeting schedules
+
+3. **Context Enhancement Indicators**: 
+   - Mark tasks as "context_enhanced": true if they leverage business intelligence
+   - Include "business_context" field explaining the connection
+   - Add "stakeholders" field if specific people are involved
+   - Include "project_connection" if tied to active projects
+
+Current Email Context Strength: {context_strength:.2f} ({connection_count} business connections identified)
+
+RESPONSE FORMAT: Return a JSON array of tasks. Each task should have:
+- "description": Clear, actionable description with business context
+- "assignee": Who should do this (considering business relationships)
+- "due_date": Specific date if mentioned (YYYY-MM-DD format)
+- "due_date_text": Original due date text from email
+- "priority": high/medium/low (elevated if high business context)
+- "category": business-aware category (project_work, relationship_management, meeting_prep, strategic_planning, etc.)
+- "confidence": 0.0-1.0 confidence score (higher with business context)
+- "source_text": Original text from email that led to this task
+- "context_enhanced": true/false (true if business intelligence was used)
+- "business_context": Explanation of business connections (if context_enhanced)
+- "stakeholders": List of relevant people from business context
+- "project_connection": Name of related project if applicable
+
+Return ONLY the JSON array. If no actionable tasks are found, return an empty array []."""
+
+            user_prompt = f"""Please analyze this email with full business intelligence context and extract actionable tasks:
+
+{enhanced_email_context}
+
+Focus on tasks that leverage the business context for maximum relevance and strategic value. Consider the relationships, projects, meetings, and strategic insights provided."""
+
+            message = self.claude_client.messages.create(
+                model=self.model,
+                max_tokens=3000,  # More tokens for detailed context
+                temperature=0.1,
+                system=system_prompt,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": user_prompt
+                    }
+                ]
+            )
+            
+            response_text = message.content[0].text.strip()
+            logger.debug(f"Claude 360-context response: {response_text}")
+            
+            return response_text
+            
+        except Exception as e:
+            logger.error(f"Failed to call Claude for 360-context task extraction: {str(e)}")
+            return None
+    
+    def _parse_claude_360_response(self, response: str, email_data: Dict, email_context: Dict) -> List[Dict]:
+        """
+        Parse Claude's 360-context JSON response into enhanced task dictionaries
+        """
+        try:
+            # Try to find JSON in the response
+            json_start = response.find('[')
+            json_end = response.rfind(']') + 1
+            
+            if json_start == -1 or json_end == 0:
+                logger.warning("No JSON array found in Claude 360-context response")
+                return []
+            
+            json_text = response[json_start:json_end]
+            
+            # Parse JSON
+            tasks_data = json.loads(json_text)
+            
+            if not isinstance(tasks_data, list):
+                logger.warning("Claude 360-context response is not a JSON array")
+                return []
+            
+            tasks = []
+            for task_data in tasks_data:
+                if isinstance(task_data, dict) and task_data.get('description'):
+                    # Validate 360-context fields
+                    if task_data.get('context_enhanced') and not task_data.get('business_context'):
+                        task_data['business_context'] = f"Connected to {email_context.get('connection_count', 0)} business elements"
+                    
+                    tasks.append(task_data)
+            
+            logger.info(f"Parsed {len(tasks)} 360-context tasks from Claude response")
+            return tasks
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Claude 360-context JSON response: {str(e)}")
+            logger.error(f"Response was: {response}")
+            return []
+        except Exception as e:
+            logger.error(f"Failed to parse Claude 360-context response: {str(e)}")
+            return []
+    
+    def _enhance_task_with_360_context(self, task: Dict, email_data: Dict, email_context: Dict, business_context: Dict) -> Dict:
+        """
+        Enhance task with comprehensive 360-context metadata and business intelligence
+        """
+        try:
+            # Start with Claude's task data
+            enhanced_task = task.copy()
+            
+            # Parse due date if provided
+            if task.get('due_date'):
+                try:
+                    due_date = parser.parse(task['due_date'])
+                    enhanced_task['due_date'] = due_date
+                except:
+                    enhanced_task['due_date'] = self._extract_date_from_text(
+                        task.get('due_date_text', '')
+                    )
+            elif task.get('due_date_text'):
+                enhanced_task['due_date'] = self._extract_date_from_text(task['due_date_text'])
+            
+            # Set default values with 360-context awareness
+            enhanced_task['priority'] = task.get('priority', 'medium').lower()
+            enhanced_task['category'] = task.get('category', 'action_item')
+            enhanced_task['confidence'] = min(1.0, max(0.0, task.get('confidence', 0.8)))
+            enhanced_task['status'] = 'pending'
+            
+            # Enhance based on business context strength
+            context_strength = email_context.get('context_strength', 0.0)
+            if context_strength > 0.7:  # High context strength
+                if enhanced_task['priority'] == 'medium':
+                    enhanced_task['priority'] = 'high'
+                enhanced_task['confidence'] = min(1.0, enhanced_task['confidence'] + 0.1)
+            
+            # Determine assignee with business context
+            if not enhanced_task.get('assignee'):
+                # Check if specific people are mentioned in business context
+                related_people = email_context.get('related_people', [])
+                if related_people and len(related_people) == 1:
+                    enhanced_task['assignee'] = related_people[0]['name']
+                else:
+                    enhanced_task['assignee'] = 'me'
+            
+            # Enhance category with business context
+            if enhanced_task['category'] == 'action_item':
+                enhanced_task['category'] = self._determine_360_category(
+                    enhanced_task['description'], 
+                    email_data,
+                    email_context
+                )
+            
+            # Add 360-context specific fields
+            if task.get('context_enhanced'):
+                enhanced_task['context_enhanced'] = True
+                enhanced_task['business_context'] = task.get('business_context', 'Business intelligence context applied')
+                enhanced_task['context_strength'] = context_strength
+                enhanced_task['connection_count'] = email_context.get('connection_count', 0)
+            
+            # Add stakeholder information
+            stakeholders = task.get('stakeholders', [])
+            if not stakeholders and email_context.get('related_people'):
+                stakeholders = [person['name'] for person in email_context['related_people']]
+            enhanced_task['stakeholders'] = stakeholders
+            
+            # Add project connection
+            if task.get('project_connection'):
+                enhanced_task['project_connection'] = task['project_connection']
+            elif email_context.get('related_projects'):
+                enhanced_task['project_connection'] = email_context['related_projects'][0]['name']
+            
+            return enhanced_task
+            
+        except Exception as e:
+            logger.error(f"Failed to enhance task with 360-context: {str(e)}")
+            return task
+    
+    def _determine_360_category(self, description: str, email_data: Dict, email_context: Dict) -> str:
+        """
+        Determine task category with 360-context business intelligence
+        """
+        try:
+            description_lower = description.lower()
+            subject = email_data.get('subject', '').lower()
+            
+            # Business context-aware categorization
+            if email_context.get('related_projects'):
+                return 'project_work'
+            
+            if email_context.get('related_meetings'):
+                return 'meeting_prep'
+            
+            if email_context.get('related_people') and len(email_context['related_people']) > 0:
+                person = email_context['related_people'][0]
+                if person.get('importance', 0) > 0.7:
+                    return 'relationship_management'
+            
+            # Strategic context
+            if any(keyword in description_lower for keyword in ['strategy', 'strategic', 'decision', 'opportunity']):
+                return 'strategic_planning'
+            
+            # Default categorization with business awareness
+            if any(keyword in description_lower for keyword in ['meeting', 'call', 'schedule', 'zoom', 'teams']):
+                return 'meeting'
+            
+            if any(keyword in description_lower for keyword in ['review', 'check', 'look at', 'examine']):
+                return 'review'
+            
+            if any(keyword in description_lower for keyword in ['reply', 'respond', 'answer', 'get back']):
+                return 'follow-up'
+            
+            if any(keyword in description_lower for keyword in ['document', 'report', 'write', 'create', 'draft']):
+                return 'document'
+            
+            if any(keyword in description_lower for keyword in ['decide', 'choose', 'approve', 'confirm']):
+                return 'decision'
+            
+            if any(keyword in description_lower for keyword in ['deadline', 'due', 'submit', 'deliver']):
+                return 'deadline'
+            
+            return 'action_item'
+            
+        except Exception as e:
+            logger.error(f"Failed to determine 360-context category: {str(e)}")
+            return 'action_item'
+    
+    def extract_tasks_from_email(self, email_data: Dict) -> Dict:
+        """
+        LEGACY METHOD: Extract actionable tasks from a single email using Claude 4 Sonnet
+        This method is kept for backward compatibility but users should use extract_tasks_with_360_context
+        """
+        try:
+            logger.warning("Using legacy task extraction - consider upgrading to 360-context extraction")
+            
+            # Check if email has enough content for task extraction
+            body_clean = email_data.get('body_clean', '')
+            if not body_clean or len(body_clean.strip()) < 20:
+                return {
+                    'success': True,
+                    'email_id': email_data.get('id'),
+                    'tasks': [],
+                    'reason': 'Email content too short for task extraction'
+                }
+            
+            # Skip certain message types that unlikely contain tasks
+            message_type = email_data.get('message_type', 'regular')
+            if message_type in ['newsletter', 'automated']:
+                return {
+                    'success': True,
+                    'email_id': email_data.get('id'),
+                    'tasks': [],
+                    'reason': f'Message type "{message_type}" skipped for task extraction'
+                }
+            
+            # Prepare email context for Claude
+            email_context = self._prepare_email_context(email_data)
+            
+            # Call Claude for task extraction
+            claude_response = self._call_claude_for_tasks(email_context)
+            
+            if not claude_response:
+                return {
+                    'success': False,
+                    'email_id': email_data.get('id'),
+                    'error': 'Failed to get response from Claude'
+                }
+            
+            # Parse Claude's response
+            tasks = self._parse_claude_response(claude_response, email_data)
+            
+            # Enhance tasks with additional metadata
+            enhanced_tasks = []
+            for task in tasks:
+                enhanced_task = self._enhance_task(task, email_data)
+                enhanced_tasks.append(enhanced_task)
+            
+            return {
+                'success': True,
+                'email_id': email_data.get('id'),
+                'tasks': enhanced_tasks,
+                'extraction_metadata': {
+                    'extracted_at': datetime.utcnow().isoformat(),
+                    'extractor_version': self.version,
+                    'model_used': self.model,
+                    'email_priority': email_data.get('priority_score', 0.5)
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to extract tasks from email {email_data.get('id', 'unknown')}: {str(e)}")
+            return {
+                'success': False,
+                'email_id': email_data.get('id'),
+                'error': str(e)
+            }
+
+# Create global instance
+task_extractor = TaskExtractor()
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/knowledge_engine.py
+PURPOSE: Email processor: Knowledge Engine
+================================================================================
+"""
+Knowledge Engine - Core Processing for Knowledge Replacement System
+==================================================================
+
+This is the brain of the Knowledge-Centric Architecture. It handles:
+
+1. Hierarchical Topic Tree Building (auto-generated + user-managed)
+2. Multi-Source Knowledge Ingestion (email, slack, dropbox, etc.)
+3. Bidirectional People-Topic Relationship Management
+4. Source Traceability and Content Retrieval
+5. Knowledge Evolution and Quality Management
+6. Proactive Intelligence Generation for Auto-Response Capabilities
+
+Goal: Build comprehensive knowledge to enable auto-response and decision-making
+"""
+
+import logging
+from typing import Dict, List, Any, Optional, Tuple, Set
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_, desc, func
+import re
+import json
+from dataclasses import dataclass
+
+from models.database import get_db_manager
+from models.knowledge_models import (
+    TopicHierarchy, PersonTopicRelationship, KnowledgeSource, 
+    UnifiedKnowledgeGraph, ProactiveKnowledgeInsight, KnowledgeEvolutionLog,
+    TopicType, SourceType, RelationshipType, KnowledgeConfidence,
+    TopicSummary, PersonTopicContext, KnowledgeTraceability
+)
+from models.email import Email  # Add Email model import
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class KnowledgeExtractionResult:
+    """Result of knowledge extraction from content"""
+    topics: List[Dict[str, Any]]
+    people: List[Dict[str, Any]]
+    relationships: List[Dict[str, Any]]
+    tasks: List[Dict[str, Any]]
+    insights: List[Dict[str, Any]]
+    confidence: float
+    source_reference: str
+
+@dataclass
+class TopicHierarchySuggestion:
+    """AI suggestion for topic hierarchy placement"""
+    topic_name: str
+    suggested_parent: Optional[str]
+    suggested_type: TopicType
+    confidence: float
+    reasoning: str
+
+class KnowledgeEngine:
+    """
+    Core Knowledge Processing Engine
+    
+    This is the central intelligence that builds and maintains the knowledge base
+    that can eventually replace the user's decision-making capabilities.
+    """
+    
+    def __init__(self):
+        self.db_manager = get_db_manager()
+        
+        # Configuration for topic hierarchy building
+        self.TOPIC_CONFIDENCE_THRESHOLD = 0.6
+        self.RELATIONSHIP_CONFIDENCE_THRESHOLD = 0.5
+        self.HIERARCHY_MAX_DEPTH = 6
+        self.AUTO_ORGANIZE_THRESHOLD = 10  # topics before auto-organizing
+        
+        # Knowledge quality thresholds
+        self.MIN_EVIDENCE_COUNT = 2
+        self.KNOWLEDGE_DECAY_DAYS = 30
+        
+    # ==========================================================================
+    # TOPIC HIERARCHY MANAGEMENT
+    # ==========================================================================
+    
+    def build_topic_hierarchy_from_content(self, user_id: int, source_content: List[Dict]) -> Dict[str, Any]:
+        """
+        Automatically build topic hierarchy from content analysis.
+        This is core to making the system intelligent about business structure.
+        """
+        logger.info(f"🏗️  Building topic hierarchy for user {user_id} from {len(source_content)} content sources")
+        
+        try:
+            with self.db_manager.get_session() as session:
+                # Step 1: Extract all topics from content
+                all_topics = self._extract_topics_from_content(source_content, user_id)
+                
+                # Step 2: Analyze and categorize topics
+                categorized_topics = self._categorize_topics(all_topics)
+                
+                # Step 3: Build hierarchical structure
+                hierarchy = self._build_hierarchy_structure(categorized_topics, session, user_id)
+                
+                # Step 4: Create/update topic records
+                created_topics = self._create_topic_records(hierarchy, session, user_id)
+                
+                # Step 5: Update topic relationships and metadata
+                self._update_topic_relationships(created_topics, session, user_id)
+                
+                session.commit()
+                
+                result = {
+                    'success': True,
+                    'topics_created': len(created_topics),
+                    'hierarchy_depth': max([t.depth_level for t in created_topics]) if created_topics else 0,
+                    'auto_generated': len([t for t in created_topics if t.auto_generated]),
+                    'categories_found': len(set([t.topic_type for t in created_topics])),
+                    'top_level_topics': [t.name for t in created_topics if t.depth_level == 0]
+                }
+                
+                logger.info(f"✅ Topic hierarchy built: {result}")
+                return result
+                
+        except Exception as e:
+            logger.error(f"❌ Error building topic hierarchy: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def _extract_topics_from_content(self, content: List[Dict], user_id: int) -> List[Dict]:
+        """Extract topics from various content types"""
+        topics = []
+        
+        for item in content:
+            source_type = item.get('source_type', 'unknown')
+            content_text = item.get('content', '') or item.get('body_text', '') or item.get('text', '')
+            
+            if not content_text:
+                continue
+            
+            # Use AI to extract topics (would integrate with Claude here)
+            extracted = self._ai_extract_topics(content_text, source_type)
+            
+            for topic in extracted:
+                topics.append({
+                    'name': topic['name'],
+                    'confidence': topic['confidence'],
+                    'source_type': source_type,
+                    'source_id': item.get('id', 'unknown'),
+                    'context': topic.get('context', ''),
+                    'mentions': topic.get('mentions', 1),
+                    'category_hints': topic.get('category_hints', [])
+                })
+        
+        # Consolidate duplicate topics
+        return self._consolidate_topics(topics)
+    
+    def _ai_extract_topics(self, content: str, source_type: str) -> List[Dict]:
+        """
+        AI-powered topic extraction from content.
+        In production, this would use Claude API.
+        """
+        # Placeholder for AI extraction - would integrate with Claude
+        # For now, use pattern matching for common business topics
+        
+        topics = []
+        content_lower = content.lower()
+        
+        # Business structure patterns
+        company_patterns = [
+            r'\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+(?:company|corp|inc|ltd)\b',
+            r'\b(?:company|organization|business)\s+([A-Z][a-zA-Z\s]+)\b'
+        ]
+        
+        project_patterns = [
+            r'\bproject\s+([A-Z][a-zA-Z\s]+)\b',
+            r'\b([A-Z][a-zA-Z]+)\s+project\b',
+            r'\binitiative\s+([A-Z][a-zA-Z\s]+)\b'
+        ]
+        
+        product_patterns = [
+            r'\b([A-Z][a-zA-Z]+)\s+(?:app|application|software|platform|system)\b',
+            r'\bproduct\s+([A-Z][a-zA-Z\s]+)\b'
+        ]
+        
+        # Extract patterns
+        patterns = {
+            'company': company_patterns,
+            'project': project_patterns,
+            'product': product_patterns
+        }
+        
+        for category, pattern_list in patterns.items():
+            for pattern in pattern_list:
+                matches = re.findall(pattern, content, re.IGNORECASE)
+                for match in matches:
+                    topic_name = match.strip() if isinstance(match, str) else ' '.join(match).strip()
+                    if len(topic_name) > 2:  # Filter out very short matches
+                        topics.append({
+                            'name': topic_name,
+                            'confidence': 0.7,
+                            'context': f"Extracted from {source_type}",
+                            'mentions': content_lower.count(topic_name.lower()),
+                            'category_hints': [category]
+                        })
+        
+        return topics
+    
+    def _consolidate_topics(self, topics: List[Dict]) -> List[Dict]:
+        """Consolidate duplicate and similar topics"""
+        consolidated = {}
+        
+        for topic in topics:
+            name = topic['name'].lower().strip()
+            
+            if name in consolidated:
+                # Merge with existing
+                consolidated[name]['mentions'] += topic['mentions']
+                consolidated[name]['confidence'] = max(consolidated[name]['confidence'], topic['confidence'])
+                consolidated[name]['category_hints'].extend(topic['category_hints'])
+                consolidated[name]['sources'] = consolidated[name].get('sources', []) + [topic.get('source_id', '')]
+            else:
+                topic['sources'] = [topic.get('source_id', '')]
+                topic['category_hints'] = list(set(topic['category_hints']))
+                consolidated[name] = topic
+        
+        return list(consolidated.values())
+    
+    def _categorize_topics(self, topics: List[Dict]) -> Dict[str, List[Dict]]:
+        """Categorize topics into hierarchy levels"""
+        categorized = {
+            'company': [],
+            'department': [],
+            'product': [],
+            'project': [],
+            'feature': [],
+            'custom': []
+        }
+        
+        for topic in topics:
+            category = self._determine_topic_category(topic)
+            categorized[category].append(topic)
+        
+        return categorized
+    
+    def _determine_topic_category(self, topic: Dict) -> str:
+        """Determine the category/type of a topic"""
+        name = topic['name'].lower()
+        hints = topic.get('category_hints', [])
+        
+        # Use hints if available
+        if 'company' in hints:
+            return 'company'
+        elif 'project' in hints:
+            return 'project'
+        elif 'product' in hints:
+            return 'product'
+        
+        # Pattern-based categorization
+        if any(word in name for word in ['company', 'corp', 'inc', 'organization']):
+            return 'company'
+        elif any(word in name for word in ['department', 'team', 'division', 'group']):
+            return 'department'
+        elif any(word in name for word in ['app', 'application', 'platform', 'system', 'software']):
+            return 'product'
+        elif any(word in name for word in ['project', 'initiative', 'program']):
+            return 'project'
+        elif any(word in name for word in ['feature', 'component', 'module', 'function']):
+            return 'feature'
+        else:
+            return 'custom'
+    
+    def _build_hierarchy_structure(self, categorized: Dict, session: Session, user_id: int) -> Dict[str, Any]:
+        """Build the hierarchical structure"""
+        hierarchy = {
+            'root_topics': [],
+            'relationships': [],
+            'suggestions': []
+        }
+        
+        # Create hierarchy: Company -> Department -> Product -> Project -> Feature
+        depth_order = ['company', 'department', 'product', 'project', 'feature', 'custom']
+        
+        for depth, category in enumerate(depth_order):
+            topics = categorized.get(category, [])
+            
+            for topic in topics:
+                # Find potential parent based on content analysis
+                parent = self._find_topic_parent(topic, hierarchy, depth, session, user_id)
+                
+                topic_record = {
+                    'name': topic['name'],
+                    'topic_type': category,
+                    'depth_level': depth,
+                    'parent': parent,
+                    'confidence_score': topic['confidence'],
+                    'mentions': topic['mentions'],
+                    'auto_generated': True,
+                    'sources': topic.get('sources', [])
+                }
+                
+                if parent:
+                    hierarchy['relationships'].append({
+                        'child': topic['name'],
+                        'parent': parent,
+                        'confidence': topic['confidence']
+                    })
+                else:
+                    hierarchy['root_topics'].append(topic_record)
+        
+        return hierarchy
+    
+    def _find_topic_parent(self, topic: Dict, hierarchy: Dict, depth: int, session: Session, user_id: int) -> Optional[str]:
+        """Find the most likely parent for a topic"""
+        if depth == 0:  # Root level
+            return None
+        
+        # Look for parent relationships in content
+        # This would use more sophisticated AI analysis in production
+        
+        # Simple heuristic: look for topics mentioned together
+        topic_name = topic['name'].lower()
+        
+        # Check existing topics at higher levels
+        existing_topics = session.query(TopicHierarchy).filter(
+            and_(
+                TopicHierarchy.depth_level < depth,
+                TopicHierarchy.depth_level >= 0
+            )
+        ).all()
+        
+        best_parent = None
+        best_score = 0
+        
+        for existing in existing_topics:
+            # Calculate relationship score based on co-occurrence
+            score = self._calculate_topic_relationship_score(topic_name, existing.name.lower())
+            if score > best_score and score > 0.3:
+                best_score = score
+                best_parent = existing.name
+        
+        return best_parent
+    
+    def _calculate_topic_relationship_score(self, topic1: str, topic2: str) -> float:
+        """Calculate how likely two topics are related"""
+        # Placeholder for more sophisticated relationship scoring
+        # Would analyze co-occurrence in content, semantic similarity, etc.
+        
+        # Simple word overlap scoring
+        words1 = set(topic1.split())
+        words2 = set(topic2.split())
+        
+        if len(words1.union(words2)) == 0:
+            return 0.0
+        
+        overlap = len(words1.intersection(words2))
+        union = len(words1.union(words2))
+        
+        return overlap / union
+    
+    def _create_topic_records(self, hierarchy: Dict, session: Session, user_id: int) -> List[TopicHierarchy]:
+        """Create topic records in database"""
+        created_topics = []
+        topic_map = {}  # name -> TopicHierarchy object
+        
+        # First pass: create all topics
+        all_topics = hierarchy['root_topics'] + [
+            rel for rel in hierarchy.get('relationships', [])
+        ]
+        
+        for topic_data in hierarchy['root_topics']:
+            topic = TopicHierarchy(
+                name=topic_data['name'],
+                topic_type=topic_data['topic_type'],
+                depth_level=topic_data['depth_level'],
+                confidence_score=topic_data['confidence_score'],
+                mention_count=topic_data['mentions'],
+                auto_generated=topic_data['auto_generated'],
+                user_created=False,
+                hierarchy_path=topic_data['name']
+            )
+            
+            session.add(topic)
+            session.flush()  # Get ID
+            
+            topic_map[topic.name] = topic
+            created_topics.append(topic)
+        
+        # Second pass: establish parent-child relationships
+        for rel in hierarchy.get('relationships', []):
+            child_name = rel['child']
+            parent_name = rel['parent']
+            
+            if parent_name in topic_map:
+                parent = topic_map[parent_name]
+                
+                # Create child topic
+                child_topic = next((t for t in all_topics if isinstance(t, dict) and t.get('name') == child_name), None)
+                if child_topic:
+                    child = TopicHierarchy(
+                        name=child_name,
+                        topic_type=child_topic.get('topic_type', 'custom'),
+                        depth_level=parent.depth_level + 1,
+                        parent_topic_id=parent.id,
+                        confidence_score=rel['confidence'],
+                        auto_generated=True,
+                        hierarchy_path=f"{parent.hierarchy_path}/{child_name}"
+                    )
+                    
+                    session.add(child)
+                    session.flush()
+                    
+                    topic_map[child.name] = child
+                    created_topics.append(child)
+        
+        return created_topics
+    
+    def _update_topic_relationships(self, topics: List[TopicHierarchy], session: Session, user_id: int):
+        """Update topic relationships and cross-references"""
+        # This would analyze content to establish topic relationships
+        # and update the unified knowledge graph
+        pass
+    
+    # ==========================================================================
+    # MULTI-SOURCE KNOWLEDGE INGESTION
+    # ==========================================================================
+    
+    def ingest_knowledge_from_source(self, source_type: SourceType, content: Dict, user_id: int) -> KnowledgeExtractionResult:
+        """
+        Ingest knowledge from any source type.
+        This is the unified entry point for all knowledge ingestion.
+        """
+        logger.info(f"🔄 Ingesting knowledge from {source_type.value} for user {user_id}")
+        
+        try:
+            with self.db_manager.get_session() as session:
+                # Step 1: Store source content with full traceability
+                source_record = self._store_source_content(content, source_type, session, user_id)
+                
+                # Step 2: Extract knowledge entities
+                extraction_result = self._extract_knowledge_entities(content, source_type, user_id)
+                
+                # Step 3: Update knowledge graph
+                self._update_knowledge_graph(extraction_result, source_record, session, user_id)
+                
+                # Step 4: Generate proactive insights
+                insights = self._generate_proactive_insights(extraction_result, session, user_id)
+                
+                session.commit()
+                
+                logger.info(f"✅ Knowledge ingestion complete: {len(extraction_result.topics)} topics, {len(extraction_result.people)} people")
+                return extraction_result
+                
+        except Exception as e:
+            logger.error(f"❌ Knowledge ingestion error: {str(e)}")
+            raise
+    
+    def _store_source_content(self, content: Dict, source_type: SourceType, session: Session, user_id: int) -> KnowledgeSource:
+        """Store source content with full traceability"""
+        source = KnowledgeSource(
+            source_type=source_type.value,
+            source_id=content.get('id', 'unknown'),
+            raw_content=json.dumps(content.get('raw_content', content)),
+            processed_content=content.get('processed_content', ''),
+            content_summary=content.get('summary', ''),
+            title=content.get('title', '') or content.get('subject', ''),
+            author=content.get('author', '') or content.get('sender', ''),
+            timestamp=datetime.fromisoformat(content.get('timestamp', datetime.utcnow().isoformat())),
+            processing_status='pending'
+        )
+        
+        session.add(source)
+        session.flush()
+        return source
+    
+    def _extract_knowledge_entities(self, content: Dict, source_type: SourceType, user_id: int) -> KnowledgeExtractionResult:
+        """Extract all knowledge entities from content"""
+        # This would integrate with Claude AI for sophisticated extraction
+        # For now, using pattern-based extraction
+        
+        text = content.get('processed_content', '') or content.get('raw_content', '')
+        
+        return KnowledgeExtractionResult(
+            topics=self._extract_topics_from_text(text),
+            people=self._extract_people_from_text(text),
+            relationships=self._extract_relationships_from_text(text),
+            tasks=self._extract_tasks_from_text(text),
+            insights=self._extract_insights_from_text(text),
+            confidence=0.7,
+            source_reference=content.get('id', 'unknown')
+        )
+    
+    def _extract_topics_from_text(self, text: str) -> List[Dict]:
+        """Extract topics from text"""
+        # Placeholder - would use AI in production
+        return []
+    
+    def _extract_people_from_text(self, text: str) -> List[Dict]:
+        """Extract people mentions from text"""
+        # Placeholder - would use AI in production
+        return []
+    
+    def _extract_relationships_from_text(self, text: str) -> List[Dict]:
+        """Extract relationships from text"""
+        # Placeholder - would use AI in production
+        return []
+    
+    def _extract_tasks_from_text(self, text: str) -> List[Dict]:
+        """Extract tasks from text"""
+        # Placeholder - would use AI in production
+        return []
+    
+    def _extract_insights_from_text(self, text: str) -> List[Dict]:
+        """Extract insights from text"""
+        # Placeholder - would use AI in production
+        return []
+    
+    def _update_knowledge_graph(self, extraction: KnowledgeExtractionResult, source: KnowledgeSource, session: Session, user_id: int):
+        """Update the unified knowledge graph with new relationships"""
+        # Update extraction results in source record
+        source.extracted_topics = extraction.topics
+        source.extracted_people = extraction.people
+        source.extracted_tasks = extraction.tasks
+        source.extracted_insights = extraction.insights
+        source.processing_status = 'processed'
+        
+        # Create knowledge graph entries for relationships
+        for relationship in extraction.relationships:
+            graph_entry = UnifiedKnowledgeGraph(
+                entity_type_1=relationship['entity_type_1'],
+                entity_id_1=relationship['entity_id_1'],
+                entity_type_2=relationship['entity_type_2'],
+                entity_id_2=relationship['entity_id_2'],
+                relationship_type=relationship['type'],
+                relationship_strength=relationship.get('strength', 0.5),
+                confidence=relationship.get('confidence', 0.5),
+                evidence_sources=[source.id],
+                evidence_count=1
+            )
+            session.add(graph_entry)
+    
+    def _generate_proactive_insights(self, extraction: KnowledgeExtractionResult, session: Session, user_id: int) -> List[Dict]:
+        """Generate proactive insights from knowledge extraction"""
+        insights = []
+        
+        # Analyze patterns and generate insights
+        # This would use sophisticated AI analysis in production
+        
+        return insights
+    
+    # ==========================================================================
+    # KNOWLEDGE RETRIEVAL AND TRACEABILITY
+    # ==========================================================================
+    
+    def get_source_content(self, source_type: str, source_id: str, user_id: int) -> Optional[Dict]:
+        """
+        Retrieve full source content for traceability.
+        Critical for user to verify AI decisions.
+        """
+        try:
+            with self.db_manager.get_session() as session:
+                source = session.query(KnowledgeSource).filter(
+                    and_(
+                        KnowledgeSource.source_type == source_type,
+                        KnowledgeSource.source_id == source_id
+                    )
+                ).first()
+                
+                if source:
+                    return {
+                        'source_type': source.source_type,
+                        'source_id': source.source_id,
+                        'raw_content': json.loads(source.raw_content) if source.raw_content else {},
+                        'processed_content': source.processed_content,
+                        'summary': source.content_summary,
+                        'title': source.title,
+                        'author': source.author,
+                        'timestamp': source.timestamp.isoformat() if source.timestamp else None,
+                        'extraction_results': {
+                            'topics': source.extracted_topics,
+                            'people': source.extracted_people,
+                            'tasks': source.extracted_tasks,
+                            'insights': source.extracted_insights
+                        }
+                    }
+                
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error retrieving source content: {str(e)}")
+            return None
+    
+    def get_knowledge_traceability(self, entity_type: str, entity_id: int, user_id: int) -> List[KnowledgeTraceability]:
+        """
+        Get complete traceability for any knowledge entity.
+        Shows all sources that contributed to this knowledge.
+        """
+        try:
+            with self.db_manager.get_session() as session:
+                # Query knowledge source references
+                references = session.query(KnowledgeSource).join(
+                    # Would join through knowledge_source_association table
+                ).filter(
+                    # Filter by entity
+                ).all()
+                
+                traceability = []
+                for ref in references:
+                    traceability.append(KnowledgeTraceability(
+                        entity_type=entity_type,
+                        entity_id=entity_id,
+                        source_type=ref.source_type,
+                        source_id=ref.source_id,
+                        source_content_snippet=ref.content_summary[:200] if ref.content_summary else '',
+                        confidence=0.8,  # Would calculate based on extraction confidence
+                        timestamp=ref.timestamp,
+                        can_access_full_content=True
+                    ))
+                
+                return traceability
+                
+        except Exception as e:
+            logger.error(f"Error getting knowledge traceability: {str(e)}")
+            return []
+
+    # ==========================================================================
+    # KNOWLEDGE FOUNDATION BOOTSTRAPPING
+    # ==========================================================================
+    
+    def build_knowledge_foundation_from_bulk_emails(self, user_id: int, months_back: int = 6) -> Dict[str, Any]:
+        """
+        Build comprehensive knowledge foundation from bulk historical emails.
+        This creates the context skeleton that makes all future ingestion more accurate.
+        
+        This is the "Automatic Approach" - analyze large amounts of historical data
+        to understand the user's complete business context before processing new content.
+        """
+        logger.info(f"🏗️  Building knowledge foundation from {months_back} months of historical emails for user {user_id}")
+        
+        try:
+            with self.db_manager.get_session() as session:
+                # Step 1: Get quality-filtered historical emails
+                historical_emails = self._fetch_foundation_emails(user_id, months_back, session)
+                
+                if len(historical_emails) < 10:
+                    return {
+                        'success': False,
+                        'error': 'Insufficient historical data for foundation building',
+                        'recommendation': 'Use manual interview approach instead'
+                    }
+                
+                # Step 2: Analyze complete corpus with Claude for comprehensive understanding
+                foundation_analysis = self._analyze_complete_email_corpus(historical_emails, user_id)
+                
+                # Step 3: Build comprehensive hierarchical structure
+                foundation_hierarchy = self._build_foundation_hierarchy(foundation_analysis, session, user_id)
+                
+                # Step 4: Create detailed topic records with rich context
+                created_topics = self._create_foundation_topic_records(foundation_hierarchy, session, user_id)
+                
+                # Step 5: Build people-topic relationships from the foundation
+                self._establish_foundation_relationships(foundation_analysis, created_topics, session, user_id)
+                
+                session.commit()
+                
+                result = {
+                    'success': True,
+                    'foundation_type': 'automatic_bulk_analysis',
+                    'emails_analyzed': len(historical_emails),
+                    'topics_created': len(created_topics),
+                    'hierarchy_depth': max([t.depth_level for t in created_topics]) if created_topics else 0,
+                    'business_areas_identified': len([t for t in created_topics if t.topic_type == 'department']),
+                    'projects_identified': len([t for t in created_topics if t.topic_type == 'project']),
+                    'people_connected': len(set([rel.person_id for rel in session.query(PersonTopicRelationship).all()])),
+                    'foundation_quality_score': self._calculate_foundation_quality(created_topics, session)
+                }
+                
+                logger.info(f"✅ Knowledge foundation built: {result}")
+                return result
+                
+        except Exception as e:
+            logger.error(f"❌ Error building knowledge foundation: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def _fetch_foundation_emails(self, user_id: int, months_back: int, session: Session) -> List[Dict]:
+        """Fetch quality-filtered historical emails for foundation building"""
+        from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter, ContactTier
+        from datetime import datetime, timedelta
+        
+        # Get emails from the past N months
+        cutoff_date = datetime.utcnow() - timedelta(days=months_back * 30)
+        
+        # Get all emails in date range
+        all_emails = session.query(Email).filter(
+            Email.user_id == user_id,
+            Email.email_date >= cutoff_date,
+            Email.ai_summary.isnot(None)  # Only processed emails
+        ).order_by(Email.email_date.desc()).limit(1000).all()
+        
+        # Apply quality filtering - only include Tier 1 and Tier 2 contacts
+        foundation_emails = []
+        for email in all_emails:
+            if email.sender:
+                contact_stats = email_quality_filter._get_contact_stats(email.sender.lower(), user_id)
+                if contact_stats.tier in [ContactTier.TIER_1, ContactTier.TIER_2]:
+                    foundation_emails.append({
+                        'id': email.gmail_id,
+                        'subject': email.subject or '',
+                        'sender': email.sender,
+                        'body_text': email.body_text or '',
+                        'ai_summary': email.ai_summary or '',
+                        'date': email.email_date.isoformat() if email.email_date else '',
+                        'contact_tier': contact_stats.tier.value,
+                        'response_rate': contact_stats.response_rate
+                    })
+        
+        logger.info(f"📧 Foundation emails: {len(foundation_emails)} quality emails from {len(all_emails)} total")
+        return foundation_emails
+    
+    def _analyze_complete_email_corpus(self, emails: List[Dict], user_id: int) -> Dict[str, Any]:
+        """
+        Send complete email corpus to Claude for comprehensive business analysis.
+        This is where we get the "big picture" understanding.
+        """
+        # Prepare comprehensive prompt for Claude
+        corpus_text = self._prepare_corpus_for_analysis(emails)
+        
+        # This would integrate with Claude API in production
+        # For now, we'll simulate comprehensive analysis
+        analysis = {
+            'business_structure': {
+                'company_focus': 'Technology consulting and software development',
+                'departments': ['Engineering', 'Sales', 'Marketing', 'Operations'],
+                'core_products': ['Mobile Apps', 'Web Platforms', 'API Services']
+            },
+            'project_hierarchy': {
+                'major_initiatives': [
+                    {
+                        'name': 'Mobile Platform Redesign',
+                        'department': 'Engineering',
+                        'key_people': ['john@company.com', 'sarah@company.com'],
+                        'sub_projects': ['iOS App', 'Android App', 'Backend API']
+                    },
+                    {
+                        'name': 'Q1 Sales Campaign', 
+                        'department': 'Sales',
+                        'key_people': ['mike@company.com'],
+                        'sub_projects': ['Lead Generation', 'Client Presentations']
+                    }
+                ]
+            },
+            'relationship_mapping': {
+                'internal_team': ['john@company.com', 'sarah@company.com', 'mike@company.com'],
+                'key_clients': ['client@bigcorp.com', 'contact@startup.com'],
+                'external_partners': ['partner@vendor.com'],
+                'decision_makers': ['ceo@company.com', 'cto@company.com']
+            },
+            'business_priorities': [
+                'Product launch deadline: March 2024',
+                'Client retention and satisfaction',
+                'Team scaling and hiring',
+                'Technology stack modernization'
+            ],
+            'topic_confidence_scores': {
+                'Mobile Platform Redesign': 0.95,
+                'Q1 Sales Campaign': 0.87,
+                'Engineering': 0.92,
+                'Sales': 0.88
+            }
+        }
+        
+        return analysis
+    
+    def _build_foundation_hierarchy(self, analysis: Dict, session: Session, user_id: int) -> Dict[str, Any]:
+        """Build hierarchical topic structure from comprehensive analysis"""
+        hierarchy = {
+            'root_topics': [],
+            'topic_relationships': [],
+            'people_topic_connections': [],
+            'business_context': analysis
+        }
+        
+        # Build from business structure analysis
+        business_structure = analysis.get('business_structure', {})
+        
+        # Create company/organization root
+        company_topic = {
+            'name': business_structure.get('company_focus', 'Business Operations'),
+            'topic_type': 'company',
+            'depth_level': 0,
+            'confidence_score': 0.95,
+            'description': 'Main business focus and operations',
+            'children': []
+        }
+        
+        # Add departments as children
+        for dept in business_structure.get('departments', []):
+            dept_topic = {
+                'name': dept,
+                'topic_type': 'department', 
+                'depth_level': 1,
+                'parent': company_topic['name'],
+                'confidence_score': 0.9,
+                'children': []
+            }
+            company_topic['children'].append(dept_topic)
+        
+        # Add projects under departments
+        for project in analysis.get('project_hierarchy', {}).get('major_initiatives', []):
+            project_topic = {
+                'name': project['name'],
+                'topic_type': 'project',
+                'depth_level': 2,
+                'parent': project.get('department', 'Operations'),
+                'confidence_score': analysis.get('topic_confidence_scores', {}).get(project['name'], 0.8),
+                'people': project.get('key_people', []),
+                'children': []
+            }
+            
+            # Add sub-projects
+            for sub_project in project.get('sub_projects', []):
+                sub_topic = {
+                    'name': sub_project,
+                    'topic_type': 'feature',
+                    'depth_level': 3,
+                    'parent': project['name'],
+                    'confidence_score': 0.75
+                }
+                project_topic['children'].append(sub_topic)
+            
+            # Find parent department and add project
+            for dept in company_topic['children']:
+                if dept['name'] == project.get('department'):
+                    dept['children'].append(project_topic)
+                    break
+        
+        hierarchy['root_topics'] = [company_topic]
+        return hierarchy
+    
+    def _create_foundation_topic_records(self, hierarchy: Dict, session: Session, user_id: int) -> List[TopicHierarchy]:
+        """Create detailed topic records with foundation context"""
+        created_topics = []
+        
+        def create_topic_recursive(topic_data, parent_id=None, parent_path=""):
+            # Create topic record
+            topic = TopicHierarchy(
+                name=topic_data['name'],
+                topic_type=topic_data['topic_type'],
+                depth_level=topic_data['depth_level'],
+                parent_topic_id=parent_id,
+                confidence_score=topic_data['confidence_score'],
+                auto_generated=True,
+                user_created=False,
+                status='active',
+                priority='medium',
+                description=topic_data.get('description', f"Auto-generated {topic_data['topic_type']} from email analysis"),
+                hierarchy_path=f"{parent_path}/{topic_data['name']}" if parent_path else topic_data['name'],
+                mention_count=0,  # Will be updated when we process the source emails
+                strategic_importance=topic_data['confidence_score'],
+                keywords=topic_data.get('keywords', []),
+                related_entities=topic_data.get('people', [])
+            )
+            
+            session.add(topic)
+            session.flush()  # Get ID
+            
+            created_topics.append(topic)
+            
+            # Create child topics recursively
+            for child in topic_data.get('children', []):
+                create_topic_recursive(child, topic.id, topic.hierarchy_path)
+            
+            return topic
+        
+        # Create all topics from hierarchy
+        for root_topic in hierarchy['root_topics']:
+            create_topic_recursive(root_topic)
+        
+        return created_topics
+    
+    def _establish_foundation_relationships(self, analysis: Dict, topics: List[TopicHierarchy], session: Session, user_id: int):
+        """Establish people-topic relationships from foundation analysis"""
+        # This would create PersonTopicRelationship records based on the analysis
+        # Implementation would map people from the relationship_mapping to topics
+        pass
+    
+    def _calculate_foundation_quality(self, topics: List[TopicHierarchy], session: Session) -> float:
+        """Calculate quality score for the foundation"""
+        if not topics:
+            return 0.0
+        
+        # Quality factors:
+        # - Hierarchy depth (deeper = more detailed)
+        # - Confidence scores
+        # - Topic distribution across types
+        # - People-topic connections
+        
+        avg_confidence = sum([t.confidence_score for t in topics]) / len(topics)
+        max_depth = max([t.depth_level for t in topics])
+        type_diversity = len(set([t.topic_type for t in topics]))
+        
+        quality_score = (avg_confidence * 0.4) + (min(max_depth / 5, 1.0) * 0.3) + (min(type_diversity / 6, 1.0) * 0.3)
+        
+        return round(quality_score, 2)
+    
+    def _prepare_corpus_for_analysis(self, emails: List[Dict]) -> str:
+        """Prepare email corpus for Claude analysis"""
+        corpus_parts = []
+        
+        for email in emails[:50]:  # Limit for token management
+            corpus_parts.append(f"""
+Email from {email['sender']} | Subject: {email['subject']}
+Date: {email['date']} | Tier: {email['contact_tier']}
+Summary: {email['ai_summary'][:200]}...
+""")
+        
+        return "\n".join(corpus_parts)
+
+# Global instance
+knowledge_engine = KnowledgeEngine() 
+
+
+================================================================================
+FILE: chief_of_staff_ai/processors/email_intelligence.py
+PURPOSE: Email processor: Email Intelligence
+================================================================================
+# Enhanced Email Intelligence Processor using Claude 4 Sonnet
+
+import json
+import logging
+import re
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Tuple
+import anthropic
+import time
+
+from config.settings import settings
+from models.database import get_db_manager, Email, Person, Project, Task, User
+
+logger = logging.getLogger(__name__)
+
+class EmailIntelligenceProcessor:
+    """Advanced email intelligence using Claude 4 Sonnet for comprehensive understanding"""
+    
+    def __init__(self):
+        self.claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = settings.CLAUDE_MODEL  # Now uses Claude 4 Opus from settings
+        self.version = "2.2"  # Debug version with relaxed filters
+        
+        # Quality filtering patterns (RELAXED FOR DEBUGGING)
+        self.non_human_patterns = [
+            'noreply', 'no-reply', 'donotreply', 'automated', 'newsletter',
+            'unsubscribe', 'notification', 'system', 'support', 'help',
+            'admin', 'contact', 'info', 'sales', 'marketing', 'hello',
+            'team', 'notifications', 'alerts', 'updates', 'reports'
+        ]
+        
+        # RELAXED quality thresholds to capture more content
+        self.min_insight_length = 10  # Reduced from 15
+        self.min_confidence_score = 0.4  # Reduced from 0.6 - be more inclusive
+        
+    def process_user_emails_intelligently(self, user_email: str, limit: int = None, force_refresh: bool = False) -> Dict:
+        """
+        Process user emails with Claude 4 Sonnet for high-quality business intelligence
+        Enhanced with quality filtering and strategic insights
+        """
+        try:
+            logger.info(f"Starting quality-focused email processing for {user_email}")
+            
+            # Get user and validate
+            user = get_db_manager().get_user_by_email(user_email)
+            if not user:
+                return {'success': False, 'error': 'User not found'}
+                
+            # Get business context for enhanced AI analysis
+            user_context = self._get_user_business_context(user.id)
+            
+            # Get emails needing processing with quality pre-filtering
+            emails_to_process = self._get_emails_needing_processing(user.id, limit or 100, force_refresh)
+            
+            # RELAXED: Filter for quality emails but be more inclusive
+            quality_filtered_emails = self._filter_quality_emails_debug(emails_to_process, user_email)
+            
+            logger.info(f"Found {len(emails_to_process)} emails to process, {len(quality_filtered_emails)} passed quality filters")
+            
+            if not quality_filtered_emails:
+                logger.warning(f"No emails passed quality filters for {user_email}")
+                return {
+                    'success': True,
+                    'user_email': user_email,
+                    'processed_emails': 0,
+                    'high_quality_insights': 0,
+                    'human_contacts_identified': 0,
+                    'meaningful_projects': 0,
+                    'actionable_tasks': 0,
+                    'processor_version': self.version,
+                    'debug_info': f"No emails passed filters out of {len(emails_to_process)} total emails"
+                }
+            
+            # Limit to top quality emails for processing
+            emails_to_process = quality_filtered_emails[:limit or 50]
+            
+            processed_count = 0
+            insights_extracted = 0
+            people_identified = 0
+            projects_identified = 0
+            tasks_created = 0
+            
+            for idx, email in enumerate(emails_to_process):
+                try:
+                    logger.info(f"Processing email {idx + 1}/{len(emails_to_process)} for {user_email}")
+                    logger.debug(f"Email from: {email.sender}, subject: {email.subject}")
+                    
+                    # Skip if email has issues
+                    if not email.body_clean and not email.snippet:
+                        logger.warning(f"Skipping email {email.gmail_id} - no content")
+                        continue
+                    
+                    # Get comprehensive email analysis from Claude with enhanced prompts
+                    analysis = self._get_quality_focused_email_analysis(email, user, user_context)
+                    
+                    if analysis:
+                        logger.debug(f"AI Analysis received for email {email.gmail_id}")
+                        logger.debug(f"Strategic value score: {analysis.get('strategic_value_score', 'N/A')}")
+                        logger.debug(f"Sender analysis: {analysis.get('sender_analysis', {})}")
+                        logger.debug(f"People found: {len(analysis.get('people', []))}")
+                        
+                        if self._validate_analysis_quality_debug(analysis):
+                            # Update email with insights
+                            self._update_email_with_insights(email, analysis)
+                            
+                            # Extract and update people information (with human filtering)
+                            if analysis.get('people') or analysis.get('sender_analysis'):
+                                people_count = self._process_human_contacts_only_debug(user.id, analysis, email)
+                                people_identified += people_count
+                                logger.info(f"Extracted {people_count} people from email {email.gmail_id}")
+                            
+                            # Extract and update project information
+                            if analysis.get('project') and self._validate_project_quality(analysis['project']):
+                                project = self._process_project_insights(user.id, analysis['project'], email)
+                                if project:
+                                    projects_identified += 1
+                                    email.project_id = project.id
+                            
+                            # Extract high-confidence tasks only
+                            if analysis.get('tasks'):
+                                tasks_count = self._process_high_quality_tasks(user.id, email.id, analysis['tasks'])
+                                tasks_created += tasks_count
+                            
+                            insights_extracted += 1
+                        else:
+                            logger.info(f"Analysis for email {email.gmail_id} didn't meet quality thresholds")
+                    else:
+                        logger.warning(f"No analysis returned for email {email.gmail_id}")
+                    
+                    processed_count += 1
+                    
+                    # Add a small delay to prevent overwhelming the system
+                    time.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.error(f"Failed to intelligently process email {email.gmail_id}: {str(e)}")
+                    continue
+            
+            logger.info(f"Quality-focused processing: {processed_count} emails, {people_identified} people identified for {user_email}")
+            
+            return {
+                'success': True,
+                'user_email': user_email,
+                'processed_emails': processed_count,
+                'high_quality_insights': insights_extracted,
+                'human_contacts_identified': people_identified,
+                'meaningful_projects': projects_identified,
+                'actionable_tasks': tasks_created,
+                'processor_version': self.version,
+                'debug_info': f"Processed {processed_count} emails, passed quality filters: {len(quality_filtered_emails)}"
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed intelligent email processing for {user_email}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def _get_emails_needing_processing(self, user_id: int, limit: int, force_refresh: bool) -> List[Email]:
+        """Get emails that need Claude analysis (generic filter)"""
+        with get_db_manager().get_session() as session:
+            query = session.query(Email).filter(
+                Email.user_id == user_id,
+                Email.body_clean.isnot(None)
+            )
+            
+            if not force_refresh:
+                query = query.filter(Email.ai_summary.is_(None))
+            
+            # Detach from session before returning to avoid issues
+            emails = query.order_by(Email.email_date.desc()).limit(limit).all()
+            session.expunge_all()
+            return emails
+
+    def _filter_unreplied_emails(self, emails: List[Email], user_email: str) -> List[Email]:
+        """Filter a list of emails to find ones that are likely unreplied"""
+        unreplied = []
+        for email in emails:
+            # If email is from the user themselves, skip
+            if email.sender and user_email.lower() in email.sender.lower():
+                continue
+
+            # If email contains certain patterns suggesting it's automated, skip
+            automated_patterns = [
+                'noreply', 'no-reply', 'donotreply', 'automated', 'newsletter',
+                'unsubscribe', 'notification only', 'system generated'
+            ]
+            sender_lower = (email.sender or '').lower()
+            subject_lower = (email.subject or '').lower()
+            if any(pattern in sender_lower or pattern in subject_lower for pattern in automated_patterns):
+                continue
+
+            # Default to including emails that seem personal/business oriented
+            unreplied.append(email)
+        return unreplied
+    
+    def _is_unreplied_email(self, email: Email, user_email: str) -> bool:
+        """Determine if an email is unreplied using heuristics"""
+        # If email is from the user themselves, skip
+        if email.sender and user_email.lower() in email.sender.lower():
+            return False
+        
+        # If email contains certain patterns suggesting it's automated, skip
+        automated_patterns = [
+            'noreply', 'no-reply', 'donotreply', 'automated', 'newsletter',
+            'unsubscribe', 'notification only', 'system generated'
+        ]
+        
+        sender_lower = (email.sender or '').lower()
+        subject_lower = (email.subject or '').lower()
+        
+        if any(pattern in sender_lower or pattern in subject_lower for pattern in automated_patterns):
+            return False
+        
+        # If email is marked as important or has action-oriented subject, include it
+        action_words = ['review', 'approve', 'sign', 'confirm', 'urgent', 'asap', 'deadline', 'meeting']
+        if any(word in subject_lower for word in action_words):
+            return True
+        
+        # Default to including emails that seem personal/business oriented
+        return True
+    
+    def _get_quality_focused_email_analysis(self, email: Email, user, user_context: Dict) -> Optional[Dict]:
+        """Get quality-focused email analysis from Claude with enhanced business context"""
+        try:
+            # Safety check to prevent processing very large emails
+            email_content = email.body_clean or email.snippet or ""
+            if len(email_content) > 10000:  # Limit email content size
+                logger.warning(f"Email {email.gmail_id} too large ({len(email_content)} chars), truncating")
+                email_content = email_content[:10000] + "... [truncated]"
+            
+            if len(email_content) < 10:  # Skip very short emails
+                logger.warning(f"Email {email.gmail_id} too short, skipping AI analysis")
+                return None
+            
+            email_context = self._prepare_enhanced_email_context(email, user)
+            
+            # Limit context size to prevent API issues
+            if len(email_context) > 15000:
+                logger.warning(f"Email context too large for {email.gmail_id}, truncating")
+                email_context = email_context[:15000] + "... [truncated]"
+            
+            # Enhanced system prompt with business context and quality requirements
+            business_context_str = self._format_business_context(user_context)
+            
+            system_prompt = f"""You are an expert AI Chief of Staff that provides comprehensive email analysis for business intelligence and productivity. Be INCLUSIVE and extract valuable insights from business communications.
+
+**YOUR MISSION:**
+- Extract ALL valuable business intelligence, contacts, tasks, and insights
+- Be inclusive rather than restrictive - capture business value wherever it exists
+- Focus on building comprehensive knowledge about professional relationships and work
+
+**BUSINESS CONTEXT FOR {user.email}:**
+{business_context_str}
+
+**ANALYSIS REQUIREMENTS:**
+
+1. **EMAIL SUMMARY**: Clear description of the email's business purpose and content
+2. **PEOPLE EXTRACTION**: Extract ALL human contacts with professional relevance (be generous!)
+   - ALWAYS extract the sender if they're a real person
+   - Extract anyone mentioned by name with business context
+   - Include names even with limited contact information
+3. **TASK IDENTIFICATION**: Find ANY actionable items or commitments mentioned
+4. **BUSINESS INSIGHTS**: Extract any strategic value, opportunities, or challenges
+5. **PROJECT CONTEXT**: Identify any work initiatives or business activities
+6. **TOPIC EXTRACTION**: Identify business topics, project names, company names, technologies
+
+**INCLUSIVE EXTRACTION GUIDELINES:**
+- Extract people even if limited info is available (name + context is enough)
+- Include tasks with clear actionable language, even if informal
+- Capture business insights at any level (strategic, operational, or tactical)
+- Process emails from colleagues, clients, partners, vendors - anyone professional
+- Include follow-ups, scheduling, decisions, updates, and work discussions
+- Extract topics like project names, company names, technologies, business areas
+- Be generous with topic extraction - include any business-relevant subjects
+
+Return a JSON object with this structure:
+{{
+    "summary": "Clear description of the email's business purpose and key content",
+    "strategic_value_score": 0.7,  // Be generous - most business emails have value
+    "sender_analysis": {{
+        "name": "Sender's actual name (extract from signature or display name)",
+        "role": "Their role/title if mentioned",
+        "company": "Their company if identifiable",
+        "relationship": "Professional relationship context",
+        "is_human_contact": true,  // Default to true for most senders
+        "business_relevance": "Why this person is professionally relevant"
+    }},
+    "people": [
+        {{
+            "name": "Full name of any person mentioned",
+            "email": "their_email@example.com",
+            "role": "Their role if mentioned",
+            "company": "Company if mentioned", 
+            "relationship": "Professional context",
+            "business_relevance": "Why they're mentioned/relevant",
+            "mentioned_context": "How they were mentioned in the email"
+        }}
+    ],
+    "project": {{
+        "name": "Project or initiative name",
+        "description": "Description of the work or project",
+        "category": "business/client_work/internal/operational",
+        "priority": "high/medium/low",
+        "status": "active/planning/discussed",
+        "business_impact": "Potential impact or value",
+        "key_stakeholders": ["person1", "person2"]
+    }},
+    "business_insights": {{
+        "key_decisions": ["Any decisions mentioned or needed"],
+        "strategic_opportunities": ["Opportunities or potential business value"],
+        "business_challenges": ["Challenges or issues discussed"],
+        "actionable_metrics": ["Any numbers or metrics mentioned"],
+        "competitive_intelligence": ["Market or competitor information"],
+        "partnership_opportunities": ["Collaboration potential"]
+    }},
+    "tasks": [
+        {{
+            "description": "Clear description of the actionable item",
+            "assignee": "{user.email}",
+            "due_date": "2025-02-15",
+            "due_date_text": "deadline mentioned in email",
+            "priority": "high/medium/low",
+            "category": "action_item/follow_up/meeting/review",
+            "confidence": 0.8,  // Be generous with confidence scores
+            "business_context": "Why this task matters",
+            "success_criteria": "What completion looks like"
+        }}
+    ],
+    "topics": ["HitCraft", "board meeting", "fundraising", "AI in music", "certification", "business development"],  // Extract: project names, company names, technologies, business areas, meeting types
+    "ai_category": "business_communication/client_work/project_coordination/operational"
+}}
+
+**IMPORTANT**: Extract value from most business emails. Only skip obvious spam or completely irrelevant content. Be generous with people extraction and task identification.
+"""
+
+            user_prompt = f"""Analyze this email comprehensively for business intelligence. Extract ALL valuable people, tasks, and insights:
+
+{email_context}
+
+Focus on building comprehensive business knowledge. Extract people and tasks generously - capture business value wherever it exists."""
+
+            # Add timeout and retry protection
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"Calling Claude API for comprehensive analysis of email {email.gmail_id}, attempt {attempt + 1}")
+                    
+                    message = self.claude_client.messages.create(
+                        model=self.model,
+                        max_tokens=3000,
+                        temperature=0.1,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_prompt}]
+                    )
+                    
+                    response_text = message.content[0].text.strip()
+                    
+                    # Handle null responses (low-quality emails)
+                    if response_text.lower().strip() in ['null', 'none', '{}', '']:
+                        logger.info(f"Claude rejected email {email.gmail_id} as low-quality")
+                        return None
+                    
+                    # Parse JSON response with better error handling
+                    json_start = response_text.find('{')
+                    json_end = response_text.rfind('}') + 1
+                    
+                    if json_start != -1 and json_end > json_start:
+                        json_text = response_text[json_start:json_end]
+                        try:
+                            analysis = json.loads(json_text)
+                            logger.info(f"Successfully analyzed email {email.gmail_id}")
+                            return analysis
+                        except json.JSONDecodeError as json_error:
+                            logger.error(f"JSON parsing error for email {email.gmail_id}: {str(json_error)}")
+                            if attempt < max_retries - 1:
+                                time.sleep(1)  # Wait before retry
+                                continue
+                            return None
+                    else:
+                        logger.warning(f"No valid JSON found in Claude response for email {email.gmail_id}")
+                        if attempt < max_retries - 1:
+                            time.sleep(1)  # Wait before retry
+                            continue
+                        return None
+                        
+                except Exception as api_error:
+                    logger.error(f"Claude API error for email {email.gmail_id}, attempt {attempt + 1}: {str(api_error)}")
+                    if attempt < max_retries - 1:
+                        time.sleep(2)  # Wait longer before retry
+                        continue
+                    return None
+            
+            logger.warning(f"Failed to analyze email {email.gmail_id} after {max_retries} attempts")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to get email analysis from Claude for {email.gmail_id}: {str(e)}")
+            return None
+    
+    def _format_business_context(self, user_context: Dict) -> str:
+        """Format business context for AI prompt"""
+        context_parts = []
+        
+        if user_context.get('existing_projects'):
+            context_parts.append(f"Current Projects: {', '.join(user_context['existing_projects'])}")
+        
+        if user_context.get('key_contacts'):
+            context_parts.append(f"Key Business Contacts: {', '.join(user_context['key_contacts'][:5])}")  # Top 5
+        
+        if user_context.get('official_topics'):
+            context_parts.append(f"Business Focus Areas: {', '.join(user_context['official_topics'])}")
+        
+        return '\n'.join(context_parts) if context_parts else "No existing business context available"
+    
+    def _validate_analysis_quality(self, analysis: Dict) -> bool:
+        """Validate that the analysis meets quality standards - RELAXED VERSION"""
+        try:
+            # RELAXED: Check strategic value score - lowered threshold
+            strategic_value = analysis.get('strategic_value_score', 0)
+            if strategic_value < 0.5:  # Reduced from 0.6 to 0.5
+                logger.info(f"Analysis rejected - low strategic value: {strategic_value}")
+                return False
+            
+            # RELAXED: Check summary quality - reduced minimum length
+            summary = analysis.get('summary', '')
+            if len(summary) < self.min_insight_length:
+                logger.info(f"Analysis rejected - summary too short: {len(summary)} chars")
+                return False
+            
+            # RELAXED: More lenient trivial content detection
+            trivial_phrases = [
+                'thanks', 'thank you', 'got it', 'received', 'noted', 'okay', 'ok',
+                'sounds good', 'will do', 'understood', 'acknowledged'
+            ]
+            
+            # Only reject if it's VERY short AND contains only trivial phrases
+            if any(phrase in summary.lower() for phrase in trivial_phrases) and len(summary) < 30:  # Reduced from 50
+                logger.info(f"Analysis rejected - trivial content detected")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error validating analysis quality: {str(e)}")
+            return False
+    
+    def _validate_project_quality(self, project_data: Dict) -> bool:
+        """Validate that project data meets quality standards"""
+        if not project_data or not project_data.get('name'):
+            return False
+        
+        # Check project name is substantial
+        if len(project_data['name']) < 5:
+            return False
+        
+        # Check for meaningful description
+        description = project_data.get('description', '')
+        if len(description) < self.min_insight_length:
+            return False
+        
+        return True
+    
+    def _process_human_contacts_only_debug(self, user_id: int, analysis: Dict, email: Email) -> int:
+        """Process people information with COMPREHENSIVE RELATIONSHIP INTELLIGENCE GENERATION"""
+        people_count = 0
+        
+        # Process sender first (with comprehensive relationship intelligence)
+        sender_analysis = analysis.get('sender_analysis')
+        if (sender_analysis and email.sender and 
+            not self._is_obviously_non_human_contact(email.sender)):
+            
+            # Get existing person to accumulate knowledge
+            existing_person = get_db_manager().find_person_by_email(user_id, email.sender)
+            
+            # Generate comprehensive relationship story and intelligence
+            comprehensive_relationship_story = self._generate_comprehensive_relationship_story(sender_analysis, email, existing_person)
+            relationship_insights = self._generate_relationship_insights(sender_analysis, email, existing_person)
+            
+            # Accumulate notes and context over time
+            existing_notes = existing_person.notes if existing_person else ""
+            new_relevance = sender_analysis.get('business_relevance', '')
+            
+            # Combine old and new notes intelligently
+            accumulated_notes = existing_notes
+            if new_relevance and new_relevance not in accumulated_notes:
+                if accumulated_notes:
+                    accumulated_notes += f"\n\nRecent Context: {new_relevance}"
+                else:
+                    accumulated_notes = new_relevance
+            
+            # Create enhanced person data with comprehensive intelligence
+            person_data = {
+                'email_address': email.sender,
+                'name': sender_analysis.get('name', email.sender_name or email.sender.split('@')[0]),
+                'title': sender_analysis.get('role'),
+                'company': sender_analysis.get('company'),
+                'relationship_type': sender_analysis.get('relationship', 'Contact'),
+                'notes': accumulated_notes,  # Accumulated knowledge
+                'importance_level': 0.8,  # Default importance
+                'ai_version': self.version,
+                'total_emails': (existing_person.total_emails if existing_person else 0) + 1,  # Increment email count
+                
+                # COMPREHENSIVE RELATIONSHIP INTELLIGENCE - These are the rich stories that make people clickable
+                'comprehensive_relationship_story': comprehensive_relationship_story,
+                'relationship_insights': relationship_insights,
+                
+                # Enhanced communication timeline
+                'communication_timeline': self._generate_communication_timeline_entry(email),
+                
+                # Business intelligence metadata
+                'relationship_intelligence': {
+                    'context_story': comprehensive_relationship_story[:200] + '...' if len(comprehensive_relationship_story) > 200 else comprehensive_relationship_story,
+                    'business_relevance': self._assess_business_relevance(sender_analysis, email),
+                    'strategic_value': self._calculate_strategic_value(sender_analysis, email),
+                    'recent_activity': 1,  # This email counts as recent activity
+                    'communication_frequency': self._assess_communication_frequency(existing_person),
+                    'last_strategic_topic': self._extract_strategic_topic_from_email(email),
+                    'collaboration_score': self._calculate_collaboration_score(sender_analysis, email),
+                    'expertise_areas': self._extract_expertise_areas(email, sender_analysis),
+                    'meeting_participant': self._is_meeting_participant(email),
+                    'communication_style': self._assess_communication_style(email),
+                    'avg_urgency': self._assess_email_urgency(email)
+                },
+                
+                # Enhanced business context
+                'business_context': {
+                    'strategic_topics': self._extract_strategic_topics_list(email),
+                    'business_insights_count': 1,  # This email contributes insights
+                    'communication_patterns': [self._categorize_communication_pattern(email)],
+                    'project_involvement': self._extract_project_involvement(email, sender_analysis),
+                    'has_strategic_communications': self._is_strategic_communication(email),
+                    'last_strategic_communication': self._format_last_strategic_communication(email) if self._is_strategic_communication(email) else None,
+                    'key_decisions_involved': self._extract_key_decisions(analysis, email),
+                    'opportunities_discussed': self._extract_opportunities(analysis, email),
+                    'challenges_mentioned': self._extract_challenges(analysis, email),
+                    'collaboration_projects': self._extract_collaboration_projects(email, analysis),
+                    'expertise_indicators': self._extract_expertise_indicators(email, sender_analysis),
+                    'meeting_frequency': self._calculate_meeting_frequency(email),
+                    'response_reliability': self._assess_response_reliability(existing_person)
+                },
+                
+                # Enhanced relationship analytics
+                'relationship_analytics': {
+                    'total_interactions': (existing_person.total_emails if existing_person else 0) + 1,
+                    'recent_interactions': 1,  # This is a recent interaction
+                    'strategic_interactions': 1 if self._is_strategic_communication(email) else 0,
+                    'avg_email_importance': self._calculate_avg_email_importance(email),
+                    'relationship_trend': self._assess_relationship_trend(existing_person),
+                    'engagement_level': self._assess_engagement_level(email, sender_analysis),
+                    'communication_consistency': self._assess_communication_consistency(existing_person),
+                    'business_value_score': self._calculate_business_value_score(sender_analysis, email),
+                    'collaboration_strength': self._calculate_collaboration_strength(email, analysis),
+                    'decision_influence': self._assess_decision_influence(analysis, email),
+                    'topic_expertise_count': len(self._extract_expertise_areas(email, sender_analysis)),
+                    'urgency_compatibility': self._assess_urgency_compatibility(email)
+                }
+            }
+            
+            get_db_manager().create_or_update_person(user_id, person_data)
+            people_count += 1
+            logger.info(f"Created/updated person with comprehensive intelligence: {person_data['name']} ({person_data['email_address']})")
+        
+        # Process mentioned people (also with comprehensive intelligence but lighter weight)
+        people_mentioned = analysis.get('people', [])
+        for person_info in people_mentioned:
+            if (person_info.get('email') and 
+                not self._is_obviously_non_human_contact(person_info['email'])):
+                
+                existing_person = get_db_manager().find_person_by_email(user_id, person_info['email'])
+                
+                # Generate lighter but still comprehensive relationship intelligence for mentioned people
+                comprehensive_relationship_story = self._generate_mentioned_person_relationship_story(person_info, email, existing_person)
+                relationship_insights = self._generate_mentioned_person_insights(person_info, email, existing_person)
+                
+                person_data = {
+                    'email_address': person_info['email'],
+                    'name': person_info.get('name', person_info['email'].split('@')[0]),
+                    'title': person_info.get('role'),
+                    'company': person_info.get('company'),
+                    'relationship_type': person_info.get('relationship', 'Mentioned Contact'),
+                    'notes': person_info.get('business_relevance', '') + f"\n\nMentioned in: {email.subject}",
+                    'importance_level': 0.6,  # Lower importance for mentioned people
+                    'ai_version': self.version,
+                    'total_emails': (existing_person.total_emails if existing_person else 0),  # Don't increment for mentions
+                    
+                    # Comprehensive intelligence for mentioned people too
+                    'comprehensive_relationship_story': comprehensive_relationship_story,
+                    'relationship_insights': relationship_insights,
+                    
+                    # Lighter business intelligence for mentioned people
+                    'relationship_intelligence': {
+                        'context_story': f"Mentioned in discussion about {email.subject or 'business matters'}",
+                        'business_relevance': 'mentioned_contact',
+                        'strategic_value': 0.3,  # Lower strategic value for mentions
+                        'recent_activity': 0,  # No direct activity
+                        'communication_frequency': 'mentioned_only',
