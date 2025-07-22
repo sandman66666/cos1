@@ -25,7 +25,7 @@ def create_tactical_tasks():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager, Email
+        from chief_of_staff_ai.models.database import get_db_manager, Email
         from prompts.prompt_loader import load_prompt, PromptCategories
         import anthropic
         from config.settings import settings
@@ -237,7 +237,7 @@ def _parse_tactical_tasks(response_text, confidence_threshold):
 def _save_tactical_task(task_data, source_email, user_id, master_tree=None):
     """Save a tactical task to the database with knowledge tree context"""
     try:
-        from models.database import get_db_manager, Task
+        from chief_of_staff_ai.models.database import get_db_manager, Task
         from datetime import datetime
         
         # Enhanced task description with knowledge context
@@ -297,7 +297,7 @@ def api_get_tasks():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         

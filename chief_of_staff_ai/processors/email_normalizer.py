@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 from html import unescape
 from bs4 import BeautifulSoup
 
-from models.database import get_db_manager, Email
+from chief_of_staff_ai.models.database import get_db_manager, Email
 
 logger = logging.getLogger(__name__)
 

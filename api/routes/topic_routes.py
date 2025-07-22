@@ -24,7 +24,7 @@ def api_get_topics():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         db_user = get_db_manager().get_user_by_email(user['email'])
         if not db_user:
@@ -52,7 +52,7 @@ def api_create_topic():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         db_user = get_db_manager().get_user_by_email(user['email'])
         if not db_user:
@@ -92,7 +92,7 @@ def api_mark_topic_official(topic_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         db_user = get_db_manager().get_user_by_email(user['email'])
         if not db_user:
@@ -122,7 +122,7 @@ def api_merge_topic(topic_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         db_user = get_db_manager().get_user_by_email(user['email'])
         if not db_user:
@@ -158,7 +158,7 @@ def api_update_topic(topic_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         db_user = get_db_manager().get_user_by_email(user['email'])
         if not db_user:
@@ -242,7 +242,7 @@ def api_ensure_default_topic():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         db_user = get_db_manager().get_user_by_email(user['email'])
         if not db_user:

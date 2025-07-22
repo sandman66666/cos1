@@ -9,7 +9,7 @@ import anthropic
 import time
 
 from config.settings import settings
-from models.database import get_db_manager, Email, Person, Project, Task, User
+from chief_of_staff_ai.models.database import get_db_manager, Email, Person, Project, Task, User
 
 logger = logging.getLogger(__name__)
 

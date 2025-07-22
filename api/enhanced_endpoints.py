@@ -16,7 +16,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'chief_of_staff_ai'))
 
 from processors.integration_manager import integration_manager
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 from config.settings import settings
 
 logger = logging.getLogger(__name__)

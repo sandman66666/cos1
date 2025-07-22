@@ -13,7 +13,7 @@ import hashlib
 
 from config.settings import settings
 from processors.unified_entity_engine import entity_engine, EntityContext
-from models.database import Email, Topic, Person, Task, Project, EntityRelationship, IntelligenceInsight
+from chief_of_staff_ai.models.database import Email, Topic, Person, Task, Project, EntityRelationship, IntelligenceInsight
 
 logger = logging.getLogger(__name__)
 
@@ -200,7 +200,7 @@ class EnhancedAIProcessor:
     def _gather_user_context(self, user_id: int, existing_context: Dict = None) -> Dict:
         """Gather comprehensive user context for AI processing"""
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             context = {
                 'existing_people': [],
@@ -545,7 +545,7 @@ Focus on business intelligence that builds on existing context rather than isola
         result = {'created': 0, 'updated': 0}
         
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             with get_db_manager().get_session() as session:
                 for project_data in projects_data:
@@ -603,7 +603,7 @@ Focus on business intelligence that builds on existing context rather than isola
     def _store_email_intelligence(self, email_data: Dict, analysis: Dict, user_id: int):
         """Store processed email intelligence in optimized format"""
         try:
-            from models.database import get_db_manager, Email
+            from chief_of_staff_ai.models.database import get_db_manager, Email
             import hashlib
             
             # Create content hash for deduplication
@@ -739,7 +739,7 @@ Focus on business intelligence that builds on existing context rather than isola
     def _find_entity_id(self, entity_info: Dict, user_id: int) -> Optional[int]:
         """Find actual entity ID from analysis data"""
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             entity_type = entity_info.get('type')
             identifier = entity_info.get('identifier')

@@ -15,7 +15,7 @@ import time
 
 from processors.unified_entity_engine import entity_engine, EntityContext
 from models.enhanced_models import Person, Topic, Task, CalendarEvent, Email, IntelligenceInsight
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 
 logger = logging.getLogger(__name__)
 

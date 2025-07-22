@@ -30,7 +30,7 @@ def api_chat():
         import anthropic
         from config.settings import settings
         from processors.email_intelligence import email_intelligence
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from api.routes.email_routes import get_master_knowledge_tree
         # Import the new prompt loader
         from prompts.prompt_loader import load_prompt, PromptCategories
@@ -197,7 +197,7 @@ def api_intelligence_metrics():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter, ContactTier
         
         user_email = user['email']
@@ -469,7 +469,7 @@ def api_download_knowledge_base():
     
     try:
         from flask import make_response
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         import json
         from datetime import datetime
         
@@ -526,7 +526,7 @@ def api_get_entity_context(entity_type, entity_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)
@@ -665,7 +665,7 @@ def api_get_entity_raw_sources(entity_type, entity_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)
@@ -780,7 +780,7 @@ def api_get_topics_hierarchy():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)
@@ -857,7 +857,7 @@ def api_build_knowledge_foundation():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         import json
         
         data = request.get_json() or {}
@@ -969,7 +969,7 @@ def api_reorganize_content():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         data = request.get_json() or {}
         reprocess_emails = data.get('reprocess_emails', True)

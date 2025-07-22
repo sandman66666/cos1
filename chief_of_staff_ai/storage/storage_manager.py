@@ -811,7 +811,7 @@ class StrategicStorageManager:
                         }
                 
                 # Fallback: try to get from old database manager
-                from models.database import get_db_manager
+                from chief_of_staff_ai.models.database import get_db_manager
                 user = get_db_manager().get_user_by_id(user_id)
                 if user:
                     return {

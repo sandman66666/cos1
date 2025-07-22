@@ -9,7 +9,7 @@ import anthropic
 from dataclasses import dataclass
 
 from config.settings import settings
-from models.database import get_db_manager, Calendar, Person, Email, Task, IntelligenceInsight, EntityRelationship
+from chief_of_staff_ai.models.database import get_db_manager, Calendar, Person, Email, Task, IntelligenceInsight, EntityRelationship
 
 logger = logging.getLogger(__name__)
 

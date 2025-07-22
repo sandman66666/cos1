@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from email.utils import parseaddr
 import json
 
-from models.database import get_db_manager, TrustedContact, Person
+from chief_of_staff_ai.models.database import get_db_manager, TrustedContact, Person
 from ingest.gmail_fetcher import gmail_fetcher
 
 logger = logging.getLogger(__name__)

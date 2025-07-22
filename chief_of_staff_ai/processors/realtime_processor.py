@@ -531,7 +531,7 @@ class RealTimeProcessor:
         related_entities = []
         
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             from models.enhanced_models import EntityRelationship
             
             with get_db_manager().get_session() as session:
@@ -611,7 +611,7 @@ class RealTimeProcessor:
             insight_id = feedback_data.get('insight_id')
             feedback_type = feedback_data.get('feedback')  # helpful, not_helpful, etc.
             
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             with get_db_manager().get_session() as session:
                 insight = session.query(IntelligenceInsight).filter(
@@ -682,7 +682,7 @@ class RealTimeProcessor:
     def _get_active_users(self) -> List[int]:
         """Get users with recent activity for scheduled analysis"""
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             from models.enhanced_models import Email
             
             # Users with activity in last 24 hours
@@ -703,7 +703,7 @@ class RealTimeProcessor:
     def _is_important_person(self, email: str, user_id: int) -> bool:
         """Check if person is marked as important"""
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             with get_db_manager().get_session() as session:
                 person = session.query(Person).filter(
@@ -725,7 +725,7 @@ class RealTimeProcessor:
         
         try:
             # Store insights in database
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             with get_db_manager().get_session() as session:
                 for insight in insights:

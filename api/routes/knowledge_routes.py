@@ -38,7 +38,7 @@ def get_topic_hierarchy():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.models.knowledge_models import TopicHierarchy
         
         user_email = user['email']
@@ -87,7 +87,7 @@ def build_topics_from_emails():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
         from chief_of_staff_ai.models.knowledge_models import SourceType
         
@@ -147,7 +147,7 @@ def build_foundation_from_bulk_emails():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
         
         data = request.get_json() or {}
@@ -214,7 +214,7 @@ def get_foundation_status():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.models.knowledge_models import TopicHierarchy
         
         user_email = user['email']
@@ -277,7 +277,7 @@ def create_topic():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.models.knowledge_models import TopicHierarchy, TopicType
         
         data = request.get_json()
@@ -356,7 +356,7 @@ def update_topic(topic_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.models.knowledge_models import TopicHierarchy
         
         data = request.get_json()
@@ -418,7 +418,7 @@ def get_topic_people(topic_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.models.knowledge_models import TopicHierarchy, PersonTopicRelationship
         
         user_email = user['email']
@@ -485,7 +485,7 @@ def get_person_topics(person_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.models.knowledge_models import PersonTopicRelationship, TopicHierarchy
         
         user_email = user['email']
@@ -558,7 +558,7 @@ def get_source_content(source_type, source_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
         
         user_email = user['email']
@@ -592,7 +592,7 @@ def get_knowledge_traceability(entity_type, entity_id):
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
         
         user_email = user['email']
@@ -640,7 +640,7 @@ def ingest_knowledge():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.knowledge_engine import knowledge_engine
         from chief_of_staff_ai.models.knowledge_models import SourceType
         
@@ -694,7 +694,7 @@ def get_knowledge_stats():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.models.knowledge_models import TopicHierarchy, PersonTopicRelationship, KnowledgeSource
         
         user_email = user['email']

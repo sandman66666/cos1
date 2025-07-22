@@ -24,7 +24,7 @@ import re
 from collections import defaultdict, Counter
 from email.utils import parseaddr
 
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 from models.enhanced_models import Email, Person, Task
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, func
@@ -71,7 +71,7 @@ class EmailQualityFilter:
     
     def __init__(self):
         """Initialize the EmailQualityFilter with configuration"""
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         self.db_manager = get_db_manager()
         self._contact_tiers: Dict[str, ContactEngagementStats] = {}
@@ -333,7 +333,7 @@ class EmailQualityFilter:
         Implements your specified tiering rules.
         """
         # Get user's email addresses
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         user = get_db_manager().get_user_by_email(stats.email_address)
         
         # If this is one of the user's own email addresses, always Tier 1
@@ -347,7 +347,7 @@ class EmailQualityFilter:
         # NEW: Check if this contact is from sent emails (TrustedContact) - these are automatically Tier 1
         try:
             with get_db_manager().get_session() as session:
-                from models.database import TrustedContact
+                from chief_of_staff_ai.models.database import TrustedContact
                 trusted_contact = session.query(TrustedContact).filter(
                     TrustedContact.email_address == stats.email_address
                 ).first()
@@ -621,7 +621,7 @@ class EmailQualityFilter:
             Dictionary with cleanup statistics
         """
         try:
-            from models.database import get_db_manager, Email, Task, Person
+            from chief_of_staff_ai.models.database import get_db_manager, Email, Task, Person
             
             logger.info(f"🧹 Starting cleanup of low-quality data for user {user_id}")
             
@@ -709,7 +709,7 @@ class EmailQualityFilter:
 
     def set_all_contacts_tier_1(self, user_email: str):
         """Set all contacts from sent emails to Tier 1"""
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         try:
             # Get user from database

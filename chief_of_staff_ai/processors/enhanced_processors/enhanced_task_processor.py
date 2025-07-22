@@ -162,7 +162,7 @@ class EnhancedTaskProcessor:
         Update task status with intelligence propagation to related entities.
         """
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             with get_db_manager().get_session() as session:
                 task = session.query(Task).filter(
@@ -216,7 +216,7 @@ class EnhancedTaskProcessor:
         Get user tasks with full entity context and relationships.
         """
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             with get_db_manager().get_session() as session:
                 query = session.query(Task).filter(Task.user_id == user_id)
@@ -271,7 +271,7 @@ class EnhancedTaskProcessor:
         Analyze user task patterns for productivity insights.
         """
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             cutoff_date = datetime.utcnow() - timedelta(days=days_back)
             
@@ -305,7 +305,7 @@ class EnhancedTaskProcessor:
     def _extract_task_details_from_result(self, result: Any, user_id: int) -> List[Dict]:
         """Extract task details from enhanced AI processing result"""
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             # Get recently created tasks for this user
             with get_db_manager().get_session() as session:

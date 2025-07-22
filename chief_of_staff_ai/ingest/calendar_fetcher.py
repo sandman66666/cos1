@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from auth.gmail_auth import gmail_auth
-from models.database import get_db_manager, Calendar
+from chief_of_staff_ai.models.database import get_db_manager, Calendar
 from config.settings import settings
 from processors.realtime_processing import realtime_processor, EventType
 from processors.enhanced_ai_pipeline import enhanced_ai_processor
@@ -690,7 +690,7 @@ class CalendarFetcher:
         """Create meeting preparation tasks using intelligence engine"""
         try:
             from processors.intelligence_engine import intelligence_engine
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             db_manager = get_db_manager()
             prep_tasks_created = 0
@@ -700,7 +700,7 @@ class CalendarFetcher:
                 try:
                     # Find the calendar event in database
                     with db_manager.get_session() as session:
-                        from models.database import Calendar
+                        from chief_of_staff_ai.models.database import Calendar
                         event = session.query(Calendar).filter(
                             Calendar.user_id == user_id,
                             Calendar.event_id == event_dict.get('event_id', event_dict.get('id'))
@@ -770,7 +770,7 @@ class CalendarFetcher:
             try:
                 # We can get the user email from the first user with this ID
                 with db_manager.get_session() as session:
-                    from models.database import User
+                    from chief_of_staff_ai.models.database import User
                     user = session.query(User).filter_by(id=user_id).first()
                     user_email = user.email if user else None
             except:

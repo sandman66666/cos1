@@ -12,7 +12,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from config.settings import settings
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 
 logger = logging.getLogger(__name__)
 

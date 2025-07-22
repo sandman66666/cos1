@@ -153,7 +153,7 @@ class EnhancedEmailProcessor:
         Analyze email communication patterns and generate insights.
         """
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             cutoff_date = datetime.utcnow() - timedelta(days=days_back)
             
@@ -313,7 +313,7 @@ class EnhancedEmailProcessor:
     def _is_duplicate_email(self, email_data: Dict, user_id: int) -> bool:
         """Check if email has already been processed with AI"""
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             gmail_id = email_data.get('gmail_id')
             if not gmail_id:
@@ -441,7 +441,7 @@ class EnhancedEmailProcessor:
     def _analyze_topic_trends(self, emails: List[Email], user_id: int) -> Dict:
         """Analyze topic trends from email communications"""
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             
             with get_db_manager().get_session() as session:
                 # Get topics mentioned in recent emails

@@ -168,7 +168,7 @@ class ProcessorManager:
     def _generate_entity_intelligence_summary(self, user_id: int) -> Dict:
         """Generate entity intelligence summary"""
         try:
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             from models.enhanced_models import Topic, Person, Task
             
             with get_db_manager().get_session() as session:

@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'chief_of_staff
 
 from processors.integration_manager import integration_manager
 from processors.unified_entity_engine import entity_engine, EntityContext
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 from models.enhanced_models import (
     Person, Topic, Task, CalendarEvent, Email, Project,
     EntityRelationship, IntelligenceInsight

@@ -152,7 +152,7 @@ def refresh_contact_tiers():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
         
         user_email = user['email']
@@ -190,7 +190,7 @@ def build_tier_rules():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
         from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
         
@@ -262,7 +262,7 @@ def get_contact_tiers():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
         
         user_email = user['email']
@@ -293,7 +293,7 @@ def cleanup_low_quality_data():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter, ContactTier
         
         user_email = user['email']
@@ -380,7 +380,7 @@ def flush_database():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)

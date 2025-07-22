@@ -245,7 +245,7 @@ def fetch_sent_emails():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.ingest.gmail_fetcher import gmail_fetcher
         
         data = request.get_json() or {}
@@ -300,7 +300,7 @@ def fetch_all_emails():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.ingest.gmail_fetcher import gmail_fetcher
         
         data = request.get_json() or {}
@@ -348,7 +348,7 @@ def build_knowledge_tree():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager, Email
+        from chief_of_staff_ai.models.database import get_db_manager, Email
         
         data = request.get_json() or {}
         batch_size = data.get('batch_size', 50)
@@ -437,7 +437,7 @@ def assign_emails_to_tree():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager, Email
+        from chief_of_staff_ai.models.database import get_db_manager, Email
         
         data = request.get_json() or {}
         batch_size = data.get('batch_size', 50)
@@ -534,7 +534,7 @@ def get_knowledge_tree():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)
@@ -583,7 +583,7 @@ def sync_knowledge_tree_to_database():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager, Person, Topic
+        from chief_of_staff_ai.models.database import get_db_manager, Person, Topic
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)
@@ -795,7 +795,7 @@ def refine_knowledge_tree(new_emails_data, existing_tree, user_email):
 def get_master_knowledge_tree(user_id):
     """Get the stored master knowledge tree for a user"""
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         with get_db_manager().get_session() as session:
             # This would typically be stored in a dedicated table
@@ -939,7 +939,7 @@ def knowledge_driven_email_pipeline():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
         from chief_of_staff_ai.agents.intelligence_agent import IntelligenceAgent
         from chief_of_staff_ai.agents.mcp_agent import MCPConnectorAgent
@@ -1329,7 +1329,7 @@ def phase1_smart_contact_filtering():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
         
         data = request.get_json() or {}
@@ -1404,7 +1404,7 @@ def phase2_initial_knowledge_tree():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.engagement_analysis.smart_contact_strategy import smart_contact_strategy
         import anthropic
         from config.settings import settings
@@ -1599,7 +1599,7 @@ def phase3_calendar_augmentation():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.ingest.calendar_fetcher import calendar_fetcher
         
         data = request.get_json() or {}
@@ -1710,7 +1710,7 @@ def phase4_email_knowledge_enhancement():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.ingest.gmail_fetcher import gmail_fetcher
         import anthropic
         from config.settings import settings
@@ -1833,7 +1833,7 @@ def phase5_cross_topic_intelligence():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         import anthropic
         from config.settings import settings
         
@@ -1978,7 +1978,7 @@ def get_current_knowledge_tree():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)

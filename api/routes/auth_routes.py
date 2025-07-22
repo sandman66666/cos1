@@ -15,7 +15,7 @@ from flask import Blueprint, session, render_template, redirect, url_for, reques
 
 # Import necessary modules
 from auth.gmail_auth import gmail_auth
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 from ..middleware.auth_middleware import get_current_user
 
 logger = logging.getLogger(__name__)

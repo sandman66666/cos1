@@ -56,7 +56,7 @@ def api_fetch_calendar():
     
     try:
         from ingest.calendar_fetcher import calendar_fetcher
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter
         
         data = request.get_json() or {}
@@ -170,7 +170,7 @@ def api_get_calendar_events():
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         days_forward = request.args.get('days_forward', 14, type=int)
@@ -251,7 +251,7 @@ def api_get_meeting_prep_tasks():
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)
@@ -316,7 +316,7 @@ def process_upcoming_meetings():
         return jsonify({'success': False, 'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)
@@ -341,7 +341,7 @@ def import_calendar_and_tier():
     """Import calendar events and add participants to Tier 1"""
     from chief_of_staff_ai.ingest.calendar_fetcher import calendar_fetcher
     from chief_of_staff_ai.processors.email_quality_filter import email_quality_filter, ContactTier
-    from models.database import get_db_manager
+    from chief_of_staff_ai.models.database import get_db_manager
     
     user = get_current_user()
     if not user:
@@ -434,7 +434,7 @@ def sync_calendar():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         from chief_of_staff_ai.ingest.calendar_fetcher import calendar_fetcher
         
         data = request.get_json() or {}
@@ -508,7 +508,7 @@ def get_enhanced_calendar_events():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         days_ahead = int(request.args.get('days_ahead', 14))
         days_back = int(request.args.get('days_back', 7))
@@ -593,7 +593,7 @@ def augment_meetings_with_knowledge():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager, CalendarEvent, Task
+        from chief_of_staff_ai.models.database import get_db_manager, CalendarEvent, Task
         from api.routes.email_routes import get_master_knowledge_tree
         from datetime import datetime, timedelta
         

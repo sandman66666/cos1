@@ -159,7 +159,7 @@ class GmailAuthManager:
         """
         try:
             # Get user from database
-            from models.database import get_db_manager
+            from chief_of_staff_ai.models.database import get_db_manager
             user = get_db_manager().get_user_by_email(user_email)
             if not user or not user.access_token:
                 logger.warning(f"No stored credentials for user: {user_email}")

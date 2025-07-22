@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 from dataclasses import dataclass
 import re
 
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 from config.settings import settings
-from models.database import (
+from chief_of_staff_ai.models.database import (
     Topic, Person, Task, Email, CalendarEvent, Project,
     EntityRelationship, IntelligenceInsight, 
     person_topic_association, task_topic_association, event_topic_association

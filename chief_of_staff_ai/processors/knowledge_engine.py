@@ -23,7 +23,7 @@ import re
 import json
 from dataclasses import dataclass
 
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 from models.knowledge_models import (
     TopicHierarchy, PersonTopicRelationship, KnowledgeSource, 
     UnifiedKnowledgeGraph, ProactiveKnowledgeInsight, KnowledgeEvolutionLog,

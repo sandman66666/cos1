@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, session
 from typing import Dict, List, Optional
 
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 from models.enhanced_models import Topic, Person, Task, EntityRelationship, IntelligenceInsight
 from processors.realtime_processing import realtime_processor, EventType
 from processors.enhanced_ai_pipeline import enhanced_ai_processor

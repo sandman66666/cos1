@@ -26,7 +26,7 @@ def api_get_people():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         
@@ -155,7 +155,7 @@ def api_get_projects():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager
+        from chief_of_staff_ai.models.database import get_db_manager
         
         user_email = user['email']
         db_user = get_db_manager().get_user_by_email(user_email)
@@ -188,7 +188,7 @@ def augment_people_with_knowledge():
         return jsonify({'error': 'Not authenticated'}), 401
     
     try:
-        from models.database import get_db_manager, Person, Email
+        from chief_of_staff_ai.models.database import get_db_manager, Person, Email
         from api.routes.email_routes import get_master_knowledge_tree
         import anthropic
         from config.settings import settings

@@ -9,7 +9,7 @@ from dateutil import parser
 import anthropic
 
 from config.settings import settings
-from models.database import get_db_manager, Email, Task
+from chief_of_staff_ai.models.database import get_db_manager, Email, Task
 
 logger = logging.getLogger(__name__)
 

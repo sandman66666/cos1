@@ -9,7 +9,7 @@ Extracted from main.py for better organization.
 import logging
 from functools import wraps
 from flask import session, jsonify
-from models.database import get_db_manager
+from chief_of_staff_ai.models.database import get_db_manager
 
 logger = logging.getLogger(__name__)
 
