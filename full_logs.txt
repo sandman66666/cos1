@@ -1,0 +1,304 @@
+Starting Container
+INFO:__main__:Connected to PostgreSQL database
+INFO:__main__:job_status table created/verified
+INFO:link_attachment_processor:Updated email_attachments.filename to TEXT type
+INFO:link_attachment_processor:Link and attachment tables initialized successfully
+INFO:__main__:Link processor initialized successfully
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     100.64.0.2:60204 - "GET /health HTTP/1.1" 200 OK
+INFO:     100.64.0.3:62206 - "GET /health HTTP/1.1" 200 OK
+INFO:__main__:Comprehensive Gmail processing for user 1
+INFO:__main__:Created job 0582a3aa-bf3c-4b68-ba3f-80becf797405 for user 1
+INFO:     100.64.0.4:40370 - "POST /process/gmail HTTP/1.1" 200 OK
+INFO:__main__:Updated job 0582a3aa-bf3c-4b68-ba3f-80becf797405: running - 0% - Starting Gmail processing...
+INFO:__main__:Updated job 0582a3aa-bf3c-4b68-ba3f-80becf797405: running - 10% - Analyzing sent emails for trusted contacts...
+INFO:__main__:Extracting trusted contacts for user 1 from last 1095 days
+INFO:__main__:User's email: sandman@session-42.com
+INFO:__main__:Getting credentials for user 1
+INFO:__main__:Credentials retrieved, valid: True, expired: False
+INFO:__main__:Building Gmail API service...
+INFO:googleapiclient.discovery_cache:file_cache is only supported with oauth2client<4.0.0
+INFO:__main__:Gmail service built successfully
+INFO:__main__:Found 4050 sent emails to analyze
+INFO:__main__:Processing 4050 messages individually
+INFO:__main__:Progress: 0/500 messages processed
+INFO:     100.64.0.3:22206 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:     100.64.0.3:52974 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 50/500 messages processed
+INFO:     100.64.0.4:43110 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 100/500 messages processed
+INFO:     100.64.0.3:29128 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:     100.64.0.2:53672 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 150/500 messages processed
+INFO:     100.64.0.4:29868 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:     100.64.0.3:28152 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 200/500 messages processed
+INFO:     100.64.0.4:18384 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:     100.64.0.3:41798 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 250/500 messages processed
+INFO:     100.64.0.4:46996 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 300/500 messages processed
+INFO:     100.64.0.3:41162 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:     100.64.0.5:10924 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 350/500 messages processed
+INFO:     100.64.0.5:62524 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:     100.64.0.5:15672 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 400/500 messages processed
+INFO:     100.64.0.2:46670 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 450/500 messages processed
+INFO:     100.64.0.4:31030 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 196a121e57d2cc22: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 196a0bf3c000a610: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 196a0bee4d56e446: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 196909ec7f648aab: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 1968c0d068efd02b: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 19685ff44471b622: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 19685fe6a5b6b1e1: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 19685fd0616ff598: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 19685f4b56cb609f: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 196809e3bebe5e58: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 1967bcc23187a1c9: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 1967b881b51e73cd: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 1967b5a1282a1682: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 196763aa9bac6c76: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 196763371072fdeb: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 19669b45dfb4854a: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 196684c325f81815: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 19662bfbe22794bd: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 196618a5c81c6326: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error processing message 1966188f6f297326: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:__main__:Processed 480 messages successfully, 20 errors
+INFO:__main__:Skipping user's own email: sandman@session-42.com
+INFO:__main__:Found 163 trusted contacts
+INFO:__main__:Updated job 0582a3aa-bf3c-4b68-ba3f-80becf797405: running - 30% - Found 163 trusted contacts
+INFO:     100.64.0.4:14126 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Updated job 0582a3aa-bf3c-4b68-ba3f-80becf797405: running - 50% - Stored 163 trusted contacts
+INFO:__main__:Updated job 0582a3aa-bf3c-4b68-ba3f-80becf797405: running - 60% - Fetching emails from trusted contacts...
+INFO:__main__:Getting credentials for user 1
+INFO:__main__:Credentials retrieved, valid: True, expired: False
+INFO:__main__:Building Gmail API service...
+INFO:googleapiclient.discovery_cache:file_cache is only supported with oauth2client<4.0.0
+INFO:__main__:Gmail service built successfully
+INFO:__main__:Query will fetch conversations with 50 trusted contacts (excluding user's own email)
+INFO:google_auth_httplib2:Refreshing credentials due to a 401 response. Attempt 1/2.
+ERROR:__main__:Error fetching emails: The credentials do not contain the necessary fields need to refresh the access token. You must specify refresh_token, token_uri, client_id, and client_secret.
+INFO:__main__:Updated job 0582a3aa-bf3c-4b68-ba3f-80becf797405: running - 70% - Processing 0 emails (of ~0 available)...
+INFO:__main__:Updated job 0582a3aa-bf3c-4b68-ba3f-80becf797405: completed - 100% - Successfully processed 0 emails, 0 links, 0 attachments
+INFO:     100.64.0.2:31668 - "GET /job-status/0582a3aa-bf3c-4b68-ba3f-80becf797405 HTTP/1.1" 200 OK
+INFO:__main__:Comprehensive Gmail processing for user 1
+INFO:__main__:Created job 15806d98-913a-40b6-8ae6-52754fd799b1 for user 1
+INFO:     100.64.0.3:15522 - "POST /process/gmail HTTP/1.1" 200 OK
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 0% - Starting Gmail processing...
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 10% - Analyzing sent emails for trusted contacts...
+INFO:__main__:Extracting trusted contacts for user 1 from last 1095 days
+INFO:__main__:User's email: sandman@session-42.com
+INFO:__main__:Getting credentials for user 1
+INFO:__main__:Credentials retrieved, valid: True, expired: False
+INFO:__main__:Building Gmail API service...
+INFO:googleapiclient.discovery_cache:file_cache is only supported with oauth2client<4.0.0
+INFO:__main__:Gmail service built successfully
+INFO:__main__:Found 4050 sent emails to analyze
+INFO:__main__:Processing 4050 messages individually
+INFO:__main__:Progress: 0/500 messages processed
+INFO:     100.64.0.5:36138 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 50/500 messages processed
+INFO:     100.64.0.5:36154 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:     100.64.0.4:46676 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 100/500 messages processed
+INFO:     100.64.0.3:15808 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 150/500 messages processed
+INFO:     100.64.0.2:37916 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:     100.64.0.4:56088 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 200/500 messages processed
+INFO:     100.64.0.2:45444 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 250/500 messages processed
+INFO:     100.64.0.3:13762 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:     100.64.0.3:13778 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 300/500 messages processed
+INFO:     100.64.0.2:41258 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 350/500 messages processed
+INFO:     100.64.0.2:26132 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:     100.64.0.5:27808 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 400/500 messages processed
+INFO:     100.64.0.5:11570 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Progress: 450/500 messages processed
+INFO:     100.64.0.4:35704 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Processed 500 messages successfully, 0 errors
+INFO:__main__:Skipping user's own email: sandman@session-42.com
+INFO:__main__:Found 165 trusted contacts
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 30% - Found 165 trusted contacts
+INFO:     100.64.0.5:50074 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 50% - Stored 165 trusted contacts
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 60% - Fetching emails from trusted contacts...
+INFO:__main__:Getting credentials for user 1
+INFO:__main__:Credentials retrieved, valid: True, expired: False
+INFO:__main__:Building Gmail API service...
+INFO:googleapiclient.discovery_cache:file_cache is only supported with oauth2client<4.0.0
+INFO:__main__:Gmail service built successfully
+INFO:__main__:Query will fetch conversations with 50 trusted contacts (excluding user's own email)
+INFO:__main__:Gmail reports approximately 201 messages available for this query
+INFO:     100.64.0.3:52170 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 70% - Processing 3099 emails (of ~201 available)...
+INFO:link_attachment_processor:Extracted 22 unique links from email 1984bec25fc08fc2
+INFO:__main__:Downloading attachment UWC_Board - Session 42 Ltd. _  Option Grant (Ido)_ - July 2025(14559660.1).docx (ID: ANGjdJ_MriZJ06AWbOksqc2ZnbBwiJ-kqIbH69mXpayKEeXwFeeHcMmDsHUoM8IL8b_5rIOnS59sy6hke3H0KNvnOK2l0aXQGPY2Iy-5ZAlFXvl9fl-Futx3Nv9Tm9YZcxnQNE22yHpmWUPE6SbPRKlB9bcH0wx5gYCX4FFRz4u3CE4g3sG9abWAMbV2oWWMM_TeNJruIWsW-Wzfh_CBMuM5iuK2wLHW-lxct3zhLgCPny0d8a0R4LexWrMFyYyBqFjZSihcVtGRZAEZOcfX8OInuFNk6AybrofjV1Tqt2yCHAmWCMh2toKFYczfoDA6XGX3YWZR1KUtFYP0P155uXE4cr-1-sVLVMWvbpdc_xdTkXvlqnqZ3erTOMfoIQk7e5tIE8ak6hzLwscBCImP4MJqYVQPJv1hhwOxd4dboA)
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/1984bec25fc08fc2/UWC_Board - Session 42 Ltd. _  Option Grant Ido_ - July 202514559660.1.docx (35984 bytes)
+
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 70% - Processed 1 emails, 22 links, 1 attachments...
+INFO:link_attachment_processor:Extracted 5 unique links from email 1984b737e28d38e2
+INFO:link_attachment_processor:Extracted 11 unique links from email 1984b6263c267415
+INFO:link_attachment_processor:Extracted 14 unique links from email 1984b3ff60bf58ab
+INFO:link_attachment_processor:Extracted 13 unique links from email 1984b1cfa8634285
+INFO:link_attachment_processor:Extracted 14 unique links from email 1984aba6ed4050e6
+INFO:link_attachment_processor:Extracted 58 unique links from email 1984aa03bb4499bf
+INFO:__main__:Downloading attachment Invoice for Legal Services No. 35797 - Horizon (Session 42).pdf (ID: ANGjdJ8LJ-qbUop75Shsipvb_qtYtmrXctF3NMBjJd19YiVj4cD1oEwsqgYpKAYAYPYiCLNPuj7ToPdN9vkIJoDSqnQHbTtAbIgHHM31O5_gTQ4b6QD3JXBDDagzCu1jq3M3R7-4Zwzv3G7cQ-wGR_MsqGmmA0lDCDKvp2QtcTTZgtx7lVtm-cG5489wVeLJOm9rjIl6Ovf1aFsc5nn24LNThAg5gVl4Diypj8C-7tbivRTN4BIxci23NWA81g9XIo1nvFGiJl_9ynZpLVt-9KfyA_588JYs4nzAVXZjkUr8csydIoYvU1E63Iyl14EDRGkT9NjZikKgc-fCpgUwKuCxLlNYRGv3wy7PJ2h1R8iBcaxu4ymgf4xkuFq22HjkodvrMHhS0cKm1sBwVFqkoXDp-CNjjnr80MZ2FhLDdA)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/1984aa03bb4499bf/Invoice for Legal Services No. 35797 - Horizon Session 42.pdf (101246 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:link_attachment_processor:Extracted 1 unique links from email 19844778b9f12d8e
+INFO:link_attachment_processor:Extracted 0 unique links from email 198446e3d33544f0
+INFO:link_attachment_processor:Extracted 4 unique links from email 19842fc5deb24840
+INFO:link_attachment_processor:Extracted 11 unique links from email 198411bcb26068b2
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 70% - Processed 11 emails, 153 links, 2 attachments...
+INFO:link_attachment_processor:Extracted 25 unique links from email 1983eb49dc5441b1
+INFO:link_attachment_processor:Extracted 29 unique links from email 1983e6578d87d3a1
+INFO:link_attachment_processor:Extracted 27 unique links from email 1983d89ca8d0d224
+INFO:link_attachment_processor:Extracted 5 unique links from email 1983cf77a0cfc5e9
+INFO:link_attachment_processor:Extracted 0 unique links from email 1983cf70b2e8e11d
+INFO:link_attachment_processor:Extracted 5 unique links from email 1983c31c9d3a30aa
+INFO:     100.64.0.4:13128 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:link_attachment_processor:Extracted 22 unique links from email 1983c104e98c4b45
+INFO:__main__:Downloading attachment Amendment to Employment Agreement - salary decrease YADIN.pdf (ID: ANGjdJ_3j62gNp7ZKQqTt1knEAFb4d1tcqTQ--uSgp-7j8IjkNbAwqsD1qpYY3JiLf6XM6vywpzK85Rjp9j5h-Y3oaiA61RXRZoXnYZuoQuy4RKpf_S8NxF7ka-q1ugXwXq8wAVu40KfrkDCD3qeGnZnYw_Gr1kvTcBr_Cz8uID97IC9zzOUyHKLzdkSSumeIgxIn03woQh9dy2xbaN6UZY0EMd4lxqBOQLdKWWlhd-sXFqX-DdBMkxM7M-kW_OZw1K-AtLhuDuF06Sr-3pJNo72ut65OkENlG0ZlikZEXw2ZVAyz7a-ULEA2m3wLK78lzORh7OjlGklHilNZg-8FDaMICVsJLLXpMBI-VGv781j15n88Catq6KHAyubN_ZZqoea5jjTMLdajwQoxrZN56i1qYfMb3V2dljnOQtuHw)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/1983c104e98c4b45/Amendment to Employment Agreement - salary decrease YADIN.pdf (226080 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:link_attachment_processor:Extracted 16 unique links from email 1983bc3bfb3f605f
+INFO:link_attachment_processor:Extracted 16 unique links from email 1983bc3a1693616f
+INFO:link_attachment_processor:Extracted 22 unique links from email 1983bb8cb4fa231e
+INFO:__main__:Downloading attachment Amendment to Employment Agreement - salary decrease YADIN.pdf (ID: ANGjdJ8C1CloPP-rAkBkprOWwBXkarwyQf2gEp4EYByCzNxZlAV7SBHnn60J-SKK_4tiw3fvGhWNQ2Cp9ZLJ7SbfnK5NfiltHMdktLnyrooVUirJ29d0NXMuOWoiI3c7-f-vyJXSou6-blvt0b4nVhPJ0Uv_4seO8JHEjd0yI4Icvwvw7qsxw9tX515Vql45bVwHOmhQV-9_B67W4A1wceDDslW4z7t5gpjWBxt_HIxoEfehSDUTphof-UbydvvLpeKNXSjx_iIzsRCr_dBCiwN5fKB7IT2YOHnlYUW86-6N7nVCDZDnq2ePHalGcDNh13Vq8LglCMPtFU3yT1yr2lDWw7h6nGQsUXGt2lcStGdWlv1DyKG9T1rbFZkLsumtadlMQfZVXeIG5iez10vPQJ5sRDKKobhTc15JlWvlNQ)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/1983bb8cb4fa231e/Amendment to Employment Agreement - salary decrease YADIN.pdf (237518 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 70% - Processed 21 emails, 320 links, 4 attachments...
+INFO:link_attachment_processor:Extracted 20 unique links from email 1983b1c63b686e8f
+INFO:link_attachment_processor:Extracted 18 unique links from email 1983aa1e6d7e69ef
+INFO:link_attachment_processor:Extracted 58 unique links from email 19839b8a93f90a61
+INFO:link_attachment_processor:Extracted 27 unique links from email 198390590e5d41ee
+INFO:link_attachment_processor:Extracted 19 unique links from email 198390343f3ebc5d
+INFO:__main__:Downloading attachment Invoice-49E396D6-0028.pdf (ID: ANGjdJ8eMG-_kRw77xqJ1OVUqWzw_wU8kaKDuN7dVDS0dzH1D5RVkxgmJVdGNbpvZWBnO9vDHaAd77Pss5AM_KYytF7Z5L8F0gSyrvBEfawB9vhFmIXc90kX3DcvjvDgCSkOc6Lc0wElq95P8YxABcVWmrDdKeEsxpYkpmSpqIfE0dFFN8Iny3fnj0Wpo8eB3_1RLJwve4bX1JbTEcXU1lguF9W0ogt65CjSQ9vmsSj1adOiBJu6Qg818jC1mA9RxOguqDA5xNa6ZlSHjBeWsxWfKrIjbNK2TecyrQ1NhY5ybMtW7-0LrsW_C97yUcf94EixDkc8vwFWJwLDx2GUcR4jYiJxjq8iAJPFKRQomaZxg5Hn2GaojoxhGXQj370TF8nxQTpXzYf5wgrCWZiEhPljCxYG-A9sYSpAW8i88A)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/198390343f3ebc5d/Invoice-49E396D6-0028.pdf (30431 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:__main__:Downloading attachment Receipt-2202-9828-4632.pdf (ID: ANGjdJ-gxVIUr98U0mkx7RaHnYU5kWHbXdci-DdeD51_yeQUfF4Coi32lnBGKVOMRkv1ueHuOAxPcDbBD8gVIzhsTZemipvD28xA-pHiCciDIBusts7Nn9SzvmDhrAr35IECiuFZf0w_s_mFA7sYgS_pGoMr3gqZD36v2oFMoXlGnw01gT3XdrMBCFQMvm1iKush558UsMkxRq-qiBJMDzEbeqUc5YQNI2gQ3ZRDMitr-gydvyQhoX9qsJ6XJ3J0s_YRqZfdkedTA7dQEiG9vQIkDcQr7YK3GmXhipHs84zF0SjGigz0w8CFMnxZsCgPSgG24w0-3DVrzdTITjOCWECedNMJsAMFWnVnI0sbK_aqb1123u40HkIXLeJxK-0OUL-lA9HeFuXIPjmgIlVPW8c38ETy6gfrOoPQAq7Mew)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/198390343f3ebc5d/Receipt-2202-9828-4632.pdf (31820 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:link_attachment_processor:Extracted 58 unique links from email 198390321ea01bb3
+INFO:link_attachment_processor:Extracted 11 unique links from email 1983902537f52a8c
+INFO:link_attachment_processor:Extracted 11 unique links from email 19838acecee37f66
+INFO:link_attachment_processor:Extracted 36 unique links from email 19837327ed327b04
+INFO:link_attachment_processor:Extracted 22 unique links from email 198372ec77ba0f95
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 70% - Processed 31 emails, 600 links, 6 attachments...
+INFO:     100.64.0.5:32368 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:link_attachment_processor:Extracted 26 unique links from email 198372c8137e684c
+INFO:link_attachment_processor:Extracted 28 unique links from email 198372981a3dff7d
+INFO:link_attachment_processor:Extracted 57 unique links from email 198370feba0cb629
+INFO:link_attachment_processor:Extracted 21 unique links from email 19836feeb3c966a0
+INFO:link_attachment_processor:Extracted 3 unique links from email 19836df16e8803e0
+INFO:link_attachment_processor:Extracted 2 unique links from email 19836cd192f4ddcb
+INFO:link_attachment_processor:Extracted 0 unique links from email 19836b5dcac2de79
+INFO:link_attachment_processor:Extracted 0 unique links from email 198323083fc85e7c
+INFO:__main__:Downloading attachment Complete_with_Docusign_SAFE_-_Session_42_[Fo.pdf (ID: ANGjdJ-2bgHFEqzs6LOUFjrQYKlBVaWb6T17WZKzsVKCIBT9W9dz1azA_pQJ37ER5cnQlxDPZkXvZQmwQvJD4Ys0gUKfnWlRW1g5E_Ng02bwCMlKp8FSr3qVwKMEWS7cdYiDMC1XT6ufWOwCJRPJJbvZQZHIAgkPvHzQvovz19HUITrHXDHMpKXNtHs9HJ-E6mxrVcNk2jVqZwSn5kiLizPIkFgfTQOWZBFJ3LbOfgZtMKwhp_CXjrTHCrdJzdY4MTqvZzmWIpnFGHWhHA3USzrMi3e8eiqd0SWlAL_6KkhSFLLEyhe8M7jW6qT6gb8vylNjjP1hWkY_YlbBqkzLzdAi8om2zQLVVjG5zBP-4vY4jdmuQGyXuinZPZaCtPJuLlbjBPurMQA8qPrQsX4u)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/198323083fc85e7c/Complete_with_Docusign_SAFE_-_Session_42_Fo.pdf (401635 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:link_attachment_processor:Extracted 17 unique links from email 1982ecdecbccc4f0
+INFO:link_attachment_processor:Extracted 22 unique links from email 1982d78156b68c6e
+INFO:__main__:Downloading attachment Session42 FY24 plan - HITCRAFT solo (1).xlsx (ID: ANGjdJ_TsNfYy2Tk4dZwFJ24qpP4FFcxkXPSygWFzDgb3qkrCGQ00W1Ee3CC_EbkoYshpgRQp34XlXuvFvCJNjRnUqBma929oCarnRJxDRZ7M7VB02sE99CErzCi2oiU_mBnIy-s37TzJTEiuU0UA8vF-SYhCcmL3hEs8EF_oa5rcoTG2_4SCg1nEBGJfcFxlhLCppGLMGdt85q-4pwpnSHERUTJ7xK50A8WfqWJKuAEsiBMNiXmiV2lNTcF-F-FjUi2PjwhOl7ZOTAl11AZLtmljlhXctzHI-n6qPYc3LY-PioG9xfBipKUr1yFDux4USuzc7KSxoG05rK-6PhAiADy4wapp-c3OQbOZFfl7R1W7MHPOik79nw2JqARQogTDIfA7HMqQEac8y2wbHfhIXdsNaaNBDx4WujqEt_xOA)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/1982d78156b68c6e/Session42 FY24 plan - HITCRAFT solo 1.xlsx (1158219 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 70% - Processed 41 emails, 776 links, 8 attachments...
+INFO:link_attachment_processor:Extracted 11 unique links from email 1982cacb3c1f3195
+INFO:link_attachment_processor:Extracted 11 unique links from email 1982ca81d0c5715a
+INFO:link_attachment_processor:Extracted 1 unique links from email 1982ca4330d76c9c
+INFO:link_attachment_processor:Extracted 11 unique links from email 1982ca31c664e13f
+INFO:link_attachment_processor:Extracted 31 unique links from email 1982c6dba0e94d9a
+INFO:__main__:Downloading attachment bank account info 77507 .pdf (ID: ANGjdJ_vPFuKwpNVPuHJdspEHUHbGr3D5E25-ZGKkYj4Kr2s5z-AVABY3Wr86qRH1mo5mijWZiPjnoSTBL-P7WZVsX88IQ_A8UC9UT-8yrGnzqS2qXu2E6o6W_hxX5fRwRMyHRr_GAwgpdYoozZGX6WMbIeEsdIhRRr7q3tchF0c_KXVs5YCQOft0-NOo7n5VzhRWg-fu6a8uoD7edpPnRXNli_cYxwpfm59zm2rddPzOUHvwJsrNXyDDaeTr4i-oZJhhHgLkXohULefcWZQkyoDrBuekW3aiuTrEabUOXCPTN2qbp_Pr6tgbf14xSDad-rSmujY6wCQqGhXWkyrC5uj3xwTC-763OFWcVfdGvp3WwROdWockR0wNkR7v0cR7YLzojsJD3csoFMRKbQfqrYACvENkrPtRdjrZD78lA)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/1982c6dba0e94d9a/bank account info 77507 .pdf (101625 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:link_attachment_processor:Extracted 2 unique links from email 1982c466f0c28352
+INFO:link_attachment_processor:Extracted 7 unique links from email 1982c3b7db2da35e
+INFO:link_attachment_processor:Extracted 7 unique links from email 1982c294c3dd76ac
+INFO:__main__:Downloading attachment OpenAI + HitCraft (1).pdf (ID: ANGjdJ_9diR-nBudbBvRWqYGu9bjKWzkyszjV9c_cQ8Ikq_XDZiynC9KF00WAWPnx-Mjk0WwNoD-_6pdNhO2RhDLBEB3VverAlG9CfBDQOR1dOkNWzhjFHs9AOaQIdFpFYJbevBKK2pg2J_9anvljSEYYV3BM00W--Lvek7EN9ZVY-iUAytiJterwuZI_RF8Wklryus3n9G4mnuvppViPLWDdTiOjJbM44sfkqqORTyQTSBFd1ra7Ucv1rNTK4McWT07jAKU5q7KL-FT63QQuAyoRjCbcWjZAm1ltrgt4RMgWaSMebchns1diFyyBljq8D8cc6nMJpOlmkYqSDF6yUuum9yQGvwD8I5PBmP8Y4c4yY0-AM0UUvycbrn0KMUae_ieDPy9N4cjz6wqx2XMif2a_J8zNr2c1ccqB5b5cA)
+INFO:     100.64.0.3:10278 - "GET /job-status/15806d98-913a-40b6-8ae6-52754fd799b1 HTTP/1.1" 200 OK
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/1982c294c3dd76ac/OpenAI  HitCraft 1.pdf (69910 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:link_attachment_processor:Extracted 7 unique links from email 1982c2662075aed4
+INFO:__main__:Downloading attachment Anthropic + HitCraft (1).pdf (ID: ANGjdJ8R-b5kap3OzBdVn4iRJmOK7UXfKLmurIj_ZdT6z6lYb9f7mcoqtcsGwsrQs6ilIgUyXTWxhyPkokToCtxWn7blqxqPJILqHv5RQ0RZmTc1ErzNdjBiuTfWZNJR8E8tlEGlWz_tPSh9cXAkk4TPh9AfGs1_VHx6Ecw_pnMmWrAAuzewl_t5IXTjsOq4bjKRWaxV01xVgnKogepDnyz_k9oBHPQ8GNwomt5vdu0lZTzvUwZo6Q1ZVVL7LHW0DK1ftgy7-uPJQId0vE8oicFhBlC4XyepXjkGnO97SfPFaM85IKhj7uprRG31Dle48NOE63xQAJf6vaxmyg5emDXtRaCgC_ZbgT36tZJbRzCIICMvYneaIbtYn1wqADmqvREHY1ubD1Vd02Q4HVIwu2mFIWOj7bHCvS-nBfqmHg)
+INFO:__main__:Saved attachment to /tmp/attachments/user_1/2025-07/1982c2662075aed4/Anthropic  HitCraft 1.pdf (78643 bytes)
+ERROR:__main__:Query execution failed: value too long for type character varying(255)
+
+ERROR:link_attachment_processor:Failed to store attachment: value too long for type character varying(255)
+
+INFO:link_attachment_processor:Extracted 11 unique links from email 1982c1281d849398
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 70% - Processed 51 emails, 875 links, 11 attachments...
+INFO:link_attachment_processor:Extracted 10 unique links from email 1982aa3f9c21f106
+INFO:link_attachment_processor:Extracted 5 unique links from email 19827290e36827ea
+INFO:link_attachment_processor:Extracted 5 unique links from email 19827039ad3417c5
+INFO:link_attachment_processor:Extracted 22 unique links from email 19826b7f97700f4e
+INFO:link_attachment_processor:Extracted 5 unique links from email 19826ad70eb9dad8
+INFO:link_attachment_processor:Extracted 4 unique links from email 198267fe1e39c94b
+INFO:link_attachment_processor:Extracted 20 unique links from email 19822c93ecefae7d
+INFO:link_attachment_processor:Extracted 3 unique links from email 1982213b4625cd9a
+INFO:link_attachment_processor:Extracted 4 unique links from email 198215b7421d9c74
+INFO:__main__:Updated job 15806d98-913a-40b6-8ae6-52754fd799b1: running - 70% - Processed 61 emails, 973 links, 11 attachments...
+INFO:link_attachment_processor:Extracted 1 unique links from email 19821388b3e13ba9
+INFO:link_attachment_processor:Extracted 7 unique links from email 1981f53c5ef0cdcc
+INFO:link_attachment_processor:Extracted 0 unique links from email 1981e9ab05f35589
+INFO:link_attachment_processor:Extracted 27 unique links from email 1981e9803b6379db
